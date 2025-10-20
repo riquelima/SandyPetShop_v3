@@ -245,7 +245,7 @@ const AdminLogin: React.FC<{ onLoginSuccess: () => void }> = ({ onLoginSuccess }
 const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void; }> = ({ onBack, onSuccess }) => {
     const [step, setStep] = useState(1);
     const [isAnimating, setIsAnimating] = useState(false);
-    const [formData, setFormData] = useState({ petName: '', ownerName: '', whatsapp: '', petBreed: '', ownerAddress: '' });
+    const [formData, setFormData] = useState({ petName: '', ownerName: '', whatsapp: '', petBreed: '', ownerAddress: '', condominium: '' });
     const [serviceQuantities, setServiceQuantities] = useState<Record<string, number>>({});
     const [selectedWeight, setSelectedWeight] = useState<PetWeight | null>(null);
     const [selectedAddons, setSelectedAddons] = useState<Record<string, boolean>>({});
@@ -517,7 +517,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                 pet_name: formData.petName, pet_breed: formData.petBreed, owner_name: formData.ownerName, owner_address: formData.ownerAddress,
                 whatsapp: formData.whatsapp, service: serviceString, weight: PET_WEIGHT_OPTIONS[selectedWeight!], price: finalPrice,
                 recurrence_type: recurrence.type, recurrence_day: recurrenceDay, recurrence_time: recurrenceTime, payment_due_date: paymentDueDate, is_active: true,
-                payment_status: 'Pendente',
+                payment_status: 'Pendente', condominium: formData.condominium,
             }).select().single();
 
             if (clientError || !newClient) throw new Error(clientError?.message || "Falha ao criar o cadastro do mensalista.");
@@ -535,6 +535,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                 status: 'AGENDADO',
                 appointment_time: app.appointment_time,
                 monthly_client_id: newClient.id,
+                condominium: formData.condominium,
             }));
 
             if (supabasePayloads.length > 0) {
@@ -551,7 +552,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
         }
     };
 
-    const isStep1Valid = formData.petName && formData.ownerName && formData.whatsapp.length > 13 && formData.petBreed && formData.ownerAddress;
+    const isStep1Valid = formData.petName && formData.ownerName && formData.whatsapp.length > 13 && formData.petBreed && formData.ownerAddress && formData.condominium;
     // FIX: Cast quantity to a number before checking if any service is selected.
     const isStep2Valid = Object.values(serviceQuantities).some(q => Number(q) > 0) && selectedWeight;
 
@@ -575,19 +576,28 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                 <form onSubmit={handleSubmit} className={`relative p-6 sm:p-8 transition-all duration-300 ${isAnimating ? 'animate-slideOutToLeft' : 'animate-slideInFromRight'}`}>
                     {step === 1 && (
                          <div className="space-y-7">
-                            <h2 className="text-3xl font-bold text-gray-800">Informações do Pet e Dono</h2>
+                            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 whitespace-nowrap">Informações do Pet e Dono</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div><label htmlFor="petName" className="block text-base font-semibold text-gray-700">Nome do Pet</label><div className="relative mt-1"><span className="absolute inset-y-0 left-0 flex items-center pl-3"><PawIcon/></span><input type="text" name="petName" id="petName" value={formData.petName} onChange={handleInputChange} required className="block w-full pl-10 pr-5 py-4 bg-gray-50 border border-gray-300 rounded-lg"/></div></div>
                                 <div><label htmlFor="petBreed" className="block text-base font-semibold text-gray-700">Raça do Pet</label><div className="relative mt-1"><span className="absolute inset-y-0 left-0 flex items-center pl-3"><BreedIcon/></span><input type="text" name="petBreed" id="petBreed" value={formData.petBreed} onChange={handleInputChange} required className="block w-full pl-10 pr-5 py-4 bg-gray-50 border border-gray-300 rounded-lg"/></div></div>
                                 <div><label htmlFor="ownerName" className="block text-base font-semibold text-gray-700">Nome do Dono</label><div className="relative mt-1"><span className="absolute inset-y-0 left-0 flex items-center pl-3"><UserIcon/></span><input type="text" name="ownerName" id="ownerName" value={formData.ownerName} onChange={handleInputChange} required className="block w-full pl-10 pr-5 py-4 bg-gray-50 border border-gray-300 rounded-lg"/></div></div>
                                 <div><label htmlFor="whatsapp" className="block text-base font-semibold text-gray-700">WhatsApp</label><div className="relative mt-1"><span className="absolute inset-y-0 left-0 flex items-center pl-3"><WhatsAppIcon/></span><input type="tel" name="whatsapp" id="whatsapp" value={formData.whatsapp} onChange={handleInputChange} required placeholder="(XX) XXXXX-XXXX" maxLength={15} className="block w-full pl-10 pr-5 py-4 bg-gray-50 border border-gray-300 rounded-lg"/></div></div>
+                                <div><label htmlFor="condominium" className="block text-base font-semibold text-gray-700">Condomínio</label><div className="relative mt-1"><span className="absolute inset-y-0 left-0 flex items-center pl-3"><AddressIcon/></span>
+                                    <select name="condominium" id="condominium" value={formData.condominium} onChange={handleInputChange} className="block w-full pl-10 pr-5 py-4 bg-gray-50 border border-gray-300 rounded-lg">
+                                        <option value="">Selecione um condomínio</option>
+                                        <option value="Vitta Parque">Vitta Parque</option>
+                                        <option value="Maxhaus">Maxhaus</option>
+                                        <option value="Paseo">Paseo</option>
+                                        <option value="Outro">Outro</option>
+                                    </select>
+                                </div></div>
                                 <div className="md:col-span-2"><label htmlFor="ownerAddress" className="block text-base font-semibold text-gray-700">Endereço</label><div className="relative mt-1"><span className="absolute inset-y-0 left-0 flex items-center pl-3"><AddressIcon/></span><input type="text" name="ownerAddress" id="ownerAddress" value={formData.ownerAddress} onChange={handleInputChange} required className="block w-full pl-10 pr-5 py-4 bg-gray-50 border border-gray-300 rounded-lg"/></div></div>
                             </div>
                         </div>
                     )}
                     {step === 2 && (
                          <div className="space-y-6">
-                            <h2 className="text-3xl font-bold text-gray-800">Escolha os Serviços do Pacote</h2>
+                            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 whitespace-nowrap">Escolha os Serviços do Pacote</h2>
                             <div>
                                 <h3 className="text-md font-semibold text-gray-700 mb-2">1. Serviço(s)</h3>
                                 <div className="space-y-3">
@@ -632,7 +642,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                     )}
                     {step === 3 && (
                         <div className="space-y-6">
-                            <h2 className="text-3xl font-bold text-gray-800">Recorrência e Resumo</h2>
+                            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 whitespace-nowrap">Recorrência e Resumo</h2>
                              <div className="p-4 bg-white rounded-lg border space-y-6">
                                 <h3 className="font-semibold text-gray-700">Regra de Recorrência</h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -653,15 +663,12 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                                     {WORKING_HOURS.map(h => <option key={h} value={h}>{`${h}:00`}</option>)}
                                 </select>
                                 <div>
-                                    <label htmlFor="paymentDueDate" className="font-semibold text-gray-700 text-sm">Data de Vencimento do Pagamento</label>
-                                    <input 
-                                        type="date" 
-                                        id="paymentDueDate" 
-                                        name="paymentDueDate" 
+                                    <DatePicker 
                                         value={paymentDueDate} 
-                                        onChange={e => setPaymentDueDate(e.target.value)}
+                                        onChange={setPaymentDueDate}
+                                        label="Data de Vencimento do Pagamento"
                                         required
-                                        className="w-full px-5 py-4 border rounded-lg bg-gray-50 mt-1" 
+                                        className="mt-1" 
                                     />
                                 </div>
                             </div>
@@ -751,7 +758,7 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
                         <div><label className="font-semibold text-gray-600">Serviço</label><input name="service" value={formData.service} onChange={handleInputChange} className="w-full mt-1 px-5 py-4 border rounded-lg"/></div>
                         <div><label className="font-semibold text-gray-600">Peso</label><input name="weight" value={formData.weight} onChange={handleInputChange} className="w-full mt-1 px-5 py-4 border rounded-lg"/></div>
                         <div><label className="font-semibold text-gray-600">Preço (R$)</label><input type="number" name="price" value={formData.price} onChange={handleInputChange} className="w-full mt-1 px-5 py-4 border rounded-lg"/></div>
-                        <div><label className="font-semibold text-gray-600">Data</label><input type="date" value={datePart} onChange={e => setDatePart(e.target.value)} className="w-full mt-1 px-5 py-4 border rounded-lg"/></div>
+                        <div><DatePicker value={datePart} onChange={setDatePart} label="Data" className="mt-1" /></div>
                         <div>
                             <label className="font-semibold text-gray-600">Hora</label>
                             <select value={timePart} onChange={e => setTimePart(Number(e.target.value))} className="w-full mt-1 px-5 py-4 border rounded-lg bg-white">
@@ -882,7 +889,7 @@ const Calendar: React.FC<{
       if (selectedDate.getMonth() !== currentMonth.getMonth() || selectedDate.getFullYear() !== currentMonth.getFullYear()) {
         setCurrentMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
       }
-    }, [selectedDate, currentMonth]);
+    }, [selectedDate]);
   
     const changeMonth = (offset: number) => {
       setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
@@ -902,21 +909,10 @@ const Calendar: React.FC<{
         const date = new Date(year, month, day);
         const { day: dayOfWeek } = getSaoPauloTimeParts(date);
         const isSelected = isSameSaoPauloDay(date, selectedDate);
-        const isPast = disablePast && isPastSaoPauloDate(date);
-        
-        let isDayDisabled = false;
-        if (allowedDays && allowedDays.length > 0) {
-            if (!allowedDays.includes(dayOfWeek)) {
-                isDayDisabled = true;
-            }
-        } else {
-            const isWeekend = disableWeekends && (dayOfWeek === 0 || dayOfWeek === 6);
-            if (isWeekend) {
-                isDayDisabled = true;
-            }
-        }
-
-        const isDisabled = isPast || isDayDisabled;
+        // Apply day disabling logic
+        const isDisabled = (disablePast && isPastSaoPauloDate(date)) ||
+                          (disableWeekends && isSaoPauloWeekend(date)) ||
+                          (allowedDays && !allowedDays.includes(dayOfWeek));
   
         days.push(
           <button
@@ -954,6 +950,125 @@ const Calendar: React.FC<{
       </div>
     );
   };
+
+// DatePicker Component - Minimalist date picker with Calendar integration
+const DatePicker: React.FC<{
+    value: string;
+    onChange: (value: string) => void;
+    label?: string;
+    placeholder?: string;
+    required?: boolean;
+    className?: string;
+    disablePast?: boolean;
+    disableWeekends?: boolean;
+    allowedDays?: number[];
+}> = ({ 
+    value, 
+    onChange, 
+    label, 
+    placeholder = "Selecione uma data", 
+    required = false, 
+    className = "", 
+    disablePast = false,
+    disableWeekends = false,
+    allowedDays
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [selectedDate, setSelectedDate] = useState<Date>(() => {
+        if (value) {
+            const [year, month, day] = value.split('-').map(Number);
+            return new Date(year, month - 1, day);
+        }
+        return new Date();
+    });
+
+    // Sync selectedDate when value prop changes
+    useEffect(() => {
+        if (value) {
+            const [year, month, day] = value.split('-').map(Number);
+            setSelectedDate(new Date(year, month - 1, day));
+        }
+    }, [value]);
+
+    const handleDateChange = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
+        
+        onChange(dateString);
+        setSelectedDate(date);
+        setIsOpen(false);
+    };
+
+    const displayValue = value ? formatDateToBR(value) : '';
+
+    return (
+        <div className="relative">
+            {label && (
+                <label className="block text-base font-semibold text-gray-700 mb-1">
+                    {label}
+                    {required && <span className="text-red-500 ml-1">*</span>}
+                </label>
+            )}
+            <div className="relative">
+                <input
+                    type="text"
+                    value={displayValue}
+                    placeholder={placeholder}
+                    readOnly
+                    required={required}
+                    onClick={() => setIsOpen(!isOpen)}
+                    className={`w-full px-5 py-4 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-colors ${className}`}
+                />
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                </div>
+            </div>
+            
+            {isOpen && (
+                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 min-w-[320px]">
+                    <Calendar
+                        selectedDate={selectedDate}
+                        onDateChange={handleDateChange}
+                        disablePast={disablePast}
+                        disableWeekends={disableWeekends}
+                        allowedDays={allowedDays}
+                    />
+                    <div className="flex justify-between mt-4 pt-3 border-t">
+                        <button
+                            type="button"
+                            onClick={() => setIsOpen(false)}
+                            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const today = new Date();
+                                handleDateChange(today);
+                            }}
+                            className="px-4 py-2 text-sm bg-pink-600 text-white rounded hover:bg-pink-700"
+                        >
+                            Hoje
+                        </button>
+                    </div>
+                </div>
+            )}
+            
+            {isOpen && (
+                <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setIsOpen(false)}
+                />
+            )}
+        </div>
+    );
+};
+
 // --- ADMIN DASHBOARD VIEWS ---
 
 const AppointmentsView: React.FC<{ key?: number }> = ({ key }) => {
@@ -1177,7 +1292,7 @@ const EditPetMovelAppointmentModal: React.FC<{
                               <option value="CONCLUÍDO">Concluído</option>
                            </select>
                         </div>
-                        <div><label className="font-semibold text-gray-600">Data</label><input type="date" value={datePart} onChange={e => setDatePart(e.target.value)} className="w-full mt-1 px-5 py-4 border rounded-lg"/></div>
+                        <div><DatePicker value={datePart} onChange={setDatePart} label="Data" className="mt-1" /></div>
                         <div>
                             <label className="font-semibold text-gray-600">Hora</label>
                             <select value={timePart} onChange={e => setTimePart(Number(e.target.value))} className="w-full mt-1 px-5 py-4 border rounded-lg bg-white">
@@ -1377,6 +1492,17 @@ const EditClientModal: React.FC<{ client: Client; onClose: () => void; onClientU
         }
     };
 
+    // Filter clients based on search term
+    const filteredClients = useMemo(() => {
+        if (!searchTerm.trim()) return monthlyClients;
+        
+        const searchLower = searchTerm.toLowerCase().trim();
+        return monthlyClients.filter(client => 
+            client.pet_name.toLowerCase().includes(searchLower) ||
+            client.owner_name.toLowerCase().includes(searchLower)
+        );
+    }, [monthlyClients, searchTerm]);
+
     return (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fadeIn">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg animate-scaleIn">
@@ -1498,7 +1624,14 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
     const serviceKey = Object.keys(SERVICES).find(key => SERVICES[key as ServiceType].label === client.service) as ServiceType | undefined;
     const weightKey = Object.keys(PET_WEIGHT_OPTIONS).find(key => PET_WEIGHT_OPTIONS[key as PetWeight] === (client as any).weight) as PetWeight | undefined;
     
-    const [formData, setFormData] = useState({ petName: client.pet_name, ownerName: client.owner_name, whatsapp: client.whatsapp, petBreed: (client as any).pet_breed || '', ownerAddress: (client as any).owner_address || '' });
+    const [formData, setFormData] = useState({ 
+        petName: client.pet_name, 
+        ownerName: client.owner_name, 
+        whatsapp: client.whatsapp, 
+        petBreed: (client as any).pet_breed || '', 
+        ownerAddress: (client as any).owner_address || '',
+        condominium: (client as any).condominium || ''
+    });
     const [selectedService, setSelectedService] = useState<ServiceType | null>(serviceKey || null);
     const [selectedWeight, setSelectedWeight] = useState<PetWeight | null>(weightKey || null);
     const [price, setPrice] = useState((client as any).price || 0);
@@ -1550,6 +1683,7 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
             owner_name: formData.ownerName,
             owner_address: formData.ownerAddress,
             whatsapp: formData.whatsapp,
+            condominium: formData.condominium,
             service: selectedService ? SERVICES[selectedService].label : client.service,
             weight: selectedWeight ? PET_WEIGHT_OPTIONS[selectedWeight] : (client as any).weight,
             price,
@@ -1648,6 +1782,7 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
                             <input type="text" name="petName" placeholder="Nome do Pet" value={formData.petName} onChange={handleInputChange} required className="w-full px-5 py-4 border rounded-lg"/>
                             <input type="text" name="ownerName" placeholder="Nome do Dono" value={formData.ownerName} onChange={handleInputChange} required className="w-full px-5 py-4 border rounded-lg"/>
                             <input type="text" name="whatsapp" placeholder="WhatsApp" value={formData.whatsapp} onChange={handleInputChange} required className="w-full px-5 py-4 border rounded-lg"/>
+                            <input type="text" name="condominium" placeholder="Nome do Condomínio" value={formData.condominium} onChange={handleInputChange} className="w-full px-5 py-4 border rounded-lg"/>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <select name="service" value={selectedService || ''} onChange={e => setSelectedService(e.target.value as ServiceType || null)} className="w-full px-5 py-4 border rounded-lg bg-white">
                                     <option value="">Selecione o serviço (opcional)</option>
@@ -1724,6 +1859,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
     const [deletingClient, setDeletingClient] = useState<MonthlyClient | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [alertInfo, setAlertInfo] = useState<{ title: string; message: string; variant: 'success' | 'error' } | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
 
     const fetchMonthlyClients = useCallback(async () => {
@@ -1839,27 +1975,54 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
             {editingClient && <EditMonthlyClientModal client={editingClient} onClose={() => setEditingClient(null)} onMonthlyClientUpdated={handleUpdateSuccess} />}
             {deletingClient && <ConfirmationModal isOpen={!!deletingClient} onClose={() => setDeletingClient(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o mensalista ${deletingClient.pet_name}? Todos os seus agendamentos futuros também serão removidos.`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
             
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
                 <h2 className="text-3xl font-bold text-gray-800">Clientes Mensalistas</h2>
-                <button onClick={onAddClient} className="flex items-center gap-3 bg-pink-600 text-white font-semibold py-3.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
-                    <UserPlusIcon /> <span className="hidden sm:inline">Adicionar Mensalista</span>
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Buscar por nome do pet ou dono..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full sm:w-80 px-4 py-2.5 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-white"
+                        />
+                        <SearchIcon />
+                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                            <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <button onClick={onAddClient} className="flex items-center gap-3 bg-pink-600 text-white font-semibold py-3.5 px-4 rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap">
+                        <UserPlusIcon /> <span className="hidden sm:inline">Adicionar Mensalista</span>
+                    </button>
+                </div>
             </div>
             {loading ? <div className="flex justify-center py-16"><LoadingSpinner /></div> : (
                  <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                    {monthlyClients.length > 0 ? (
+                    {filteredClients.length > 0 ? (
                         <div className="divide-y divide-gray-100">
-                            {monthlyClients.map(client => (
+                            {filteredClients.map(client => (
                                 <div key={client.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-x-4 gap-y-2 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setEditingClient(client)}>
                                     <div className="flex-1 min-w-0">
                                         <p className="font-bold text-gray-900 truncate">{client.pet_name}</p>
                                         <p className="text-base text-gray-600 truncate">{client.owner_name}</p>
+                                        {client.condominium && (
+                                            <p className="text-sm text-gray-500 truncate">
+                                                <span className="font-medium">Condomínio:</span> {client.condominium}
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="w-full sm:w-auto flex items-center justify-between mt-2 sm:mt-0">
                                        <div className="flex items-center gap-3 flex-wrap">
                                             <p className="text-xs text-pink-800 bg-pink-100 font-semibold py-1 px-2 rounded-full truncate">
                                                {getRecurrenceText(client)}
                                            </p>
+                                           {client.payment_due_date && (
+                                               <p className="text-xs text-blue-800 bg-blue-100 font-semibold py-1 px-2 rounded-full truncate">
+                                                   Vencimento: {formatDateToBR(client.payment_due_date)}
+                                               </p>
+                                           )}
                                            <button
                                                 onClick={(e) => handleTogglePaymentStatus(client, e)}
                                                 className={`px-2 py-1 text-xs font-bold rounded-full whitespace-nowrap transition-colors ${
@@ -1879,7 +2042,14 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                                 </div>
                             ))}
                         </div>
-                    ) : <p className="text-center text-gray-500 py-16">Nenhum cliente mensalista cadastrado.</p>}
+                    ) : (
+                        <p className="text-center text-gray-500 py-16">
+                            {searchTerm.trim() 
+                                ? `Nenhum mensalista encontrado para "${searchTerm}".` 
+                                : 'Nenhum cliente mensalista cadastrado.'
+                            }
+                        </p>
+                    )}
                  </div>
             )}
         </>
@@ -2806,9 +2976,9 @@ const DaycareRegistrationForm: React.FC<{
                    <h3 className="text-lg font-semibold text-pink-700 border-b pb-2 mb-2">Saúde e Comportamento</h3>
                    {renderRadioGroup('Se dá bem com outros animais', 'gets_along_with_others', [{label: 'Sim', value: true}, {label: 'Não', value: false}])}
                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                       <div><label className="block text-base font-semibold text-gray-700">Última vacina</label><input type="date" name="last_vaccine" value={formData.last_vaccine} onChange={handleInputChange} className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-md"/></div>
-                       <div><label className="block text-base font-semibold text-gray-700">Último vermífugo</label><input type="date" name="last_deworming" value={formData.last_deworming} onChange={handleInputChange} className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-md"/></div>
-                       <div><label className="block text-base font-semibold text-gray-700">Último remédio de pulgas e carrapatos</label><input type="date" name="last_flea_remedy" value={formData.last_flea_remedy} onChange={handleInputChange} className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-md"/></div>
+                       <div><DatePicker value={formData.last_vaccine} onChange={(value) => setFormData(prev => ({ ...prev, last_vaccine: value }))} label="Última vacina" className="mt-1" /></div>
+                       <div><DatePicker value={formData.last_deworming} onChange={(value) => setFormData(prev => ({ ...prev, last_deworming: value }))} label="Último vermífugo" className="mt-1" /></div>
+                       <div><DatePicker value={formData.last_flea_remedy} onChange={(value) => setFormData(prev => ({ ...prev, last_flea_remedy: value }))} label="Último remédio de pulgas e carrapatos" className="mt-1" /></div>
                    </div>
                     {renderRadioGroup('Alergia?', 'has_allergies', [{label: 'Sim', value: true}, {label: 'Não', value: false}])}
                     {formData.has_allergies && (
@@ -2856,14 +3026,12 @@ const DaycareRegistrationForm: React.FC<{
                                 className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-md"/>
                         </div>
                         <div>
-                            <label htmlFor="payment_date" className="block text-base font-semibold text-gray-700">Data de Pagamento</label>
-                            <input 
-                                type="date" 
-                                id="payment_date"
-                                name="payment_date" 
+                            <DatePicker 
                                 value={formData.payment_date || ''} 
-                                onChange={handleInputChange} 
-                                className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-md"/>
+                                onChange={(value) => setFormData(prev => ({ ...prev, payment_date: value }))}
+                                label="Data de Pagamento"
+                                className="mt-1" 
+                            />
                         </div>
                     </div>
                 </div>
@@ -2939,18 +3107,10 @@ const TimeSlotPicker: React.FC<{
             }
         });
 
-        // Calculate final availability based on the duration of the selected service
+        // Todos os horários estão disponíveis
         const finalAvailability = new Map<number, boolean>();
         workingHours.forEach(hour => {
-            let hasCapacity = true;
-            for(let i = 0; i < Math.ceil(duration); i++) {
-                const checkHour = hour + i;
-                if ((availability.get(checkHour) || 0) <= 0 || !workingHours.includes(checkHour)) {
-                    hasCapacity = false;
-                    break;
-                }
-            }
-            finalAvailability.set(hour, hasCapacity);
+            finalAvailability.set(hour, true);
         });
 
         return finalAvailability;
@@ -2962,9 +3122,8 @@ const TimeSlotPicker: React.FC<{
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {workingHours.map(hour => {
-          const isAvailable = getAvailability.get(hour) ?? false;
-          const isPastTime = isSameSaoPauloDay(selectedDate, now) && hour <= todaySaoPaulo.hour;
-          const isDisabled = !isAvailable || isPastTime;
+          // Todos os horários estão disponíveis
+          const isDisabled = false;
           
           return (
             <button
