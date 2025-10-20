@@ -121,22 +121,22 @@ const AlertModal: React.FC<{
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-[60] p-4 animate-fadeIn">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-full sm:max-w-md animate-scaleIn text-center">
-                <div className="p-6">
-                     <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full" style={{ backgroundColor: variant === 'success' ? '#D1FAE5' : '#FEE2E2' }}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-fadeIn">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-full sm:max-w-md animate-scaleIn text-center border-4" style={{ borderColor: variant === 'success' ? '#86EFAC' : '#FCA5A5' }}>
+                <div className="p-8">
+                     <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full shadow-lg" style={{ backgroundColor: variant === 'success' ? '#D1FAE5' : '#FEE2E2' }}>
                         {variant === 'success' ? <SuccessAlertIcon /> : <ErrorIcon />}
                     </div>
-                    <h2 className="mt-4 text-3xl font-bold text-gray-800">{title}</h2>
-                    <p className="mt-2 text-gray-600 whitespace-pre-wrap">{message}</p>
+                    <h2 className="mt-6 text-4xl font-bold text-gray-800">{title}</h2>
+                    <p className="mt-4 text-gray-600 whitespace-pre-wrap text-lg leading-relaxed">{message}</p>
                 </div>
-                <div className="p-4 bg-gray-50 flex justify-center rounded-b-2xl">
+                <div className="p-6 bg-gradient-to-t from-gray-50 to-white flex justify-center rounded-b-3xl">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="bg-pink-600 text-white font-bold py-3.5 px-8 rounded-lg hover:bg-pink-700 transition-colors"
+                        className="bg-gradient-to-r from-pink-600 to-pink-700 text-white font-bold py-4 px-12 rounded-xl hover:from-pink-700 hover:to-pink-800 transition-all shadow-lg hover:shadow-xl"
                     >
-                        OK
+                        Entendi
                     </button>
                 </div>
             </div>
@@ -158,23 +158,23 @@ const ConfirmationModal: React.FC<{
     if (!isOpen) return null;
 
     const confirmButtonClasses = {
-        primary: 'bg-pink-600 hover:bg-pink-700',
-        danger: 'bg-red-600 hover:bg-red-700',
+        primary: 'bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800',
+        danger: 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800',
     };
 
     return (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fadeIn">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-full sm:max-w-md animate-scaleIn">
-                <div className="p-6">
-                    <h2 className="text-3xl font-bold text-gray-800">{title}</h2>
-                    <p className="mt-2 text-gray-600">{message}</p>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-full sm:max-w-md animate-scaleIn border-2 border-gray-200">
+                <div className="p-8">
+                    <h2 className="text-4xl font-bold text-gray-800">{title}</h2>
+                    <p className="mt-4 text-gray-600 text-lg leading-relaxed">{message}</p>
                 </div>
-                <div className="p-4 bg-gray-50 flex justify-end gap-5 rounded-b-2xl">
+                <div className="p-6 bg-gradient-to-t from-gray-50 to-white flex justify-end gap-4 rounded-b-3xl">
                     <button
                         type="button"
                         onClick={onClose}
                         disabled={isLoading}
-                        className="bg-gray-200 text-gray-800 font-bold py-3.5 px-4 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                        className="bg-white border-2 border-gray-300 text-gray-700 font-bold py-4 px-6 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all disabled:opacity-50 shadow-sm hover:shadow"
                     >
                         {cancelText}
                     </button>
@@ -182,7 +182,7 @@ const ConfirmationModal: React.FC<{
                         type="button"
                         onClick={onConfirm}
                         disabled={isLoading}
-                        className={`text-white font-bold py-3.5 px-4 rounded-lg transition-colors disabled:opacity-50 ${confirmButtonClasses[variant]}`}
+                        className={`text-white font-bold py-4 px-6 rounded-xl transition-all disabled:opacity-50 shadow-lg hover:shadow-xl ${confirmButtonClasses[variant]}`}
                     >
                         {isLoading ? (
                             <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-white mx-auto"></div>
@@ -3266,22 +3266,26 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
   const isStep3Valid = selectedTime !== null;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <header className="text-center mb-6">
-          <img src="https://i.imgur.com/M3Gt3OA.png" alt="Sandy's Pet Shop Logo" className="h-20 w-20 mx-auto mb-2"/>
-          <h1 className="font-brand text-5xl text-pink-800">Sandy's Pet Shop</h1>
-          <p className="text-gray-600 text-lg">Agendamento Online</p>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-pink-50 via-white to-rose-50">
+      <header className="text-center mb-8 animate-fadeInUp">
+          <img src="https://i.imgur.com/M3Gt3OA.png" alt="Sandy's Pet Shop Logo" className="h-24 w-24 mx-auto mb-4 drop-shadow-lg"/>
+          <h1 className="font-brand text-6xl text-pink-800 mb-2">Sandy's Pet Shop</h1>
+          <p className="text-gray-600 text-xl font-medium">Agendamento Online</p>
       </header>
 
-      <main className="w-full max-w-2xl bg-rose-50 rounded-2xl shadow-xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex justify-between items-center text-sm font-semibold text-gray-500">
+      <main className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-pink-100/40 backdrop-blur-sm">
+        <div className="px-8 py-6 bg-gradient-to-r from-pink-50 to-rose-50 border-b-2 border-pink-100">
+            <div className="flex justify-between items-center relative">
+                {/* Progress Line */}
+                <div className="absolute top-4 left-0 right-0 h-0.5 bg-gray-200 -z-10">
+                    <div className={`h-full bg-pink-600 transition-all duration-500`} style={{ width: `${((step - 1) / 3) * 100}%` }}></div>
+                </div>
                 {['Dados', 'Serviços', 'Horário', 'Resumo'].map((name, index) => (
-                    <div key={name} className={`flex items-center gap-3 ${step > index + 1 ? 'text-pink-600' : ''} ${step === index + 1 ? 'text-pink-600 font-bold' : ''}`}>
-                        <div className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${step >= index + 1 ? 'bg-pink-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                    <div key={name} className="flex flex-col items-center gap-2 z-10">
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-md ${step >= index + 1 ? 'bg-gradient-to-br from-pink-500 to-pink-700 text-white scale-110' : 'bg-white text-gray-400 border-2 border-gray-300'}`}>
                             {step > index + 1 ? '✓' : index + 1}
                         </div>
-                        <span className="hidden sm:inline">{name}</span>
+                        <span className={`hidden sm:block text-xs font-bold ${step === index + 1 ? 'text-pink-700' : step > index + 1 ? 'text-pink-600' : 'text-gray-400'}`}>{name}</span>
                     </div>
                 ))}
             </div>
@@ -3485,7 +3489,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
             </div>
           )}
 
-          <div className="mt-8 flex justify-between items-center">
+          <div className="mt-10 flex justify-between items-center gap-4">
             {step > 1 ? (
               <button type="button" onClick={() => {
                   if (step === 2 && serviceStepView !== 'main') {
@@ -3498,25 +3502,34 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                   } else {
                       changeStep(step - 1);
                   }
-              }} className="bg-gray-200 text-gray-800 font-bold py-3.5 px-5 rounded-lg hover:bg-gray-300 transition-colors">Voltar</button>
+              }} className="bg-white border-2 border-gray-300 text-gray-700 font-bold py-4 px-8 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm hover:shadow">
+                ← Voltar
+              </button>
             ) : <div />}
 
-            {step < 4 && <button type="button" onClick={() => changeStep(step + 1)} disabled={(step === 1 && !isStep1Valid) || (step === 2 && !isStep2Valid) || (step === 3 && !isStep3Valid)} className="w-full md:w-auto bg-pink-600 text-white font-bold py-3.5 px-5 rounded-lg hover:bg-pink-700 transition-colors disabled:bg-gray-300">Avançar</button>}
-            {step === 4 && <button type="submit" disabled={isSubmitting} className="w-full md:w-auto bg-green-500 text-white font-bold py-3.5 px-5 rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-300">{isSubmitting ? 'Agendando...' : 'Confirmar Agendamento'}</button>}
+            {step < 4 && <button type="button" onClick={() => changeStep(step + 1)} disabled={(step === 1 && !isStep1Valid) || (step === 2 && !isStep2Valid) || (step === 3 && !isStep3Valid)} className="w-full md:w-auto bg-gradient-to-r from-pink-600 to-pink-700 text-white font-bold py-4 px-8 rounded-xl hover:from-pink-700 hover:to-pink-800 transition-all shadow-lg hover:shadow-xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed">
+              Próximo →
+            </button>}
+            {step === 4 && <button type="submit" disabled={isSubmitting} className="w-full md:w-auto bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-4 px-8 rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed">
+              {isSubmitting ? 'Agendando...' : '✓ Confirmar Agendamento'}
+            </button>}
           </div>
         </form>
       </main>
 
-      <footer className="text-center mt-4 text-base text-gray-500">
-        <button onClick={() => setView('login')} className="hover:underline">Admin</button>
+      <footer className="text-center mt-8 text-base">
+        <button onClick={() => setView('login')} className="text-gray-500 hover:text-pink-600 font-medium transition-colors underline-offset-4 hover:underline">Acesso Administrativo</button>
       </footer>
       
       {isModalOpen && (
-        <div className="fixed inset-0 bg-pink-600 bg-opacity-90 flex items-center justify-center z-50 animate-fadeIn p-4">
-          <div className="text-center bg-white p-8 rounded-2xl shadow-2xl max-w-full sm:max-w-sm mx-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn p-4">
+          <div className="text-center bg-white p-10 rounded-3xl shadow-2xl max-w-full sm:max-w-md mx-auto border-4 border-pink-200 animate-scaleIn">
             <SuccessIcon />
-            <h2 className="text-3xl font-bold text-gray-800 mt-2">Agendamento Confirmado!</h2>
-            <p className="text-gray-600 mt-2">Seu horário foi reservado com sucesso. Obrigado!</p>
+            <h2 className="text-4xl font-bold bg-gradient-to-r from-pink-600 to-pink-800 bg-clip-text text-transparent mt-4">Agendamento Confirmado!</h2>
+            <p className="text-gray-600 mt-4 text-lg">Seu horário foi reservado com sucesso. Obrigado!</p>
+            <div className="mt-6 p-4 bg-pink-50 rounded-xl">
+              <p className="text-sm text-pink-800 font-medium">Você receberá uma confirmação via WhatsApp em breve</p>
+            </div>
           </div>
         </div>
       )}
@@ -4507,15 +4520,15 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     };
 
     const NavMenu = () => (
-         <nav className="flex flex-col gap-2">
+         <nav className="flex flex-col gap-3">
             {menuItems.map(item => (
                 <button
                     key={item.id}
                     onClick={() => { setActiveView(item.id); setShowMobileMenu(false); }}
-                    className={`w-full flex items-center gap-4 px-5 py-4 rounded-lg text-base font-semibold transition-colors ${
+                    className={`w-full flex items-center gap-4 px-6 py-4 rounded-xl text-base font-semibold transition-all shadow-sm ${
                         activeView === item.id 
-                            ? 'bg-pink-100 text-pink-800' 
-                            : 'text-gray-600 hover:bg-gray-100'
+                            ? 'bg-gradient-to-r from-pink-600 to-pink-700 text-white shadow-lg scale-105' 
+                            : 'text-gray-700 hover:bg-white hover:shadow-md bg-white/50'
                     }`}
                 >
                     {item.icon}
@@ -4526,22 +4539,24 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     );
 
     return (
-        <div className="min-h-screen bg-gray-100">
-            <header className="bg-white shadow-sm sticky top-0 z-40">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-pink-50/20 to-gray-100">
+            <header className="bg-white border-b-2 border-pink-100 shadow-lg sticky top-0 z-40 backdrop-blur-sm bg-white/95">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-18">
-                        <div className="flex items-center gap-3">
-                             <img src="https://i.imgur.com/M3Gt3OA.png" alt="Logo" className="h-10 w-10"/>
-                             <h1 className="font-brand text-3xl text-pink-800 hidden sm:block">Sandy's Pet Shop</h1>
-                             <span className="text-gray-500 hidden lg:block">Admin</span>
+                    <div className="flex justify-between items-center h-20">
+                        <div className="flex items-center gap-4">
+                             <img src="https://i.imgur.com/M3Gt3OA.png" alt="Logo" className="h-12 w-12 drop-shadow-md"/>
+                             <div>
+                                 <h1 className="font-brand text-4xl text-pink-800 hidden sm:block leading-none">Sandy's Pet Shop</h1>
+                                 <span className="text-pink-600 text-sm font-semibold hidden lg:block">Painel Administrativo</span>
+                             </div>
                         </div>
                         <div className="hidden md:block">
-                            <button onClick={onLogout} className="flex items-center gap-4 text-base font-semibold text-gray-600 hover:text-pink-600 transition-colors">
+                            <button onClick={onLogout} className="flex items-center gap-3 text-base font-semibold text-gray-600 hover:text-pink-600 bg-gray-50 hover:bg-pink-50 px-5 py-3 rounded-xl transition-all shadow-sm hover:shadow">
                                 <LogoutIcon/> Sair
                             </button>
                         </div>
                         <div className="md:hidden">
-                            <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="p-2 rounded-md text-gray-500 hover:bg-gray-100">
+                            <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="p-3 rounded-xl text-gray-500 hover:bg-pink-50 hover:text-pink-600 transition-colors">
                                 {showMobileMenu ? <CloseIcon /> : <MenuIcon />}
                             </button>
                         </div>
