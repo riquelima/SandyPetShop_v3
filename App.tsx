@@ -1985,18 +1985,22 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
             {editingClient && <EditMonthlyClientModal client={editingClient} onClose={() => setEditingClient(null)} onMonthlyClientUpdated={handleUpdateSuccess} />}
             {deletingClient && <ConfirmationModal isOpen={!!deletingClient} onClose={() => setDeletingClient(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o mensalista ${deletingClient.pet_name}? Todos os seus agendamentos futuros também serão removidos.`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
             
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold text-gray-800 truncate">Clientes Mensalistas</h2>
+            <div className="mb-6">
+                <h2 className="text-3xl font-bold text-gray-800 truncate mb-4">Clientes Mensalistas</h2>
                 <div className="flex items-center gap-3">
-                    <input
-                        type="text"
-                        placeholder="Buscar por nome do pet ou dono..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full sm:w-80 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-white"
-                    />
-                    <button onClick={onAddClient} className="bg-pink-600 text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap">
-                        Adicionar Mensalista
+                    <div className="flex-1">
+                        <input
+                            type="text"
+                            placeholder="Buscar por nome do pet ou dono..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-white"
+                        />
+                    </div>
+                    <button onClick={onAddClient} className="bg-pink-600 text-white font-semibold py-2.5 px-3 rounded-lg hover:bg-pink-700 transition-colors flex items-center justify-center">
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
                     </button>
                 </div>
             </div>
