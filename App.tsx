@@ -576,7 +576,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                 <form onSubmit={handleSubmit} className={`relative p-6 sm:p-8 transition-all duration-300 ${isAnimating ? 'animate-slideOutToLeft' : 'animate-slideInFromRight'}`}>
                     {step === 1 && (
                          <div className="space-y-7">
-                            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 whitespace-nowrap">Informações do Pet e Dono</h2>
+                            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 truncate">Informações do Pet e Dono</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div><label htmlFor="petName" className="block text-base font-semibold text-gray-700">Nome do Pet</label><div className="relative mt-1"><span className="absolute inset-y-0 left-0 flex items-center pl-3"><PawIcon/></span><input type="text" name="petName" id="petName" value={formData.petName} onChange={handleInputChange} required className="block w-full pl-10 pr-5 py-4 bg-gray-50 border border-gray-300 rounded-lg"/></div></div>
                                 <div><label htmlFor="petBreed" className="block text-base font-semibold text-gray-700">Raça do Pet</label><div className="relative mt-1"><span className="absolute inset-y-0 left-0 flex items-center pl-3"><BreedIcon/></span><input type="text" name="petBreed" id="petBreed" value={formData.petBreed} onChange={handleInputChange} required className="block w-full pl-10 pr-5 py-4 bg-gray-50 border border-gray-300 rounded-lg"/></div></div>
@@ -597,7 +597,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                     )}
                     {step === 2 && (
                          <div className="space-y-6">
-                            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 whitespace-nowrap">Escolha os Serviços do Pacote</h2>
+                            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 truncate">Escolha os Serviços do Pacote</h2>
                             <div>
                                 <h3 className="text-md font-semibold text-gray-700 mb-2">1. Serviço(s)</h3>
                                 <div className="space-y-3">
@@ -642,7 +642,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                     )}
                     {step === 3 && (
                         <div className="space-y-6">
-                            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 whitespace-nowrap">Recorrência e Resumo</h2>
+                            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 truncate">Recorrência e Resumo</h2>
                              <div className="p-4 bg-white rounded-lg border space-y-6">
                                 <h3 className="font-semibold text-gray-700">Regra de Recorrência</h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -743,6 +743,17 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
             onAppointmentUpdated(data as AdminAppointment);
         }
     };
+
+    // Filter clients based on search term
+    const filteredClients = useMemo(() => {
+        if (!searchTerm.trim()) return monthlyClients;
+        
+        const searchLower = searchTerm.toLowerCase().trim();
+        return monthlyClients.filter(client => 
+            client.pet_name.toLowerCase().includes(searchLower) ||
+            client.owner_name.toLowerCase().includes(searchLower)
+        );
+    }, [monthlyClients, searchTerm]);
 
     return (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fadeIn">
@@ -1492,17 +1503,6 @@ const EditClientModal: React.FC<{ client: Client; onClose: () => void; onClientU
         }
     };
 
-    // Filter clients based on search term
-    const filteredClients = useMemo(() => {
-        if (!searchTerm.trim()) return monthlyClients;
-        
-        const searchLower = searchTerm.toLowerCase().trim();
-        return monthlyClients.filter(client => 
-            client.pet_name.toLowerCase().includes(searchLower) ||
-            client.owner_name.toLowerCase().includes(searchLower)
-        );
-    }, [monthlyClients, searchTerm]);
-
     return (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fadeIn">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg animate-scaleIn">
@@ -1941,6 +1941,16 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
         }
     };
 
+    // Filter clients based on search term
+    const filteredClients = useMemo(() => {
+        if (!searchTerm.trim()) return monthlyClients;
+        const searchLower = searchTerm.toLowerCase().trim();
+        return monthlyClients.filter(client =>
+            client.pet_name.toLowerCase().includes(searchLower) ||
+            client.owner_name.toLowerCase().includes(searchLower)
+        );
+    }, [monthlyClients, searchTerm]);
+
     const handleTogglePaymentStatus = async (client: MonthlyClient, e: React.MouseEvent) => {
         e.stopPropagation(); // Prevent the card's onClick from firing
         const newStatus = client.payment_status === 'Pendente' ? 'Pago' : 'Pendente';
@@ -1975,26 +1985,18 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
             {editingClient && <EditMonthlyClientModal client={editingClient} onClose={() => setEditingClient(null)} onMonthlyClientUpdated={handleUpdateSuccess} />}
             {deletingClient && <ConfirmationModal isOpen={!!deletingClient} onClose={() => setDeletingClient(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o mensalista ${deletingClient.pet_name}? Todos os seus agendamentos futuros também serão removidos.`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
             
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-                <h2 className="text-3xl font-bold text-gray-800">Clientes Mensalistas</h2>
-                <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-                    <div className="relative">
-                        <input
-                            type="text"
-                            placeholder="Buscar por nome do pet ou dono..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full sm:w-80 px-4 py-2.5 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-white"
-                        />
-                        <SearchIcon />
-                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                            <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                        </div>
-                    </div>
-                    <button onClick={onAddClient} className="flex items-center gap-3 bg-pink-600 text-white font-semibold py-3.5 px-4 rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap">
-                        <UserPlusIcon /> <span className="hidden sm:inline">Adicionar Mensalista</span>
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-3xl font-bold text-gray-800 truncate">Clientes Mensalistas</h2>
+                <div className="flex items-center gap-3">
+                    <input
+                        type="text"
+                        placeholder="Buscar por nome do pet ou dono..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full sm:w-80 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-white"
+                    />
+                    <button onClick={onAddClient} className="bg-pink-600 text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap">
+                        Adicionar Mensalista
                     </button>
                 </div>
             </div>
