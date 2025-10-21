@@ -368,11 +368,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
     };
 
     const handleAlertClose = () => {
-        const wasSuccess = alertInfo?.variant === 'success';
         setAlertInfo(null);
-        if (wasSuccess) {
-            onSuccess();
-        }
     };
     
     const getPackageDetails = () => {
@@ -539,9 +535,34 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
             }));
 
             if (supabasePayloads.length > 0) {
-                const { error } = await supabase.from('appointments').insert(supabasePayloads);
-                if (error) throw new Error(`Cadastro criado, mas erro ao gerar agendamentos: ${error.message}`);
-                else setAlertInfo({ title: 'Sucesso!', message: `${supabasePayloads.length} agendamentos criados com sucesso!`, variant: 'success' });
+                // Check if the service is Pet Móvel type - using both serviceQuantities and serviceString
+                const isPetMovelService = Object.entries(serviceQuantities).some(([serviceType, quantity]) => {
+                    return Number(quantity) > 0 && [
+                        ServiceType.PET_MOBILE_BATH,
+                        ServiceType.PET_MOBILE_BATH_AND_GROOMING,
+                        ServiceType.PET_MOBILE_GROOMING_ONLY
+                    ].includes(serviceType as ServiceType);
+                }) || serviceString.includes('Pet Móvel');
+
+                if (isPetMovelService) {
+                    // For Pet Móvel services, insert into BOTH tables for complete synchronization
+                    const [appointmentsResult, petMovelResult] = await Promise.all([
+                        supabase.from('appointments').insert(supabasePayloads),
+                        supabase.from('pet_movel_appointments').insert(supabasePayloads)
+                    ]);
+                    
+                    if (appointmentsResult.error || petMovelResult.error) {
+                        const errorMsg = appointmentsResult.error?.message || petMovelResult.error?.message;
+                        throw new Error(`Cadastro criado, mas erro ao gerar agendamentos: ${errorMsg}`);
+                    }
+                } else {
+                    // For regular services, insert only into appointments table
+                    const { error } = await supabase.from('appointments').insert(supabasePayloads);
+                    if (error) throw new Error(`Cadastro criado, mas erro ao gerar agendamentos: ${error.message}`);
+                }
+                
+                setAlertInfo({ title: 'Mensalista Cadastrado!', message: `Mensalista ${formData.petName} cadastrado com sucesso! ${supabasePayloads.length} agendamentos foram criados.`, variant: 'success' });
+                onSuccess(); // Call onSuccess immediately after successful operation
             } else {
                 setAlertInfo({ title: 'Aviso', message: "Nenhum agendamento futuro pôde ser criado com as regras fornecidas.", variant: 'error' });
             }
@@ -1369,66 +1390,72 @@ const PetMovelAppointmentDetailsModal: React.FC<{
 };
 
 const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
-    const [appointments, setAppointments] = useState<PetMovelAppointment[]>([]);
+    const [monthlyClients, setMonthlyClients] = useState<MonthlyClient[]>([]);
     const [loading, setLoading] = useState(true);
     const [expandedCondos, setExpandedCondos] = useState<string[]>([]);
-    const [selectedForDetails, setSelectedForDetails] = useState<PetMovelAppointment | null>(null);
-    const [selectedForEdit, setSelectedForEdit] = useState<PetMovelAppointment | null>(null);
-    const [selectedForDelete, setSelectedForDelete] = useState<PetMovelAppointment | null>(null);
+    const [selectedForDetails, setSelectedForDetails] = useState<MonthlyClient | null>(null);
+    const [selectedForEdit, setSelectedForEdit] = useState<MonthlyClient | null>(null);
+    const [selectedForDelete, setSelectedForDelete] = useState<MonthlyClient | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const fetchAppointments = useCallback(async () => {
+    const fetchMonthlyClients = useCallback(async () => {
         setLoading(true);
         const { data, error } = await supabase
-            .from('pet_movel_appointments')
+            .from('monthly_clients')
             .select('*')
             .order('condominium', { ascending: true })
-            .order('appointment_time', { ascending: true });
+            .order('owner_name', { ascending: true });
 
         if (error) {
-            console.error('Error fetching pet movel appointments:', error);
+            console.error('Error fetching monthly clients:', error);
         } else {
-            setAppointments(data as PetMovelAppointment[]);
-            if (data && data.length > 0) setExpandedCondos([data[0].condominium]);
+            // Filter only Pet Móvel clients
+            const petMovelClients = (data as MonthlyClient[]).filter(client => 
+                client.service && client.service.includes('Pet Móvel')
+            );
+            setMonthlyClients(petMovelClients);
+            if (petMovelClients && petMovelClients.length > 0) {
+                setExpandedCondos([petMovelClients[0].condominium]);
+            }
         }
         setLoading(false);
     }, []);
 
     useEffect(() => {
-        fetchAppointments();
-    }, [fetchAppointments, key]);
+        fetchMonthlyClients();
+    }, [fetchMonthlyClients, key]);
 
-    const handleAppointmentUpdated = (updatedAppointment: PetMovelAppointment) => {
-        setAppointments(prev => prev.map(app => app.id === updatedAppointment.id ? updatedAppointment : app).sort((a,b) => new Date(a.appointment_time).getTime() - new Date(b.appointment_time).getTime()));
+    const handleClientUpdated = (updatedClient: MonthlyClient) => {
+        setMonthlyClients(prev => prev.map(client => client.id === updatedClient.id ? updatedClient : client));
         setSelectedForEdit(null);
     };
 
     const handleConfirmDelete = async () => {
         if (!selectedForDelete) return;
         setIsDeleting(true);
-        const { error } = await supabase.from('pet_movel_appointments').delete().eq('id', selectedForDelete.id);
+        const { error } = await supabase.from('monthly_clients').delete().eq('id', selectedForDelete.id);
         if (error) {
-            alert('Falha ao excluir o agendamento.');
+            alert('Falha ao excluir o mensalista.');
         } else {
-            setAppointments(prev => prev.filter(app => app.id !== selectedForDelete.id));
+            setMonthlyClients(prev => prev.filter(client => client.id !== selectedForDelete.id));
         }
         setIsDeleting(false);
         setSelectedForDelete(null);
     };
 
-    const groupedAppointments = useMemo(() => {
-        const groups: Record<string, Record<string, PetMovelAppointment[]>> = {};
+    const groupedClients = useMemo(() => {
+        const groups: Record<string, Record<string, MonthlyClient[]>> = {};
         const extractNumber = (address: string | null) => address ? `Apto/Casa ${address.match(/\d+/)?.[0] || address}` : 'Endereço não informado';
         
-        appointments.forEach(appt => {
-            const condo = appt.condominium;
-            const number = extractNumber(appt.owner_address);
+        monthlyClients.forEach(client => {
+            const condo = client.condominium || 'Sem Condomínio';
+            const number = extractNumber(client.owner_address);
             if (!groups[condo]) groups[condo] = {};
             if (!groups[condo][number]) groups[condo][number] = [];
-            groups[condo][number].push(appt);
+            groups[condo][number].push(client);
         });
         return groups;
-    }, [appointments]);
+    }, [monthlyClients]);
 
     const toggleCondo = (condoName: string) => {
         setExpandedCondos(prev => prev.includes(condoName) ? prev.filter(c => c !== condoName) : [...prev, condoName]);
@@ -1436,16 +1463,15 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
 
     return (
         <div className="animate-fadeIn">
-            {selectedForDetails && <PetMovelAppointmentDetailsModal appointment={selectedForDetails} onClose={() => setSelectedForDetails(null)} onEdit={setSelectedForEdit} onDelete={setSelectedForDelete} />}
-            {selectedForEdit && <EditPetMovelAppointmentModal appointment={selectedForEdit} onClose={() => setSelectedForEdit(null)} onAppointmentUpdated={handleAppointmentUpdated} />}
-            {selectedForDelete && <ConfirmationModal isOpen={!!selectedForDelete} onClose={() => setSelectedForDelete(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o agendamento para ${selectedForDelete.pet_name}?`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
+            {selectedForEdit && <EditMonthlyClientModal client={selectedForEdit} onClose={() => setSelectedForEdit(null)} onMonthlyClientUpdated={handleClientUpdated} />}
+            {selectedForDelete && <ConfirmationModal isOpen={!!selectedForDelete} onClose={() => setSelectedForDelete(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o mensalista ${selectedForDelete.pet_name}?`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
             
             <h2 className="text-3xl font-bold text-gray-800 mb-6">Agenda Pet Móvel</h2>
             {loading ? <div className="flex justify-center py-16"><LoadingSpinner /></div> : (
-                Object.keys(groupedAppointments).length === 0 ? (
-                    <div className="text-center py-16 bg-white rounded-lg shadow-sm"><p className="text-gray-500 text-lg">Nenhum agendamento do Pet Móvel encontrado.</p></div>
+                Object.keys(groupedClients).length === 0 ? (
+                    <div className="text-center py-16 bg-white rounded-lg shadow-sm"><p className="text-gray-500 text-lg">Nenhum mensalista Pet Móvel encontrado.</p></div>
                 ) : (
-                    Object.entries(groupedAppointments).map(([condo, apts]) => (
+                    Object.entries(groupedClients).map(([condo, clients]) => (
                         <div key={condo} className="bg-white rounded-2xl shadow-md mb-6 overflow-hidden">
                             <button onClick={() => toggleCondo(condo)} className="w-full text-left p-4 flex justify-between items-center bg-gray-50 hover:bg-gray-100 focus:outline-none">
                                 <h3 className="text-2xl font-bold text-pink-700">{condo}</h3>
@@ -1453,17 +1479,28 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
                             </button>
                             {expandedCondos.includes(condo) && (
                                 <div className="p-4 space-y-6 animate-fadeIn">
-                                    {Object.entries(apts).map(([number, apptList]) => (
+                                    {Object.entries(clients).map(([number, clientList]) => (
                                         <div key={number} className="pl-4 border-l-4 border-pink-200">
                                             <h4 className="font-semibold text-gray-700">{number}</h4>
                                             <div className="mt-2 space-y-2">
-                                                {apptList.map(appt => (
-                                                    <div key={appt.id} onClick={() => setSelectedForDetails(appt)} className="p-3 bg-rose-50 rounded-lg flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 cursor-pointer hover:bg-rose-100">
-                                                        <div className="flex-1"><p className="font-bold text-gray-800">{appt.pet_name}</p><p className="text-base text-gray-600">{appt.service}</p><p className="text-xs text-gray-500 sm:hidden">{appt.owner_name}</p></div>
-                                                        <div className="flex-1 text-left sm:text-right"><p className="text-sm font-semibold text-gray-800">{new Date(appt.appointment_time).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit'})} às {new Date(appt.appointment_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}</p><p className="text-xs text-gray-500 hidden sm:block">{appt.owner_name}</p></div>
-                                                        <div className="flex items-center gap-1 self-end sm:self-center" onClick={e => e.stopPropagation()}>
-                                                            <button onClick={() => setSelectedForEdit(appt)} className="p-2 rounded-full text-gray-500 hover:bg-gray-200 transition-colors" aria-label="Editar"><EditIcon /></button>
-                                                            <button onClick={() => setSelectedForDelete(appt)} className="p-2 rounded-full text-red-500 hover:bg-red-100 transition-colors" aria-label="Excluir"><DeleteIcon /></button>
+                                                {clientList.map(client => (
+                                                    <div key={client.id} className="p-3 bg-rose-50 rounded-lg flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                                                        <div className="flex-1">
+                                                            <p className="font-bold text-gray-800">{client.pet_name}</p>
+                                                            <p className="text-base text-gray-600">{client.service}</p>
+                                                            <p className="text-xs text-gray-500 sm:hidden">{client.owner_name}</p>
+                                                        </div>
+                                                        <div className="flex-1 text-left sm:text-right">
+                                                            <p className="text-sm font-semibold text-gray-800">
+                                                                {client.recurrence_type === 'weekly' ? 'Semanal' : 
+                                                                 client.recurrence_type === 'bi-weekly' ? 'Quinzenal' : 'Mensal'}
+                                                            </p>
+                                                            <p className="text-xs text-gray-500 hidden sm:block">{client.owner_name}</p>
+                                                            <p className="text-xs text-gray-500">R$ {client.price.toFixed(2).replace('.', ',')}</p>
+                                                        </div>
+                                                        <div className="flex items-center gap-1 self-end sm:self-center">
+                                                            <button onClick={() => setSelectedForEdit(client)} className="p-2 rounded-full text-gray-500 hover:bg-gray-200 transition-colors" aria-label="Editar"><EditIcon /></button>
+                                                            <button onClick={() => setSelectedForDelete(client)} className="p-2 rounded-full text-red-500 hover:bg-red-100 transition-colors" aria-label="Excluir"><DeleteIcon /></button>
                                                         </div>
                                                     </div>
                                                 ))}
