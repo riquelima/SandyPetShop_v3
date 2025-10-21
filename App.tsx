@@ -1398,6 +1398,9 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
     const [selectedForDelete, setSelectedForDelete] = useState<MonthlyClient | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [searchTerm, setSearchTerm] = useState<string>('');
+    const [selectedClientForAppointments, setSelectedClientForAppointments] = useState<MonthlyClient | null>(null);
+    const [clientAppointments, setClientAppointments] = useState<AdminAppointment[]>([]);
+    const [loadingAppointments, setLoadingAppointments] = useState(false);
 
     const fetchMonthlyClients = useCallback(async () => {
         setLoading(true);
@@ -1438,9 +1441,42 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
         fetchMonthlyClients();
     }, [fetchMonthlyClients, key]);
 
+    const fetchClientAppointments = useCallback(async (clientId: string) => {
+        setLoadingAppointments(true);
+        try {
+            const { data, error } = await supabase
+                .from('appointments')
+                .select('*')
+                .eq('monthly_client_id', clientId)
+                .order('appointment_time', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching client appointments:', error);
+                setClientAppointments([]);
+            } else {
+                setClientAppointments(data as AdminAppointment[]);
+            }
+        } catch (error) {
+            console.error('Error fetching client appointments:', error);
+            setClientAppointments([]);
+        } finally {
+            setLoadingAppointments(false);
+        }
+    }, []);
+
     const handleClientUpdated = (updatedClient: MonthlyClient) => {
         setMonthlyClients(prev => prev.map(client => client.id === updatedClient.id ? updatedClient : client));
         setSelectedForEdit(null);
+    };
+
+    const handleOpenAppointmentsModal = async (client: MonthlyClient) => {
+        setSelectedClientForAppointments(client);
+        await fetchClientAppointments(client.id);
+    };
+
+    const handleCloseAppointmentsModal = () => {
+        setSelectedClientForAppointments(null);
+        setClientAppointments([]);
     };
 
     const handleConfirmDelete = async () => {
@@ -1499,85 +1535,191 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
     }, [searchTerm, groupedClients]);
 
     return (
-        <div className="animate-fadeIn">
+        <div className="animate-fadeIn bg-gray-50 min-h-screen p-6">
             {selectedForEdit && <EditMonthlyClientModal client={selectedForEdit} onClose={() => setSelectedForEdit(null)} onMonthlyClientUpdated={handleClientUpdated} />}
             {selectedForDelete && <ConfirmationModal isOpen={!!selectedForDelete} onClose={() => setSelectedForDelete(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o mensalista ${selectedForDelete.pet_name}?`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
             
-            <h2 className="text-3xl font-bold text-gray-800 mb-6">Agenda Pet Móvel</h2>
-            
-            {/* Campo de Busca */}
-            <div className="mb-6">
-                <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <SearchIcon />
+            {/* Header com título e estatísticas */}
+            <div className="bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl p-6 text-white shadow-lg mb-6">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div>
+                        <h2 className="text-3xl lg:text-4xl font-bold mb-2">Pet Móvel</h2>
+                        <p className="text-pink-100">Gerencie seus clientes Pet Móvel</p>
                     </div>
-                    <input
-                        type="text"
-                        placeholder="Buscar por nome do pet, proprietário ou condomínio..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="block w-full pl-12 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-pink-500 focus:border-pink-500 text-base"
-                    />
-                    {searchTerm && (
-                        <button
-                            onClick={() => setSearchTerm('')}
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    <div className="flex flex-wrap gap-4">
+                        <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 text-center min-w-[100px]">
+                            <div className="text-2xl font-bold">{Object.values(groupedClients).reduce((total, clients) => total + Object.values(clients).reduce((sum, list) => sum + list.length, 0), 0)}</div>
+                            <div className="text-sm text-pink-100">Total Clientes</div>
+                        </div>
+                        <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 text-center min-w-[100px]">
+                            <div className="text-2xl font-bold">{Object.keys(groupedClients).length}</div>
+                            <div className="text-sm text-pink-100">Condomínios</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Barra de busca e filtros */}
+            <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+                <div className="flex flex-col lg:flex-row gap-4">
+                    <div className="relative flex-1">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <SearchIcon className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Digite sua busca"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="block w-full pl-12 pr-10 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-base"
+                        />
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm('')}
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                            >
+                                <CloseIcon />
+                            </button>
+                        )}
+                    </div>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => setExpandedCondos(Object.keys(groupedClients))}
+                            className="px-4 py-2 bg-pink-100 text-pink-700 rounded-lg hover:bg-pink-200 transition-colors font-medium"
                         >
-                            <CloseIcon />
+                            Expandir Todos
                         </button>
-                    )}
+                        <button 
+                            onClick={() => setExpandedCondos([])}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                        >
+                            Recolher Todos
+                        </button>
+                    </div>
                 </div>
             </div>
             
-            {loading ? <div className="flex justify-center py-16"><LoadingSpinner /></div> : (
-                Object.keys(groupedClients).length === 0 ? (
-                    <div className="text-center py-16 bg-white rounded-lg shadow-sm">
-                        <p className="text-gray-500 text-lg">
+            {loading ? (
+                <div className="flex justify-center py-16">
+                    <LoadingSpinner />
+                </div>
+            ) : Object.keys(groupedClients).length === 0 ? (
+                <div className="text-center py-16 bg-white rounded-xl shadow-sm">
+                    <div className="max-w-md mx-auto">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <SearchIcon className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                            {searchTerm.trim() ? 'Nenhum resultado encontrado' : 'Nenhum cliente encontrado'}
+                        </h3>
+                        <p className="text-gray-500 mb-4">
                             {searchTerm.trim() ? 
-                                `Nenhum resultado encontrado para "${searchTerm}"` : 
-                                'Nenhum mensalista Pet Móvel encontrado.'
+                                `Não encontramos resultados para "${searchTerm}"` : 
+                                'Não há mensalistas Pet Móvel cadastrados ainda.'
                             }
                         </p>
                         {searchTerm.trim() && (
                             <button 
                                 onClick={() => setSearchTerm('')}
-                                className="mt-3 text-pink-600 hover:text-pink-800 underline"
+                                className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
                             >
                                 Limpar busca
                             </button>
                         )}
                     </div>
-                ) : (
-                    Object.entries(groupedClients).map(([condo, clients]) => (
-                        <div key={condo} className="bg-white rounded-2xl shadow-md mb-6 overflow-hidden">
-                            <button onClick={() => toggleCondo(condo)} className="w-full text-left p-4 flex justify-between items-center bg-gray-50 hover:bg-gray-100 focus:outline-none">
-                                <h3 className="text-2xl font-bold text-pink-700">{condo}</h3>
-                                <ChevronRightIcon className={`h-8 w-8 transform transition-transform ${expandedCondos.includes(condo) ? 'rotate-90' : ''}`} />
+                </div>
+            ) : (
+                <div className="space-y-6">
+                    {Object.entries(groupedClients).map(([condo, clients]) => (
+                        <div key={condo} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+                            <button 
+                                onClick={() => toggleCondo(condo)} 
+                                className="w-full text-left p-6 flex justify-between items-center hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-colors"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                                        {condo.charAt(0)}
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-gray-800">{condo}</h3>
+                                        <p className="text-sm text-gray-500">
+                                            {Object.values(clients).reduce((sum, list) => sum + list.length, 0)} clientes
+                                        </p>
+                                    </div>
+                                </div>
+                                <ChevronRightIcon className={`h-6 w-6 text-gray-400 transform transition-transform ${expandedCondos.includes(condo) ? 'rotate-90' : ''}`} />
                             </button>
+                            
                             {expandedCondos.includes(condo) && (
-                                <div className="p-4 space-y-6 animate-fadeIn">
+                                <div className="border-t border-gray-100 bg-gray-50/50 animate-fadeIn">
                                     {Object.entries(clients).map(([number, clientList]) => (
-                                        <div key={number} className="pl-4 border-l-4 border-pink-200">
-                                            <h4 className="font-semibold text-gray-700">{number}</h4>
-                                            <div className="mt-2 space-y-2">
+                                        <div key={number} className="p-6 border-b border-gray-100 last:border-b-0">
+                                            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                                                 {clientList.map(client => (
-                                                    <div key={client.id} className="p-3 bg-rose-50 rounded-lg flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-                                                        <div className="flex-1">
-                                                            <p className="font-bold text-gray-800">{client.pet_name}</p>
-                                                            <p className="text-base text-gray-600">{client.service}</p>
-                                                            <p className="text-xs text-gray-500 sm:hidden">{client.owner_name}</p>
+                                                    <div 
+                                                        key={client.id} 
+                                                        className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
+                                                        onClick={() => handleOpenAppointmentsModal(client)}
+                                                    >
+                                                        <div className="flex items-start justify-between mb-3">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-10 h-10 bg-gradient-to-br from-pink-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                                                                    {client.pet_name.charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <div>
+                                                                    <h5 className="font-bold text-gray-800">{client.pet_name}</h5>
+                                                                    <p className="text-sm text-gray-500">{client.owner_name}</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex gap-1">
+                                                                <button 
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setSelectedForEdit(client);
+                                                                    }} 
+                                                                    className="p-1.5 rounded-lg text-gray-400 hover:text-pink-600 hover:bg-pink-50 transition-colors" 
+                                                                    aria-label="Editar"
+                                                                >
+                                                                    <EditIcon className="w-4 h-4" />
+                                                                </button>
+                                                                <button 
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setSelectedForDelete(client);
+                                                                    }} 
+                                                                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" 
+                                                                    aria-label="Excluir"
+                                                                >
+                                                                    <DeleteIcon className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                        <div className="flex-1 text-left sm:text-right">
-                                                            <p className="text-sm font-semibold text-gray-800">
-                                                                {client.recurrence_type === 'weekly' ? 'Semanal' : 
-                                                                 client.recurrence_type === 'bi-weekly' ? 'Quinzenal' : 'Mensal'}
-                                                            </p>
-                                                            <p className="text-xs text-gray-500 hidden sm:block">{client.owner_name}</p>
-                                                            <p className="text-xs text-gray-500">R$ {client.price.toFixed(2).replace('.', ',')}</p>
-                                                        </div>
-                                                        <div className="flex items-center gap-1 self-end sm:self-center">
-                                                            <button onClick={() => setSelectedForEdit(client)} className="p-2 rounded-full text-gray-500 hover:bg-gray-200 transition-colors" aria-label="Editar"><EditIcon /></button>
-                                                            <button onClick={() => setSelectedForDelete(client)} className="p-2 rounded-full text-red-500 hover:bg-red-100 transition-colors" aria-label="Excluir"><DeleteIcon /></button>
+                                                        
+                                                        <div className="space-y-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-2 h-2 bg-pink-400 rounded-full"></div>
+                                                                <p className="text-sm text-gray-600">{client.service}</p>
+                                                            </div>
+                                                            
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                                                                    <p className="text-sm text-gray-600">
+                                                                        {client.recurrence_type === 'weekly' ? 'Semanal' : 
+                                                                         client.recurrence_type === 'bi-weekly' ? 'Quinzenal' : 'Mensal'}
+                                                                    </p>
+                                                                </div>
+                                                                <p className="text-sm font-semibold text-green-600">
+                                                                    R$ {client.price.toFixed(2).replace('.', ',')}
+                                                                </p>
+                                                            </div>
+                                                            
+                                                            {client.owner_address && (
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                                                                    <p className="text-xs text-gray-500 truncate">{client.owner_address}</p>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 ))}
@@ -1587,11 +1729,117 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
                                 </div>
                             )}
                         </div>
-                    ))
-                )
+                    ))}
+                </div>
             )}
             
-
+            {/* Modal de Agendamentos do Cliente */}
+            {selectedClientForAppointments && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+                        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-pink-500 to-purple-600 text-white">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <h2 className="text-2xl font-bold">Agendamentos de {selectedClientForAppointments.pet_name}</h2>
+                                    <p className="text-pink-100 mt-1">Tutor: {selectedClientForAppointments.owner_name}</p>
+                                </div>
+                                <button 
+                                    onClick={handleCloseAppointmentsModal} 
+                                    className="p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors"
+                                >
+                                    <CloseIcon className="w-6 h-6" />
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                            {loadingAppointments ? (
+                                <div className="flex justify-center py-12">
+                                    <LoadingSpinner />
+                                </div>
+                            ) : clientAppointments.length > 0 ? (
+                                <div className="space-y-4">
+                                    <div className="grid gap-4">
+                                        {clientAppointments.map(appointment => (
+                                            <div key={appointment.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 bg-gradient-to-br from-pink-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                                                            <ClockIcon className="w-5 h-5" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-semibold text-gray-800">
+                                                                {new Date(appointment.appointment_time).toLocaleDateString('pt-BR', {
+                                                                    day: '2-digit',
+                                                                    month: 'long',
+                                                                    year: 'numeric',
+                                                                    timeZone: 'America/Sao_Paulo'
+                                                                })}
+                                                            </h4>
+                                                            <p className="text-sm text-gray-600">
+                                                                {new Date(appointment.appointment_time).toLocaleTimeString('pt-BR', {
+                                                                    hour: '2-digit',
+                                                                    minute: '2-digit',
+                                                                    timeZone: 'America/Sao_Paulo'
+                                                                })}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                                        appointment.status === 'CONCLUÍDO' 
+                                                            ? 'bg-green-100 text-green-800' 
+                                                            : 'bg-blue-100 text-blue-800'
+                                                    }`}>
+                                                        {appointment.status}
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                                    <div>
+                                                        <p className="text-gray-500 font-medium">Serviço</p>
+                                                        <p className="text-gray-800">{appointment.service}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-gray-500 font-medium">Peso</p>
+                                                        <p className="text-gray-800">{appointment.weight}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-gray-500 font-medium">Preço</p>
+                                                        <p className="text-green-600 font-semibold">
+                                                            R$ {Number(appointment.price || 0).toFixed(2).replace('.', ',')}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                
+                                                {appointment.addons && appointment.addons.length > 0 && (
+                                                    <div className="mt-3 pt-3 border-t border-gray-200">
+                                                        <p className="text-gray-500 font-medium text-sm mb-2">Adicionais</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {appointment.addons.map((addon, index) => (
+                                                                <span key={index} className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">
+                                                                    {addon}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center py-12">
+                                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <CalendarIcon className="w-8 h-8 text-gray-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Nenhum agendamento encontrado</h3>
+                                    <p className="text-gray-500">Este cliente ainda não possui agendamentos registrados.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
