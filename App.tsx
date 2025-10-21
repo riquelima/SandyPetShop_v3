@@ -1397,9 +1397,11 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
     const [selectedForEdit, setSelectedForEdit] = useState<MonthlyClient | null>(null);
     const [selectedForDelete, setSelectedForDelete] = useState<MonthlyClient | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [searchTerm, setSearchTerm] = useState<string>('');
 
     const fetchMonthlyClients = useCallback(async () => {
         setLoading(true);
+        
         const { data, error } = await supabase
             .from('monthly_clients')
             .select('*')
@@ -1409,13 +1411,24 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
         if (error) {
             console.error('Error fetching monthly clients:', error);
         } else {
-            // Filter only Pet Móvel clients
-            const petMovelClients = (data as MonthlyClient[]).filter(client => 
-                client.service && client.service.includes('Pet Móvel')
-            );
+            // Filter clients by specific condominiums for Pet Móvel
+            const petMovelCondominiums = ['Paseo', 'Max Haus', 'Vitta'];
+            
+            const petMovelClients = (data as MonthlyClient[]).filter(client => {
+                if (!client.condominium) return false;
+                
+                // Normalize condominium name for comparison
+                const condominium = String(client.condominium).trim();
+                
+                // Check if the client's condominium matches any of the Pet Móvel condominiums
+                return petMovelCondominiums.some(targetCondo => 
+                    condominium.toLowerCase().includes(targetCondo.toLowerCase())
+                );
+            });
+            
             setMonthlyClients(petMovelClients);
             if (petMovelClients && petMovelClients.length > 0) {
-                setExpandedCondos([petMovelClients[0].condominium]);
+                setExpandedCondos([petMovelClients[0].condominium || 'Sem Condomínio']);
             }
         }
         setLoading(false);
@@ -1447,7 +1460,23 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
         const groups: Record<string, Record<string, MonthlyClient[]>> = {};
         const extractNumber = (address: string | null) => address ? `Apto/Casa ${address.match(/\d+/)?.[0] || address}` : 'Endereço não informado';
         
-        monthlyClients.forEach(client => {
+        // Filtrar clientes baseado no termo de busca
+        const filteredClients = monthlyClients.filter(client => {
+            if (!searchTerm.trim()) return true;
+            
+            const searchLower = searchTerm.toLowerCase().trim();
+            const petName = (client.pet_name || '').toLowerCase();
+            const ownerName = (client.owner_name || '').toLowerCase();
+            const condominium = (client.condominium || '').toLowerCase();
+            const address = (client.owner_address || '').toLowerCase();
+            
+            return petName.includes(searchLower) || 
+                   ownerName.includes(searchLower) || 
+                   condominium.includes(searchLower) ||
+                   address.includes(searchLower);
+        });
+        
+        filteredClients.forEach(client => {
             const condo = client.condominium || 'Sem Condomínio';
             const number = extractNumber(client.owner_address);
             if (!groups[condo]) groups[condo] = {};
@@ -1455,11 +1484,19 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
             groups[condo][number].push(client);
         });
         return groups;
-    }, [monthlyClients]);
+    }, [monthlyClients, searchTerm]);
 
     const toggleCondo = (condoName: string) => {
         setExpandedCondos(prev => prev.includes(condoName) ? prev.filter(c => c !== condoName) : [...prev, condoName]);
     };
+
+    // Expandir automaticamente todos os condomínios quando há busca ativa
+    useEffect(() => {
+        if (searchTerm.trim()) {
+            const allCondos = Object.keys(groupedClients);
+            setExpandedCondos(allCondos);
+        }
+    }, [searchTerm, groupedClients]);
 
     return (
         <div className="animate-fadeIn">
@@ -1467,9 +1504,49 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
             {selectedForDelete && <ConfirmationModal isOpen={!!selectedForDelete} onClose={() => setSelectedForDelete(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o mensalista ${selectedForDelete.pet_name}?`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
             
             <h2 className="text-3xl font-bold text-gray-800 mb-6">Agenda Pet Móvel</h2>
+            
+            {/* Campo de Busca */}
+            <div className="mb-6">
+                <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <SearchIcon />
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Buscar por nome do pet, proprietário ou condomínio..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="block w-full pl-12 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-pink-500 focus:border-pink-500 text-base"
+                    />
+                    {searchTerm && (
+                        <button
+                            onClick={() => setSearchTerm('')}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                        >
+                            <CloseIcon />
+                        </button>
+                    )}
+                </div>
+            </div>
+            
             {loading ? <div className="flex justify-center py-16"><LoadingSpinner /></div> : (
                 Object.keys(groupedClients).length === 0 ? (
-                    <div className="text-center py-16 bg-white rounded-lg shadow-sm"><p className="text-gray-500 text-lg">Nenhum mensalista Pet Móvel encontrado.</p></div>
+                    <div className="text-center py-16 bg-white rounded-lg shadow-sm">
+                        <p className="text-gray-500 text-lg">
+                            {searchTerm.trim() ? 
+                                `Nenhum resultado encontrado para "${searchTerm}"` : 
+                                'Nenhum mensalista Pet Móvel encontrado.'
+                            }
+                        </p>
+                        {searchTerm.trim() && (
+                            <button 
+                                onClick={() => setSearchTerm('')}
+                                className="mt-3 text-pink-600 hover:text-pink-800 underline"
+                            >
+                                Limpar busca
+                            </button>
+                        )}
+                    </div>
                 ) : (
                     Object.entries(groupedClients).map(([condo, clients]) => (
                         <div key={condo} className="bg-white rounded-2xl shadow-md mb-6 overflow-hidden">
@@ -1513,6 +1590,8 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
                     ))
                 )
             )}
+            
+
         </div>
     );
 };
