@@ -665,7 +665,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                             </div>
                             <div className="w-full p-3 border rounded-lg bg-gray-100 flex justify-between items-center">
                                 <span className="font-semibold text-gray-700">Preço do Pacote Mensal:</span>
-                                <span className="font-bold text-2xl text-gray-900">R$ {packagePrice.toFixed(2).replace('.', ',')}</span>
+                                <span className="font-bold text-2xl text-gray-900">R$ {(packagePrice ?? 0).toFixed(2).replace('.', ',')}</span>
                             </div>
                         </div>
                     )}
@@ -707,7 +707,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                                 <p><strong>Responsável:</strong> {formData.ownerName}</p>
                                 <p><strong>Serviços:</strong> {getPackageDetails().serviceString || 'Nenhum'}</p>
                                 <p><strong>Peso:</strong> {selectedWeight ? PET_WEIGHT_OPTIONS[selectedWeight] : 'Nenhum'}</p>
-                                <p className="mt-2 pt-2 border-t font-bold text-lg"><strong>Preço do Pacote: R$ {packagePrice.toFixed(2).replace('.', ',')}</strong></p>
+                                <p className="mt-2 pt-2 border-t font-bold text-lg"><strong>Preço do Pacote: R$ {(packagePrice ?? 0).toFixed(2).replace('.', ',')}</strong></p>
                              </div>
                         </div>
                     )}
@@ -814,6 +814,722 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
     );
 };
 
+const AdminAddAppointmentModal: React.FC<{ 
+    isOpen: boolean; 
+    onClose: () => void; 
+    onAppointmentCreated: () => void; 
+}> = ({ isOpen, onClose, onAppointmentCreated }) => {
+    const [step, setStep] = useState(1);
+    const [formData, setFormData] = useState({ 
+        petName: '', 
+        ownerName: '', 
+        whatsapp: '', 
+        petBreed: '', 
+        ownerAddress: '' 
+    });
+    const [selectedService, setSelectedService] = useState<ServiceType | null>(null);
+    const [serviceStepView, setServiceStepView] = useState<'main' | 'bath_groom' | 'pet_movel' | 'pet_movel_condo'>('main');
+    const [selectedCondo, setSelectedCondo] = useState<string | null>(null);
+    const [selectedWeight, setSelectedWeight] = useState<PetWeight | null>(null);
+    const [selectedAddons, setSelectedAddons] = useState<Record<string, boolean>>({});
+    const [totalPrice, setTotalPrice] = useState(0);
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [selectedTime, setSelectedTime] = useState<number | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [allowedDays, setAllowedDays] = useState<number[] | undefined>(undefined);
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
+
+    const isVisitService = useMemo(() => 
+        selectedService === ServiceType.VISIT_DAYCARE || selectedService === ServiceType.VISIT_HOTEL,
+        [selectedService]
+    );
+    
+    const isPetMovel = useMemo(() => serviceStepView === 'pet_movel', [serviceStepView]);
+
+    // Reset form when modal opens/closes
+    useEffect(() => {
+        if (isOpen) {
+            setStep(1);
+            setFormData({ petName: '', ownerName: '', whatsapp: '', petBreed: '', ownerAddress: '' });
+            setSelectedService(null);
+            setServiceStepView('main');
+            setSelectedCondo(null);
+            setSelectedWeight(null);
+            setSelectedAddons({});
+            setTotalPrice(0);
+            setSelectedDate(new Date());
+            setSelectedTime(null);
+            setIsSubmitting(false);
+            setAllowedDays(undefined);
+        }
+    }, [isOpen]);
+
+    // Fetch appointments for time slot validation
+    useEffect(() => {
+        const fetchAppointments = async () => {
+            const { data: regularData, error: regularError } = await supabase
+                .from('appointments')
+                .select('*');
+
+            if (regularError) {
+                console.error('Error fetching appointments:', regularError);
+                return;
+            }
+
+            const { data: petMovelData, error: petMovelError } = await supabase
+                .from('pet_movel_appointments')
+                .select('*');
+
+            if (petMovelError) {
+                console.error('Error fetching pet_movel_appointments:', petMovelError);
+                return;
+            }
+            
+            const combinedData = [...(regularData || []), ...(petMovelData || [])];
+
+            if (combinedData.length > 0) {
+                const allAppointments: Appointment[] = combinedData
+                    .map((dbRecord: any) => {
+                        const serviceKey = Object.keys(SERVICES).find(key => SERVICES[key as ServiceType].label === dbRecord.service) as ServiceType | undefined;
+                        
+                        if (!serviceKey) {
+                            return null;
+                        }
+                
+                        return {
+                            id: dbRecord.id,
+                            petName: dbRecord.pet_name,
+                            ownerName: dbRecord.owner_name,
+                            whatsapp: dbRecord.whatsapp,
+                            service: serviceKey,
+                            appointmentTime: new Date(dbRecord.appointment_time),
+                        };
+                    })
+                    .filter((app): app is Appointment => app !== null);
+                
+                setAppointments(allAppointments);
+            }
+        };
+
+        if (isOpen) {
+            fetchAppointments();
+        }
+    }, [isOpen]);
+
+    // Calendar day restrictions based on service type
+    useEffect(() => {
+        if (step === 3) {
+            if (serviceStepView === 'bath_groom') {
+                setAllowedDays([1, 2]); // Monday and Tuesday
+            } else if (serviceStepView === 'pet_movel' && selectedCondo) {
+                switch (selectedCondo) {
+                    case 'Vitta Parque':
+                        setAllowedDays([3]); // Wednesday
+                        break;
+                    case 'Maxhaus':
+                        setAllowedDays([4]); // Thursday
+                        break;
+                    case 'Paseo':
+                        setAllowedDays([5]); // Friday
+                        break;
+                    default:
+                        setAllowedDays(undefined);
+                }
+            } else {
+                setAllowedDays(undefined);
+            }
+        }
+    }, [step, serviceStepView, selectedCondo]);
+
+    // Reset selected time when date or service changes
+    useEffect(() => { 
+        setSelectedTime(null); 
+    }, [selectedDate, selectedService]);
+
+    // Calculate total price
+    useEffect(() => {
+        if (isVisitService) {
+            setTotalPrice(0);
+            return;
+        }
+        
+        if (!selectedService || !selectedWeight) {
+            setTotalPrice(0);
+            return;
+        }
+
+        let basePrice = 0;
+        
+        const isRegularService = [ServiceType.BATH, ServiceType.GROOMING_ONLY, ServiceType.BATH_AND_GROOMING].includes(selectedService);
+        const isMobileService = [ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_BATH_AND_GROOMING, ServiceType.PET_MOBILE_GROOMING_ONLY].includes(selectedService);
+
+        if (isRegularService || isMobileService) {
+            const prices = SERVICE_PRICES[selectedWeight];
+            if (prices) {
+                if (selectedService === ServiceType.BATH || selectedService === ServiceType.PET_MOBILE_BATH) {
+                    basePrice = prices[ServiceType.BATH] ?? 0;
+                } else if (selectedService === ServiceType.GROOMING_ONLY || selectedService === ServiceType.PET_MOBILE_GROOMING_ONLY) {
+                    basePrice = prices[ServiceType.GROOMING_ONLY] ?? 0;
+                } else if (selectedService === ServiceType.BATH_AND_GROOMING || selectedService === ServiceType.PET_MOBILE_BATH_AND_GROOMING) {
+                    basePrice = (prices[ServiceType.BATH] ?? 0) + (prices[ServiceType.GROOMING_ONLY] ?? 0);
+                }
+            }
+        }
+        
+        let addonsPrice = 0;
+        Object.keys(selectedAddons).forEach(addonId => {
+            if (selectedAddons[addonId]) {
+                const addon = ADDON_SERVICES.find(a => a.id === addonId);
+                if (addon) addonsPrice += addon.price;
+            }
+        });
+        setTotalPrice(basePrice + addonsPrice);
+    }, [selectedService, selectedWeight, selectedAddons, isVisitService]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: name === 'whatsapp' ? formatWhatsapp(value) : value }));
+    };
+
+    const handleWeightChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newWeight = e.target.value as PetWeight;
+        setSelectedWeight(newWeight);
+        const newAddons = {...selectedAddons};
+        ADDON_SERVICES.forEach(addon => {
+            if (selectedAddons[addon.id]) {
+                const isExcluded = addon.excludesWeight?.includes(newWeight);
+                const requiresNotMet = addon.requiresWeight && !addon.requiresWeight.includes(newWeight);
+                if(isExcluded || requiresNotMet) newAddons[addon.id] = false;
+            }
+        });
+        setSelectedAddons(newAddons);
+    };
+
+    const handleAddonToggle = (addonId: string) => {
+        const newAddons = { ...selectedAddons };
+        newAddons[addonId] = !newAddons[addonId];
+        if (addonId === 'patacure1' && newAddons[addonId]) newAddons['patacure2'] = false;
+        else if (addonId === 'patacure2' && newAddons[addonId]) newAddons['patacure1'] = false;
+        setSelectedAddons(newAddons);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedService || !selectedTime) return;
+        setIsSubmitting(true);
+        
+        const year = selectedDate.getFullYear();
+        const month = selectedDate.getMonth();
+        const day = selectedDate.getDate();
+        const appointmentTime = toSaoPauloUTC(year, month, day, selectedTime);
+
+        const isPetMovelSubmit = !!selectedCondo;
+        // FIXED: Always save to 'appointments' table regardless of service type
+        const targetTable = 'appointments';
+        
+        const basePayload = {
+            appointment_time: appointmentTime.toISOString(),
+            pet_name: formData.petName,
+            pet_breed: formData.petBreed,
+            owner_name: formData.ownerName,
+            whatsapp: formData.whatsapp,
+            service: SERVICES[selectedService].label,
+            weight: isVisitService ? 'N/A' : (selectedWeight ? PET_WEIGHT_OPTIONS[selectedWeight] : 'N/A'),
+            addons: isVisitService ? [] : ADDON_SERVICES.filter(addon => selectedAddons[addon.id]).map(addon => addon.label),
+            price: totalPrice,
+            status: 'AGENDADO'
+        };
+        
+        // Always include owner_address and condominium fields (they can be null for regular services)
+        const supabasePayload = {
+            ...basePayload, 
+            owner_address: formData.ownerAddress || null,
+            condominium: selectedCondo || null
+        };
+
+        try {
+            // Check for appointment conflicts (now applies to all services since all are saved in appointments table)
+            const { data: existingAppointments, error: conflictError } = await supabase
+                .from('appointments')
+                .select('appointment_time, pet_name, owner_name')
+                .eq('appointment_time', appointmentTime.toISOString())
+                .eq('status', 'AGENDADO');
+
+            if (conflictError) {
+                console.error('Erro ao verificar conflitos:', conflictError);
+            } else if (existingAppointments && existingAppointments.length >= MAX_CAPACITY_PER_SLOT) {
+                throw new Error(`Este horário já está lotado! Máximo de ${MAX_CAPACITY_PER_SLOT} agendamentos simultâneos permitidos.`);
+            }
+
+            // Check if the same pet already has an appointment at the same time
+            const duplicateAppointment = existingAppointments?.find(apt => 
+                apt.pet_name.toLowerCase() === formData.petName.toLowerCase() && 
+                apt.owner_name.toLowerCase() === formData.ownerName.toLowerCase()
+            );
+
+            if (duplicateAppointment) {
+                throw new Error(`O pet ${formData.petName} já possui um agendamento neste horário!`);
+            }
+
+            const { data: newDbAppointment, error: supabaseError } = await supabase.from(targetTable).insert([supabasePayload]).select().single();
+            if (supabaseError) throw supabaseError;
+
+            // Auto-register client if not exists
+            try {
+                const { data: existingClient } = await supabase
+                    .from('clients')
+                    .select('id')
+                    .eq('phone', supabasePayload.whatsapp)
+                    .limit(1)
+                    .single();
+
+                if (!existingClient) {
+                    const { error: clientInsertError } = await supabase
+                        .from('clients')
+                        .insert({ 
+                            name: supabasePayload.owner_name, 
+                            phone: supabasePayload.whatsapp 
+                        });
+                    if (clientInsertError) {
+                        console.error('Failed to auto-register client:', clientInsertError.message);
+                    }
+                }
+            } catch (error) {
+                console.error('An error occurred during client auto-registration:', error);
+            }
+            
+            // Send webhook notification
+            try {
+                const webhookUrl = 'https://n8n.intelektus.tech/webhook/servicoAgendado';
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(supabasePayload),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Webhook (servicoAgendado) failed with status ${response.status}`);
+                }
+            } catch (webhookError) {
+                console.error('Error sending new appointment webhook:', webhookError);
+            }
+
+            // Success - close modal and refresh appointments
+            onAppointmentCreated();
+            onClose();
+        } catch (error: any) {
+            console.error("Error submitting appointment:", error);
+            alert(error.message || 'Não foi possível concluir o agendamento. Tente novamente.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const isStep1Valid = formData.petName && formData.ownerName && formData.whatsapp.length > 13 && formData.petBreed && formData.ownerAddress;
+    const isStep2Valid = serviceStepView !== 'main' && selectedService && (isVisitService || selectedWeight);
+    const isStep3Valid = selectedTime !== null;
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold text-gray-800">Adicionar Agendamento</h2>
+                        <button
+                            onClick={onClose}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                            <CloseIcon />
+                        </button>
+                    </div>
+
+                    {/* Progress indicator */}
+                    <div className="flex items-center justify-center mb-8">
+                        <div className="flex items-center space-x-4">
+                            {[1, 2, 3].map((stepNumber) => (
+                                <div key={stepNumber} className="flex items-center">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                                        step >= stepNumber ? 'bg-pink-600 text-white' : 'bg-gray-200 text-gray-600'
+                                    }`}>
+                                        {stepNumber}
+                                    </div>
+                                    {stepNumber < 3 && (
+                                        <div className={`w-12 h-1 mx-2 ${
+                                            step > stepNumber ? 'bg-pink-600' : 'bg-gray-200'
+                                        }`} />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <form onSubmit={handleSubmit}>
+                        {/* Step 1: Pet and Owner Information */}
+                        {step === 1 && (
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações do Pet e Tutor</h3>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Pet</label>
+                                    <input
+                                        type="text"
+                                        name="petName"
+                                        value={formData.petName}
+                                        onChange={handleInputChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Raça do Pet</label>
+                                    <input
+                                        type="text"
+                                        name="petBreed"
+                                        value={formData.petBreed}
+                                        onChange={handleInputChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Tutor</label>
+                                    <input
+                                        type="text"
+                                        name="ownerName"
+                                        value={formData.ownerName}
+                                        onChange={handleInputChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
+                                    <input
+                                        type="tel"
+                                        name="whatsapp"
+                                        value={formData.whatsapp}
+                                        onChange={handleInputChange}
+                                        placeholder="(11) 99999-9999"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
+                                    <input
+                                        type="text"
+                                        name="ownerAddress"
+                                        value={formData.ownerAddress}
+                                        onChange={handleInputChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="flex justify-end pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setStep(2)}
+                                        disabled={!isStep1Valid}
+                                        className="px-6 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        Próximo
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 2: Service Selection */}
+                        {step === 2 && (
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-semibold text-gray-800 mb-4">Seleção de Serviço</h3>
+                                
+                                {serviceStepView === 'main' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setServiceStepView('bath_groom')}
+                                            className="p-4 border-2 border-gray-200 rounded-lg hover:border-pink-500 transition-colors text-left"
+                                        >
+                                            <div className="flex items-center space-x-3">
+                                                <BathTosaIcon />
+                                                <div>
+                                                    <h4 className="font-medium text-gray-800">Banho & Tosa</h4>
+                                                    <p className="text-sm text-gray-600">Serviços de higiene e estética</p>
+                                                </div>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setServiceStepView('pet_movel')}
+                                            className="p-4 border-2 border-gray-200 rounded-lg hover:border-pink-500 transition-colors text-left"
+                                        >
+                                            <div className="flex items-center space-x-3">
+                                                <PetMovelIcon />
+                                                <div>
+                                                    <h4 className="font-medium text-gray-800">Pet Móvel</h4>
+                                                    <p className="text-sm text-gray-600">Atendimento em condomínios</p>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    </div>
+                                )}
+
+                                {serviceStepView === 'bath_groom' && (
+                                    <div className="space-y-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setServiceStepView('main')}
+                                            className="flex items-center text-pink-600 hover:text-pink-700 mb-4"
+                                        >
+                                            <ChevronLeftIcon className="h-4 w-4 mr-1" />
+                                            Voltar
+                                        </button>
+
+                                        <div className="space-y-3">
+                                            {[ServiceType.BATH, ServiceType.GROOMING_ONLY, ServiceType.BATH_AND_GROOMING, ServiceType.VISIT_DAYCARE, ServiceType.VISIT_HOTEL].map((service) => (
+                                                <label key={service} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="service"
+                                                        value={service}
+                                                        checked={selectedService === service}
+                                                        onChange={(e) => setSelectedService(e.target.value as ServiceType)}
+                                                        className="text-pink-600 focus:ring-pink-500"
+                                                    />
+                                                    <span className="text-gray-800">{SERVICES[service].label}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+
+                                        {selectedService && !isVisitService && (
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Porte do Pet</label>
+                                                <select
+                                                    value={selectedWeight || ''}
+                                                    onChange={handleWeightChange}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                                    required
+                                                >
+                                                    <option value="">Selecione o porte</option>
+                                                    {Object.entries(PET_WEIGHT_OPTIONS).map(([key, label]) => (
+                                                        <option key={key} value={key}>{label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+
+                                        {selectedService && selectedWeight && !isVisitService && (
+                                            <div>
+                                                <h4 className="text-sm font-medium text-gray-700 mb-2">Serviços Adicionais</h4>
+                                                <div className="space-y-2">
+                                                    {ADDON_SERVICES.filter(addon => {
+                                                        const isExcluded = addon.excludesWeight?.includes(selectedWeight);
+                                                        const requiresNotMet = addon.requiresWeight && !addon.requiresWeight.includes(selectedWeight);
+                                                        return !isExcluded && !requiresNotMet;
+                                                    }).map((addon) => (
+                                                        <label key={addon.id} className="flex items-center space-x-3 p-2 border rounded hover:bg-gray-50 cursor-pointer">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedAddons[addon.id] || false}
+                                                                onChange={() => handleAddonToggle(addon.id)}
+                                                                className="text-pink-600 focus:ring-pink-500"
+                                                            />
+                                                            <span className="flex-1 text-gray-800">{addon.label}</span>
+                                                            <span className="text-pink-600 font-medium">R$ {addon.price.toFixed(2)}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {totalPrice > 0 && (
+                                            <div className="bg-pink-50 p-4 rounded-lg">
+                                                <div className="text-lg font-semibold text-pink-800">
+                                                    Total: R$ {(totalPrice ?? 0).toFixed(2)}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {serviceStepView === 'pet_movel' && (
+                                    <div className="space-y-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setServiceStepView('main')}
+                                            className="flex items-center text-pink-600 hover:text-pink-700 mb-4"
+                                        >
+                                            <ChevronLeftIcon className="h-4 w-4 mr-1" />
+                                            Voltar
+                                        </button>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Condomínio</label>
+                                            <select
+                                                value={selectedCondo || ''}
+                                                onChange={(e) => setSelectedCondo(e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                                required
+                                            >
+                                                <option value="">Selecione o condomínio</option>
+                                                <option value="Vitta Parque">Vitta Parque</option>
+                                                <option value="Maxhaus">Maxhaus</option>
+                                                <option value="Paseo">Paseo</option>
+                                            </select>
+                                        </div>
+
+                                        {selectedCondo && (
+                                            <div className="space-y-3">
+                                                {[ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_GROOMING_ONLY, ServiceType.PET_MOBILE_BATH_AND_GROOMING].map((service) => (
+                                                    <label key={service} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            name="service"
+                                                            value={service}
+                                                            checked={selectedService === service}
+                                                            onChange={(e) => setSelectedService(e.target.value as ServiceType)}
+                                                            className="text-pink-600 focus:ring-pink-500"
+                                                        />
+                                                        <span className="text-gray-800">{SERVICES[service].label}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {selectedService && selectedCondo && (
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Porte do Pet</label>
+                                                <select
+                                                    value={selectedWeight || ''}
+                                                    onChange={handleWeightChange}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                                    required
+                                                >
+                                                    <option value="">Selecione o porte</option>
+                                                    {Object.entries(PET_WEIGHT_OPTIONS).map(([key, label]) => (
+                                                        <option key={key} value={key}>{label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+
+                                        {selectedService && selectedWeight && selectedCondo && (
+                                            <div>
+                                                <h4 className="text-sm font-medium text-gray-700 mb-2">Serviços Adicionais</h4>
+                                                <div className="space-y-2">
+                                                    {ADDON_SERVICES.filter(addon => {
+                                                        const isExcluded = addon.excludesWeight?.includes(selectedWeight);
+                                                        const requiresNotMet = addon.requiresWeight && !addon.requiresWeight.includes(selectedWeight);
+                                                        return !isExcluded && !requiresNotMet;
+                                                    }).map((addon) => (
+                                                        <label key={addon.id} className="flex items-center space-x-3 p-2 border rounded hover:bg-gray-50 cursor-pointer">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedAddons[addon.id] || false}
+                                                                onChange={() => handleAddonToggle(addon.id)}
+                                                                className="text-pink-600 focus:ring-pink-500"
+                                                            />
+                                                            <span className="flex-1 text-gray-800">{addon.label}</span>
+                                                            <span className="text-pink-600 font-medium">R$ {addon.price.toFixed(2)}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {totalPrice > 0 && (
+                                            <div className="bg-pink-50 p-4 rounded-lg">
+                                                <div className="text-lg font-semibold text-pink-800">
+                                                    Total: R$ {(totalPrice ?? 0).toFixed(2)}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="flex justify-between pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setStep(1)}
+                                        className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                                    >
+                                        Anterior
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setStep(3)}
+                                        disabled={!isStep2Valid}
+                                        className="px-6 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        Próximo
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 3: Date and Time Selection */}
+                        {step === 3 && (
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-semibold text-gray-800 mb-4">Data e Horário</h3>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Data do Agendamento</label>
+                                    <Calendar
+                                        selectedDate={selectedDate}
+                                        onDateChange={setSelectedDate}
+                                        disablePast={true}
+                                        disableWeekends={true}
+                                        allowedDays={allowedDays}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Horário</label>
+                                    <TimeSlotPicker
+                                        selectedDate={selectedDate}
+                                        selectedService={selectedService}
+                                        appointments={appointments}
+                                        onTimeSelect={setSelectedTime}
+                                        selectedTime={selectedTime}
+                                        workingHours={isVisitService ? VISIT_WORKING_HOURS : WORKING_HOURS}
+                                        isPetMovel={isPetMovel}
+                                    />
+                                </div>
+
+                                <div className="flex justify-between pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setStep(2)}
+                                        className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                                    >
+                                        Anterior
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={!isStep3Valid || isSubmitting}
+                                        className="px-6 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+                                    >
+                                        {isSubmitting && <LoadingSpinner />}
+                                        <span>{isSubmitting ? 'Agendando...' : 'Confirmar Agendamento'}</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </form>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 {/* FIX: Changed the `status` prop type from `string` to the specific union type to match the `AdminAppointment` interface. */}
 const AppointmentCard: React.FC<{ appointment: AdminAppointment; onUpdateStatus: (id: string, status: 'AGENDADO' | 'CONCLUÍDO') => void; isUpdating: boolean; onEdit: (appointment: AdminAppointment) => void; onDelete: (appointment: AdminAppointment) => void; isDeleting: boolean; }> = ({ appointment, onUpdateStatus, isUpdating, onEdit, onDelete, isDeleting }) => {
@@ -868,7 +1584,7 @@ const AppointmentCard: React.FC<{ appointment: AdminAppointment; onUpdateStatus:
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
-                    <p className="text-2xl font-bold text-gray-800">R$ {price.toFixed(2).replace('.', ',')}</p>
+                    <p className="text-2xl font-bold text-gray-800">R$ {(price ?? 0).toFixed(2).replace('.', ',')}</p>
                     <div className="flex items-center gap-2">
                          <button 
                             onClick={() => onEdit(appointment)}
@@ -1111,19 +1827,44 @@ const AppointmentsView: React.FC<{ key?: number }> = ({ key }) => {
     const [editingAppointment, setEditingAppointment] = useState<AdminAppointment | null>(null);
     const [appointmentToDelete, setAppointmentToDelete] = useState<AdminAppointment | null>(null);
     const [deletingAppointmentId, setDeletingAppointmentId] = useState<string | null>(null);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     const fetchAppointments = useCallback(async () => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('appointments')
-            .select('*')
-            .order('appointment_time', { ascending: false });
+        
+        try {
+            // Fetch from both tables to ensure all appointments are displayed
+            const [appointmentsResult, petMovelResult] = await Promise.all([
+                supabase.from('appointments').select('*').order('appointment_time', { ascending: false }),
+                supabase.from('pet_movel_appointments').select('*').order('appointment_time', { ascending: false })
+            ]);
 
-        if (error) {
+            if (appointmentsResult.error) {
+                console.error('Error fetching appointments:', appointmentsResult.error);
+            }
+            
+            if (petMovelResult.error) {
+                console.error('Error fetching pet_movel_appointments:', petMovelResult.error);
+            }
+
+            // Combine data from both tables
+            const appointmentsData = appointmentsResult.data || [];
+            const petMovelData = petMovelResult.data || [];
+            
+            // Merge and remove duplicates (in case some appointments exist in both tables)
+            const allAppointments = [...appointmentsData, ...petMovelData];
+            const uniqueAppointments = allAppointments.filter((appointment, index, self) => 
+                index === self.findIndex(a => a.id === appointment.id)
+            );
+            
+            // Sort by appointment_time descending
+            uniqueAppointments.sort((a, b) => new Date(b.appointment_time).getTime() - new Date(a.appointment_time).getTime());
+            
+            setAppointments(uniqueAppointments as AdminAppointment[]);
+        } catch (error) {
             console.error('Error fetching appointments:', error);
-        } else {
-            setAppointments(data as AdminAppointment[]);
         }
+        
         setLoading(false);
     }, []);
 
@@ -1136,9 +1877,19 @@ const AppointmentsView: React.FC<{ key?: number }> = ({ key }) => {
         const appointmentToUpdate = appointments.find(app => app.id === id);
         if (!appointmentToUpdate) return;
         setUpdatingStatusId(id);
-        const { error } = await supabase.from('appointments').update({ status: newStatus }).eq('id', id);
+        
+        // Try to update in both tables since we don't know which table the appointment is in
+        const [appointmentsResult, petMovelResult] = await Promise.all([
+            supabase.from('appointments').update({ status: newStatus }).eq('id', id),
+            supabase.from('pet_movel_appointments').update({ status: newStatus }).eq('id', id)
+        ]);
 
-        if (error) {
+        // Check if at least one update was successful
+        const hasError = appointmentsResult.error && petMovelResult.error;
+        
+        if (hasError) {
+            console.error('Error updating in appointments:', appointmentsResult.error);
+            console.error('Error updating in pet_movel_appointments:', petMovelResult.error);
             alert('Falha ao atualizar o status.');
         } else {
             const updatedAppointment = { ...appointmentToUpdate, status: newStatus };
@@ -1162,13 +1913,36 @@ const AppointmentsView: React.FC<{ key?: number }> = ({ key }) => {
         setAppointments(prev => prev.map(app => app.id === updatedAppointment.id ? updatedAppointment : app));
         handleCloseEditModal();
     };
+    const handleOpenAddModal = () => {
+        setIsAddModalOpen(true);
+    };
+    const handleCloseAddModal = () => setIsAddModalOpen(false);
+    const handleAppointmentCreated = () => {
+        fetchAppointments();
+        handleCloseAddModal();
+    };
     const handleRequestDelete = (appointment: AdminAppointment) => setAppointmentToDelete(appointment);
     const handleConfirmDelete = async () => {
         if (!appointmentToDelete) return;
         setDeletingAppointmentId(appointmentToDelete.id);
-        const { error } = await supabase.from('appointments').delete().eq('id', appointmentToDelete.id);
-        if (error) { alert('Falha ao excluir o agendamento.'); }
-        else { setAppointments(prev => prev.filter(app => app.id !== appointmentToDelete.id)); }
+        
+        // Try to delete from both tables since we don't know which table the appointment is in
+        const [appointmentsResult, petMovelResult] = await Promise.all([
+            supabase.from('appointments').delete().eq('id', appointmentToDelete.id),
+            supabase.from('pet_movel_appointments').delete().eq('id', appointmentToDelete.id)
+        ]);
+        
+        // Check if at least one deletion was successful
+        const hasError = appointmentsResult.error && petMovelResult.error;
+        
+        if (hasError) {
+            console.error('Error deleting from appointments:', appointmentsResult.error);
+            console.error('Error deleting from pet_movel_appointments:', petMovelResult.error);
+            alert('Falha ao excluir o agendamento.');
+        } else {
+            setAppointments(prev => prev.filter(app => app.id !== appointmentToDelete.id));
+        }
+        
         setDeletingAppointmentId(null);
         setAppointmentToDelete(null);
     };
@@ -1200,6 +1974,7 @@ const AppointmentsView: React.FC<{ key?: number }> = ({ key }) => {
     return (
         <>
             {isEditModalOpen && editingAppointment && <EditAppointmentModal appointment={editingAppointment} onClose={handleCloseEditModal} onAppointmentUpdated={handleAppointmentUpdated} />}
+            {isAddModalOpen && <AdminAddAppointmentModal isOpen={isAddModalOpen} onClose={handleCloseAddModal} onAppointmentCreated={handleAppointmentCreated} />}
             {appointmentToDelete && <ConfirmationModal isOpen={!!appointmentToDelete} onClose={() => setAppointmentToDelete(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o agendamento para ${appointmentToDelete.pet_name}?`} confirmText="Excluir" variant="danger" isLoading={deletingAppointmentId === appointmentToDelete.id} />}
 
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -1207,6 +1982,9 @@ const AppointmentsView: React.FC<{ key?: number }> = ({ key }) => {
                     <input type="text" placeholder="Buscar por pet, dono ou serviço..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500" />
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><SearchIcon /></div>
                 </div>
+                <button onClick={handleOpenAddModal} className="flex-shrink-0 flex items-center justify-center gap-3 bg-green-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-green-700 transition-colors shadow-lg border-2 border-green-500" style={{minWidth: '200px'}}>
+                    <UserPlusIcon /> Adicionar Agendamento
+                </button>
                 <button onClick={() => setAdminView(adminView === 'daily' ? 'all' : 'daily')} className="flex-shrink-0 flex items-center justify-center gap-3 bg-pink-100 text-pink-800 font-semibold py-3 px-5 rounded-lg hover:bg-pink-200 transition-colors">
                     {adminView === 'daily' ? <><ListIcon /> Ver Todos</> : <><CalendarIcon /> Ver Calendário</>}
                 </button>
@@ -1802,7 +2580,7 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
                                                                     </p>
                                                                 </div>
                                                                 <p className="text-sm font-semibold text-green-600">
-                                                                    R$ {client.price.toFixed(2).replace('.', ',')}
+                                                                    R$ {(client.price ?? 0).toFixed(2).replace('.', ',')}
                                                                 </p>
                                                             </div>
                                                             
@@ -3808,11 +4586,11 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
         const prices = SERVICE_PRICES[selectedWeight];
         if (prices) {
             if (selectedService === ServiceType.BATH || selectedService === ServiceType.PET_MOBILE_BATH) {
-                basePrice = prices[ServiceType.BATH];
+                basePrice = prices[ServiceType.BATH] ?? 0;
             } else if (selectedService === ServiceType.GROOMING_ONLY || selectedService === ServiceType.PET_MOBILE_GROOMING_ONLY) {
-                basePrice = prices[ServiceType.GROOMING_ONLY];
+                basePrice = prices[ServiceType.GROOMING_ONLY] ?? 0;
             } else if (selectedService === ServiceType.BATH_AND_GROOMING || selectedService === ServiceType.PET_MOBILE_BATH_AND_GROOMING) {
-                basePrice = prices[ServiceType.BATH] + prices[ServiceType.GROOMING_ONLY];
+                basePrice = (prices[ServiceType.BATH] ?? 0) + (prices[ServiceType.GROOMING_ONLY] ?? 0);
             }
         }
     }
@@ -4168,7 +4946,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                     <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                         <div className="flex justify-between items-center">
                             <span className="text-lg font-semibold text-gray-700">Preço Total:</span>
-                            <span className="text-2xl font-bold text-green-600">R$ {totalPrice.toFixed(2)}</span>
+                            <span className="text-2xl font-bold text-green-600">R$ {(totalPrice ?? 0).toFixed(2)}</span>
                         </div>
                         {Object.keys(selectedAddons).some(key => selectedAddons[key]) && (
                             <div className="mt-2 text-sm text-gray-600">
@@ -4237,7 +5015,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                 )}
                 <p><strong>Data:</strong> {selectedDate.toLocaleDateString('pt-BR', {timeZone: 'America/Sao_Paulo'})} às {selectedTime}:00</p>
                  <div className="mt-4 pt-4 border-t border-gray-200">
-                     <p className="text-2xl font-bold text-gray-900 text-right">Total: R$ {totalPrice.toFixed(2).replace('.', ',')}</p>
+                     <p className="text-2xl font-bold text-gray-900 text-right">Total: R$ {(totalPrice ?? 0).toFixed(2).replace('.', ',')}</p>
                  </div>
               </div>
             </div>
