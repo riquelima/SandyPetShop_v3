@@ -252,6 +252,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
     const [packagePrice, setPackagePrice] = useState(0);
     const [recurrence, setRecurrence] = useState<{ type: 'weekly' | 'bi-weekly' | 'monthly', day: number, time: number }>({ type: 'weekly', day: 1, time: 9 });
     const [paymentDueDate, setPaymentDueDate] = useState('');
+    const [serviceStartDate, setServiceStartDate] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [alertInfo, setAlertInfo] = useState<{ title: string; message: string; variant: 'success' | 'error' } | null>(null);
 
@@ -463,17 +464,21 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
             const recurrenceDay = parseInt(String(recurrence.day), 10);
             const recurrenceTime = parseInt(String(recurrence.time), 10);
             const now = new Date();
+            
+            // Use service start date as the reference date instead of current date
+            const serviceStartDateObj = serviceStartDate ? new Date(serviceStartDate + 'T00:00:00') : new Date();
 
             if (recurrence.type === 'weekly' || recurrence.type === 'bi-weekly') {
-                let firstDate = new Date();
-                const todaySaoPaulo = getSaoPauloTimeParts(firstDate);
+                let firstDate = new Date(serviceStartDateObj);
+                const startDateSaoPaulo = getSaoPauloTimeParts(firstDate);
                 // JS getDay(): Sun=0, Mon=1... Sat=6. Our day picker: Mon=1... Fri=5
-                let firstDateDayOfWeek = todaySaoPaulo.day;
+                let firstDateDayOfWeek = startDateSaoPaulo.day;
                 if (firstDateDayOfWeek === 0) firstDateDayOfWeek = 7; // Convert Sunday to 7 to be after Saturday
 
                 let daysToAdd = (recurrenceDay - firstDateDayOfWeek + 7) % 7;
-                if (daysToAdd === 0 && todaySaoPaulo.hour >= recurrenceTime) {
-                    daysToAdd = 7; // if today is the day but time has passed, jump to next week
+                // If the service start date is the same day as recurrence day, start from that day
+                if (daysToAdd === 0) {
+                    daysToAdd = 0; // Start from the service start date itself
                 }
                 firstDate.setDate(firstDate.getDate() + daysToAdd);
 
@@ -487,11 +492,11 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                     appointmentsToCreate.push({ appointment_time: appointmentTime.toISOString() });
                 }
             } else { // monthly
-                let targetDate = new Date();
-                const todaySaoPaulo = getSaoPauloTimeParts(targetDate);
+                let targetDate = new Date(serviceStartDateObj);
                 targetDate.setDate(recurrenceDay);
                 
-                if (targetDate < now || (isSameSaoPauloDay(targetDate, now) && todaySaoPaulo.hour >= recurrenceTime)) {
+                // If the target day is before the service start date, move to next month
+                if (targetDate < serviceStartDateObj) {
                     targetDate.setMonth(targetDate.getMonth() + 1);
                 }
                 const appointmentTime = toSaoPauloUTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), recurrenceTime);
@@ -696,6 +701,15 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                                         value={paymentDueDate} 
                                         onChange={setPaymentDueDate}
                                         label="Data de Vencimento do Pagamento"
+                                        required
+                                        className="mt-1" 
+                                    />
+                                </div>
+                                <div>
+                                    <DatePicker 
+                                        value={serviceStartDate} 
+                                        onChange={setServiceStartDate}
+                                        label="Data de Início do Serviço"
                                         required
                                         className="mt-1" 
                                     />
