@@ -3187,6 +3187,13 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
     const [isDeleting, setIsDeleting] = useState(false);
     const [alertInfo, setAlertInfo] = useState<{ title: string; message: string; variant: 'success' | 'error' } | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
+    
+    // Estados para filtros
+    const [showFilterPanel, setShowFilterPanel] = useState(false);
+    const [filterCondominium, setFilterCondominium] = useState('');
+    const [filterDueDate, setFilterDueDate] = useState('');
+    const [sortBy, setSortBy] = useState(''); // 'pet-az', 'owner-az'
 
 
     const fetchMonthlyClients = useCallback(async () => {
@@ -3268,15 +3275,41 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
         }
     };
 
-    // Filter clients based on search term
+    // Filter and sort clients based on search term and filters
     const filteredClients = useMemo(() => {
-        if (!searchTerm.trim()) return monthlyClients;
-        const searchLower = searchTerm.toLowerCase().trim();
-        return monthlyClients.filter(client =>
-            client.pet_name.toLowerCase().includes(searchLower) ||
-            client.owner_name.toLowerCase().includes(searchLower)
-        );
-    }, [monthlyClients, searchTerm]);
+        let filtered = monthlyClients;
+        
+        // Filtro por termo de busca
+        if (searchTerm.trim()) {
+            const searchLower = searchTerm.toLowerCase().trim();
+            filtered = filtered.filter(client =>
+                client.pet_name.toLowerCase().includes(searchLower) ||
+                client.owner_name.toLowerCase().includes(searchLower)
+            );
+        }
+        
+        // Filtro por condomínio
+        if (filterCondominium) {
+            filtered = filtered.filter(client => client.condominium === filterCondominium);
+        }
+        
+        // Filtro por data de vencimento
+        if (filterDueDate) {
+            filtered = filtered.filter(client => client.payment_due_date === filterDueDate);
+        }
+        
+        // Ordenação
+        if (sortBy === 'pet-az') {
+            filtered = [...filtered].sort((a, b) => a.pet_name.localeCompare(b.pet_name));
+        } else if (sortBy === 'owner-az') {
+            filtered = [...filtered].sort((a, b) => a.owner_name.localeCompare(b.owner_name));
+        } else {
+            // Ordenação padrão por nome do tutor
+            filtered = [...filtered].sort((a, b) => a.owner_name.localeCompare(b.owner_name));
+        }
+        
+        return filtered;
+    }, [monthlyClients, searchTerm, filterCondominium, filterDueDate, sortBy]);
 
     const handleTogglePaymentStatus = async (client: MonthlyClient, e: React.MouseEvent) => {
         e.stopPropagation(); // Prevent the card's onClick from firing
@@ -3314,7 +3347,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
             
             <div className="mb-6">
                 <h2 className="text-3xl font-bold text-gray-800 truncate mb-4">Clientes Mensalistas</h2>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 mb-4">
                     <div className="flex-1">
                         <input
                             type="text"
@@ -3324,6 +3357,52 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-white"
                         />
                     </div>
+                    
+                    {/* Toggle de Visualização */}
+                    <div className="flex bg-gray-100 rounded-lg p-1">
+                        <button
+                            onClick={() => setViewMode('cards')}
+                            className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
+                                viewMode === 'cards' 
+                                ? 'bg-white text-pink-600 shadow-sm' 
+                                : 'text-gray-600 hover:text-gray-800'
+                            }`}
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            Cards
+                        </button>
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
+                                viewMode === 'list' 
+                                ? 'bg-white text-pink-600 shadow-sm' 
+                                : 'text-gray-600 hover:text-gray-800'
+                            }`}
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                            </svg>
+                            Lista
+                        </button>
+                    </div>
+                    
+                    {/* Botão de Filtro */}
+                    <button 
+                        onClick={() => setShowFilterPanel(!showFilterPanel)}
+                        className={`px-3 py-2.5 rounded-lg transition-colors flex items-center justify-center ${
+                            showFilterPanel 
+                            ? 'bg-blue-600 text-white' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                        title="Filtros"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                    </button>
+                    
                     <button onClick={onAddClient} className="bg-pink-600 text-white font-semibold py-2.5 px-3 rounded-lg hover:bg-pink-700 transition-colors flex items-center justify-center">
                         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -3331,59 +3410,228 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                     </button>
                 </div>
             </div>
+            
+            {/* Painel de Filtros */}
+            {showFilterPanel && (
+                <div className="mb-6 bg-white rounded-lg shadow-md border border-gray-200 p-4">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                        Filtros e Ordenação
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* Filtro por Condomínio */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Condomínio</label>
+                            <select
+                                value={filterCondominium}
+                                onChange={(e) => setFilterCondominium(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                                <option value="">Todos os condomínios</option>
+                                {Array.from(new Set(monthlyClients.map(client => client.condominium))).sort().map(condo => (
+                                    <option key={condo} value={condo}>{condo}</option>
+                                ))}
+                            </select>
+                        </div>
+                        
+                        {/* Filtro por Data de Vencimento */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Data de Vencimento</label>
+                            <input
+                                type="date"
+                                value={filterDueDate}
+                                onChange={(e) => setFilterDueDate(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                        </div>
+                        
+                        {/* Ordenação */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Ordenar por</label>
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                                <option value="">Padrão (Tutor A-Z)</option>
+                                <option value="pet-az">Pet A-Z</option>
+                                <option value="owner-az">Tutor A-Z</option>
+                            </select>
+                        </div>
+                        
+                        {/* Botão Limpar Filtros */}
+                        <div className="flex items-end">
+                            <button
+                                onClick={() => {
+                                    setFilterCondominium('');
+                                    setFilterDueDate('');
+                                    setSortBy('');
+                                }}
+                                className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H8a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Limpar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
             {loading ? <div className="flex justify-center py-16"><LoadingSpinner /></div> : (
-                 <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                    {filteredClients.length > 0 ? (
-                        <div className="divide-y divide-gray-100">
+                filteredClients.length > 0 ? (
+                    viewMode === 'cards' ? (
+                        // Visualização em Cards
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {filteredClients.map(client => (
-                                <div key={client.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-x-4 gap-y-2 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setEditingClient(client)}>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-bold text-gray-900 truncate">{client.pet_name}</p>
-                                        <p className="text-base text-gray-600 truncate">{client.owner_name}</p>
-                                        {client.condominium && (
-                                            <p className="text-sm text-gray-500 truncate">
-                                                <span className="font-medium">Condomínio:</span> {client.condominium}
-                                            </p>
-                                        )}
+                                <div key={client.id} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] cursor-pointer overflow-hidden border border-gray-100" onClick={() => setEditingClient(client)}>
+                                    {/* Header do Card */}
+                                    <div className="bg-gradient-to-r from-pink-500 to-purple-600 p-4 text-white">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center space-x-3">
+                                                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                                                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-xl font-bold truncate">{client.pet_name}</h3>
+                                                    <p className="text-pink-100 text-sm truncate">{client.owner_name}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                                                <button onClick={() => setEditingClient(client)} className="p-2 rounded-full text-white hover:bg-white hover:bg-opacity-20 transition-colors" aria-label="Editar mensalista">
+                                                    <EditIcon />
+                                                </button>
+                                                <button onClick={() => setDeletingClient(client)} className="p-2 rounded-full text-white hover:bg-white hover:bg-opacity-20 transition-colors" aria-label="Excluir mensalista">
+                                                    <DeleteIcon />
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="w-full sm:w-auto flex items-center justify-between mt-2 sm:mt-0">
-                                       <div className="flex items-center gap-3 flex-wrap">
-                                            <p className="text-xs text-pink-800 bg-pink-100 font-semibold py-1 px-2 rounded-full truncate">
-                                               {getRecurrenceText(client)}
-                                           </p>
-                                           {client.payment_due_date && (
-                                               <p className="text-xs text-blue-800 bg-blue-100 font-semibold py-1 px-2 rounded-full truncate">
-                                                   Vencimento: {formatDateToBR(client.payment_due_date)}
-                                               </p>
-                                           )}
-                                           <button
+
+                                    {/* Conteúdo do Card */}
+                                    <div className="p-5 space-y-4">
+                                        {/* Informações do Condomínio */}
+                                        {client.condominium && (
+                                            <div className="flex items-center space-x-2 text-gray-600">
+                                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H9m0 0H5m0 0h2M7 16h6M7 8h6v4H7V8z" />
+                                                </svg>
+                                                <span className="text-sm font-medium">Condomínio:</span>
+                                                <span className="text-sm truncate">{client.condominium}</span>
+                                            </div>
+                                        )}
+
+                                        {/* Recorrência */}
+                                        <div className="flex items-center space-x-2">
+                                            <svg className="w-4 h-4 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            <span className="text-sm font-semibold text-pink-700 bg-pink-50 px-3 py-1 rounded-full">
+                                                {getRecurrenceText(client)}
+                                            </span>
+                                        </div>
+
+                                        {/* Data de Vencimento */}
+                                        {client.payment_due_date && (
+                                            <div className="flex items-center space-x-2">
+                                                <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                                <span className="text-sm font-medium text-gray-600">Vencimento:</span>
+                                                <span className="text-sm font-semibold text-blue-700 bg-blue-50 px-3 py-1 rounded-full">
+                                                    {formatDateToBR(client.payment_due_date)}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {/* Status do Pagamento */}
+                                        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                                            <span className="text-sm font-medium text-gray-600">Status do Pagamento:</span>
+                                            <button
                                                 onClick={(e) => handleTogglePaymentStatus(client, e)}
-                                                className={`px-2 py-1 text-xs font-bold rounded-full whitespace-nowrap transition-colors ${
+                                                className={`px-4 py-2 text-sm font-bold rounded-full transition-all duration-200 ${
                                                     client.payment_status === 'Pendente' 
-                                                    ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' 
-                                                    : 'bg-green-100 text-green-800 hover:bg-green-200'
+                                                    ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 hover:shadow-md' 
+                                                    : 'bg-green-100 text-green-800 hover:bg-green-200 hover:shadow-md'
                                                 }`}
                                             >
-                                                {client.payment_status === 'Pendente' ? 'Pagamento Pendente' : 'Pagamento Realizado'}
+                                                {client.payment_status === 'Pendente' ? '⏳ Pendente' : '✅ Pago'}
                                             </button>
-                                       </div>
-                                        <div className="flex-shrink-0 flex items-center gap-1 sm:ml-4" onClick={e => e.stopPropagation()}>
-                                            <button onClick={() => setEditingClient(client)} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-blue-700 transition-colors" aria-label="Editar mensalista"><EditIcon /></button>
-                                            <button onClick={() => setDeletingClient(client)} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-red-700 transition-colors" aria-label="Excluir mensalista"><DeleteIcon /></button>
                                         </div>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <p className="text-center text-gray-500 py-16">
+                        // Visualização em Lista
+                        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                            <div className="divide-y divide-gray-100">
+                                {filteredClients.map(client => (
+                                    <div key={client.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-x-4 gap-y-2 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setEditingClient(client)}>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-bold text-gray-900 truncate">{client.pet_name}</p>
+                                            <p className="text-base text-gray-600 truncate">{client.owner_name}</p>
+                                            {client.condominium && (
+                                                <p className="text-sm text-gray-500 truncate">
+                                                    <span className="font-medium">Condomínio:</span> {client.condominium}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="w-full sm:w-auto flex items-center justify-between mt-2 sm:mt-0">
+                                           <div className="flex items-center gap-3 flex-wrap">
+                                                <p className="text-xs text-pink-800 bg-pink-100 font-semibold py-1 px-2 rounded-full truncate">
+                                                   {getRecurrenceText(client)}
+                                               </p>
+                                               {client.payment_due_date && (
+                                                   <p className="text-xs text-blue-800 bg-blue-100 font-semibold py-1 px-2 rounded-full truncate">
+                                                       Vencimento: {formatDateToBR(client.payment_due_date)}
+                                                   </p>
+                                               )}
+                                               <button
+                                                    onClick={(e) => handleTogglePaymentStatus(client, e)}
+                                                    className={`px-2 py-1 text-xs font-bold rounded-full whitespace-nowrap transition-colors ${
+                                                        client.payment_status === 'Pendente' 
+                                                        ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' 
+                                                        : 'bg-green-100 text-green-800 hover:bg-green-200'
+                                                    }`}
+                                                >
+                                                    {client.payment_status === 'Pendente' ? 'Pagamento Pendente' : 'Pagamento Realizado'}
+                                                </button>
+                                           </div>
+                                            <div className="flex-shrink-0 flex items-center gap-1 sm:ml-4" onClick={e => e.stopPropagation()}>
+                                                <button onClick={() => setEditingClient(client)} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-blue-700 transition-colors" aria-label="Editar mensalista"><EditIcon /></button>
+                                                <button onClick={() => setDeletingClient(client)} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-red-700 transition-colors" aria-label="Excluir mensalista"><DeleteIcon /></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )
+                ) : (
+                    <div className="bg-white rounded-2xl shadow-sm p-16 text-center">
+                        <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                            <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                            {searchTerm.trim() ? 'Nenhum resultado encontrado' : 'Nenhum mensalista cadastrado'}
+                        </h3>
+                        <p className="text-gray-500">
                             {searchTerm.trim() 
-                                ? `Nenhum mensalista encontrado para "${searchTerm}".` 
-                                : 'Nenhum cliente mensalista cadastrado.'
+                                ? `Não encontramos mensalistas para "${searchTerm}".` 
+                                : 'Comece adicionando seu primeiro cliente mensalista.'
                             }
                         </p>
-                    )}
-                 </div>
+                    </div>
+                )
             )}
         </>
     );
