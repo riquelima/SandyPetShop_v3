@@ -57,6 +57,10 @@ export interface AdminAppointment {
 
 export interface PetMovelAppointment extends AdminAppointment {
     condominium: string;
+    client_name: string;
+    apartment?: string;
+    date: string;
+    time: string;
 }
 
 
@@ -82,6 +86,7 @@ export interface MonthlyClient {
   payment_due_date: string;
   is_active: boolean;
   payment_status: 'Pendente' | 'Pago';
+  condominium?: string;
 }
 
 export interface DaycareRegistration {

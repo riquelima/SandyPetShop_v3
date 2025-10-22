@@ -1,0 +1,476 @@
+[
+  {
+    "id": "TC001",
+    "title": "Schedule Appointment Within Working Hours",
+    "description": "Verify that a user can successfully schedule an appointment for a regular service between 9:00 and 17:00 excluding lunch break 12:00-13:00.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the appointment scheduling page."
+      },
+      {
+        "type": "action",
+        "description": "Select a regular service type."
+      },
+      {
+        "type": "action",
+        "description": "Choose a date and a time slot between 9:00 and 12:00 or 13:00 and 17:00."
+      },
+      {
+        "type": "action",
+        "description": "Fill in valid pet details and additional services if any."
+      },
+      {
+        "type": "action",
+        "description": "Submit the appointment request."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the appointment is confirmed and listed in the system."
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Prevent Scheduling Over Lunch Break",
+    "description": "Ensure that the system prevents scheduling any appointments during lunch break from 12:00 to 13:00.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Access the appointment scheduling interface."
+      },
+      {
+        "type": "action",
+        "description": "Select any service type."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to schedule an appointment within the time slot between 12:00 and 13:00."
+      },
+      {
+        "type": "action",
+        "description": "Submit the appointment request."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that an error is displayed preventing scheduling during lunch break."
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Enforce Maximum Capacity of Two Appointments Per Time Slot",
+    "description": "Verify that no more than two regular service appointments can be booked for the same time slot.",
+    "category": "business validation",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Schedule two separate appointments for the same time slot for regular services."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to book a third appointment in the same time slot."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm the system blocks the third booking and shows a capacity limit error."
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Conflict Detection for Overlapping Pet Appointments",
+    "description": "Ensure the system prevents overlapping appointments from being created for the same pet.",
+    "category": "business validation",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Book an appointment for a pet at a specific time slot."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to book another appointment for the same pet that overlaps in time."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the system rejects the overlapping appointment with an appropriate conflict message."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Dynamic Pricing Based on Pet Weight and Additional Services",
+    "description": "Validate that the displayed price updates in real-time when pet weight or additional services are changed during scheduling.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open the appointment scheduling form."
+      },
+      {
+        "type": "action",
+        "description": "Input pet weight and select additional services."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm the pricing display updates dynamically reflecting pet weight and added services in real-time."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Mobile Grooming Scheduling with Condominium Address Validation",
+    "description": "Check that mobile grooming appointments allow selection of condominium addresses and validate address input correctly.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to mobile grooming service scheduling."
+      },
+      {
+        "type": "action",
+        "description": "Select condominium option and input address details."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to schedule within allowed time slots, ensuring no capacity limits."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify appointment confirmation with the correct condominium address stored and no capacity error."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Subscription Client Recurrence Appointment Generation",
+    "description": "Verify the system automatically generates future appointments for subscription clients based on selected recurrence frequency (weekly, biweekly, monthly).",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Register a subscription client with a recurrence frequency."
+      },
+      {
+        "type": "action",
+        "description": "Confirm initial appointment."
+      },
+      {
+        "type": "assertion",
+        "description": "Check the system automatically generates all subsequent appointments according to the selected schedule."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Daycare Enrollment with Veterinary and Behavioral Info",
+    "description": "Confirm that daycare service enrollment requires filling veterinary info and behavior tracking before submission.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open daycare service enrollment form."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to submit enrollment form without veterinary or behavior info."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation prompts user to fill mandatory veterinary and behavior data."
+      },
+      {
+        "type": "action",
+        "description": "Complete all required fields."
+      },
+      {
+        "type": "action",
+        "description": "Submit the form again."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm successful enrollment submission."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Pet Hotel Check-In and Check-Out with Consent Signature",
+    "description": "Test the pet hotel service check-in and check-out workflow including feeding info, additional services selection and digital consent signature capture.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Initiate pet hotel check-in process."
+      },
+      {
+        "type": "action",
+        "description": "Fill feeding instructions and select additional services."
+      },
+      {
+        "type": "action",
+        "description": "Sign digital consent form using the provided interface."
+      },
+      {
+        "type": "action",
+        "description": "Complete check-in and later check-out."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify all data is recorded accurately and check-out is processed correctly."
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Admin Login with Supabase Authentication",
+    "description": "Ensure administrators can log in using Supabase Auth with correct credential validation and session management.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the admin login page."
+      },
+      {
+        "type": "action",
+        "description": "Input valid admin credentials."
+      },
+      {
+        "type": "action",
+        "description": "Submit login form."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm successful login and session is established."
+      },
+      {
+        "type": "action",
+        "description": "Log out of admin account."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm session termination and login page displayed."
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Role-Based Access Control Enforcement",
+    "description": "Validate that only authorized roles can access admin panel and sensitive operations, while unauthorized access is denied.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to access admin dashboard without login or as a non-admin account."
+      },
+      {
+        "type": "assertion",
+        "description": "Check access is denied and user is redirected to login or error page."
+      },
+      {
+        "type": "action",
+        "description": "Log in as admin and access admin dashboard."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify full access to appointment, client, subscription, and reports management functionalities."
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Brazilian Format Validation for Date, WhatsApp Phone, and Currency",
+    "description": "Ensure that input fields for dates, WhatsApp contacts, and currency values comply with Brazilian formatting standards.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Input invalid date formats, WhatsApp phone numbers, and currency values in respective forms."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation errors are shown prompting correct Brazilian format."
+      },
+      {
+        "type": "action",
+        "description": "Input correctly formatted date (DD/MM/YYYY), WhatsApp (+55 XX XXXXX-XXXX), and currency (R$ XXX,XX)."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm inputs accept the values without errors."
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Notification Modals Display Success and Error States",
+    "description": "Validate the notification system modals correctly show success alerts and error alerts upon various user actions.",
+    "category": "ui",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Perform a successful appointment booking."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify notification modal displays success message with proper UI variant."
+      },
+      {
+        "type": "action",
+        "description": "Trigger an error such as booking outside working hours."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm notification modal shows error message with corresponding variant styling."
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Timezone UTC-3 (São Paulo) Consistency in Date and Time Validations",
+    "description": "Check that all date and time inputs, displays, and business logic respect UTC-3 timezone consistently across the application.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Schedule appointments crossing date boundaries in UTC-3 timezone."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify displayed times and validations reflect UTC-3 accurately, including daylight savings where applicable."
+      },
+      {
+        "type": "action",
+        "description": "Review generated reports and notifications timestamps."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm all timestamps are consistent with UTC-3 timezone standards."
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Responsive Layout Validation for Mobile-First Design",
+    "description": "Ensure the application UI adapts correctly on various screen sizes emphasizing mobile usage.",
+    "category": "ui",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open the application on desktop, tablet, and multiple mobile resolutions."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify all UI components including forms, modals, and dashboard adapt properly with no clipping or misalignment."
+      },
+      {
+        "type": "assertion",
+        "description": "Check navigation and usability remain consistent and intuitive on all devices."
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Administrative Dashboard Appointment Management",
+    "description": "Verify administrators can view, create, edit, and cancel appointments through the dashboard successfully.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as admin and open the appointment management panel."
+      },
+      {
+        "type": "action",
+        "description": "Create a new appointment through admin interface."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm appointment is saved and visible in schedule."
+      },
+      {
+        "type": "action",
+        "description": "Edit existing appointment details and save."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify changes are applied and reflected immediately."
+      },
+      {
+        "type": "action",
+        "description": "Cancel an appointment."
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure appointment status updates to canceled and is not available for booking."
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Error Handling on Network or Backend Failures",
+    "description": "Ensure system gracefully handles failures such as network errors or backend service downtime with user-friendly error messages.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Simulate network failure or Supabase backend unavailability during critical operations like login or booking."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the system shows appropriate error notifications/modal dialogs."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm no data corruption or partial submission occurs during failures."
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Subscription Payment Controls and Status Accuracy",
+    "description": "Validate that payments for subscription clients update client status accurately and all related appointments reflect payment state.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Register subscription client and complete the payment process."
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure client status updates to active."
+      },
+      {
+        "type": "action",
+        "description": "Check that all automatically generated appointments for the subscription reflect the payment status."
+      },
+      {
+        "type": "action",
+        "description": "Simulate failed or pending payment scenario."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm client status and appointments reflect non-paid state and prompt for payment."
+      }
+    ]
+  }
+]

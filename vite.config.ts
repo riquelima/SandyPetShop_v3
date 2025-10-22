@@ -18,6 +18,10 @@ export default defineConfig(({ mode }) => {
           clientPort: 443,
         },
       },
+      preview: {
+        port: 5000,
+        host: '0.0.0.0'
+      },
       plugins: [react()],
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
