@@ -844,17 +844,19 @@ const StatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({ 
     if (!isOpen) return null;
 
     const StatCard: React.FC<{ title: string; data: { count: number; revenue: number; services: { [key: string]: number } } }> = ({ title, data }) => (
-        <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-            <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">{title}</h3>
-            <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                        <p className="text-sm text-gray-600">Total de Serviços</p>
-                        <p className="text-2xl font-bold text-blue-600">{data.count}</p>
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-gray-200">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 border-b pb-2">{title}</h3>
+            <div className="space-y-3 sm:space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div className="bg-blue-50 p-3 sm:p-4 rounded-lg">
+                        <p className="text-xs sm:text-sm text-gray-600">Total de Serviços</p>
+                        <p className="text-xl sm:text-2xl font-bold text-blue-600">{data.count}</p>
                     </div>
-                    <div className="bg-green-50 p-4 rounded-lg">
-                        <p className="text-sm text-gray-600">Receita Total</p>
-                        <p className="text-2xl font-bold text-green-600">R$ {data.revenue.toFixed(2).replace('.', ',')}</p>
+                    <div className="bg-green-50 p-3 sm:p-4 rounded-lg">
+                        <p className="text-xs sm:text-sm text-gray-600">Receita Total</p>
+                        <p className="text-lg sm:text-2xl font-bold text-green-600 whitespace-nowrap overflow-hidden text-ellipsis">
+                            R$ {data.revenue.toFixed(2).replace('.', ',')}
+                        </p>
                     </div>
                 </div>
                 {Object.keys(data.services).length > 0 && (
@@ -875,23 +877,23 @@ const StatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({ 
     );
 
     return (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fadeIn">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="sticky top-0 bg-white border-b border-gray-200 p-6 rounded-t-2xl">
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4 animate-fadeIn">
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-6xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b border-gray-200 p-4 sm:p-6 rounded-t-xl sm:rounded-t-2xl">
                     <div className="flex justify-between items-center">
-                        <h2 className="text-3xl font-bold text-gray-800">📊 Estatísticas de Serviços</h2>
-                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl font-bold">×</button>
+                        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800">📊 Estatísticas de Serviços</h2>
+                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-xl sm:text-2xl font-bold min-w-[44px] min-h-[44px] flex items-center justify-center">×</button>
                     </div>
                 </div>
                 
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                     {loading ? (
-                        <div className="flex justify-center py-16">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+                        <div className="flex justify-center py-12 sm:py-16">
+                            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-pink-500"></div>
                         </div>
                     ) : statistics ? (
-                        <div className="space-y-8">
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="space-y-6 sm:space-y-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                                 <StatCard title="📅 Hoje" data={statistics.daily} />
                                 <StatCard title="📊 Esta Semana" data={statistics.weekly} />
                                 <StatCard title="📈 Este Mês" data={statistics.monthly} />
