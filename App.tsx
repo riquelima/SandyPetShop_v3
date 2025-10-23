@@ -7660,6 +7660,7 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         { id: 'monthlyClients', label: 'Mensalistas', icon: <MonthlyIcon/> },
     ];
     
+    // Renderiza a view ativa baseada no estado activeView
     const renderActiveView = () => {
         switch (activeView) {
             case 'appointments': return <AppointmentsView key={dataKey} />;
