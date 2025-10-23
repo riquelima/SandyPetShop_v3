@@ -5177,7 +5177,7 @@ const HotelRegistrationForm: React.FC<{
                     <SuccessIcon />
                     <h2 className="text-3xl font-bold text-gray-800 mt-2">Check-in Realizado!</h2>
                     <p className="text-gray-600 mt-2">Registro de hospedagem criado com sucesso.</p>
-                    <button onClick={() => setView && setView('scheduler')} className="mt-6 bg-pink-600 text-white font-bold py-3.5 px-8 rounded-lg hover:bg-pink-700 transition-colors">OK</button>
+                    <button onClick={() => setView && setViewWithLog('scheduler')} className="mt-6 bg-pink-600 text-white font-bold py-3.5 px-8 rounded-lg hover:bg-pink-700 transition-colors">OK</button>
                 </div>
             </div>
         );
@@ -5203,7 +5203,7 @@ const HotelRegistrationForm: React.FC<{
         if (step > 1) {
             changeStep(step - 1);
         } else {
-            setView && setView('scheduler');
+            setView && setViewWithLog('scheduler');
         }
     };
 
@@ -5625,7 +5625,7 @@ const DaycareRegistrationForm: React.FC<{
                 <SuccessIcon />
                 <h2 className="text-3xl font-bold text-gray-800 mt-2">Solicitação Enviada!</h2>
                 <p className="text-gray-600 mt-2">Recebemos seu pedido. Entraremos em contato em breve para os próximos passos.</p>
-                <button onClick={() => setView && setView('scheduler')} className="mt-6 bg-pink-600 text-white font-bold py-3.5 px-8 rounded-lg hover:bg-pink-700 transition-colors">OK</button>
+                <button onClick={() => setView && setViewWithLog('scheduler')} className="mt-6 bg-pink-600 text-white font-bold py-3.5 px-8 rounded-lg hover:bg-pink-700 transition-colors">OK</button>
             </div>
         </div>
       );
@@ -5853,7 +5853,7 @@ const DaycareRegistrationForm: React.FC<{
                 </div>
             </div>
             <div className="p-6 bg-white flex justify-between items-center mt-auto rounded-b-2xl">
-                <button type="button" onClick={onBack || (() => setView && setView('scheduler'))} className="w-auto bg-gray-200 text-gray-800 font-bold py-3 px-6 rounded-lg hover:bg-gray-300 transition-colors">
+                <button type="button" onClick={onBack || (() => setView && setViewWithLog('scheduler'))} className="w-auto bg-gray-200 text-gray-800 font-bold py-3 px-6 rounded-lg hover:bg-gray-300 transition-colors">
                     {isAdmin ? 'Cancelar' : 'Voltar'}
                 </button>
                 <button type="submit" disabled={isSubmitting} className="w-auto bg-green-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-400">
@@ -6329,10 +6329,10 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                              <button type="button" onClick={() => { setServiceStepView('bath_groom'); setSelectedService(null); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
                                 <span className="text-lg">Banho & Tosa</span>
                             </button>
-                            <button type="button" onClick={() => setView('daycareRegistration')} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
+                            <button type="button" onClick={() => { console.log('Clicou em Creche Pet'); setViewWithLog('daycareRegistration'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
                                 <span className="text-lg">{SERVICES[ServiceType.VISIT_DAYCARE].label}</span>
                             </button>
-                             <button type="button" onClick={() => setView('hotelRegistration')} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
+                             <button type="button" onClick={() => { console.log('Clicou em Hotel Pet'); setViewWithLog('hotelRegistration'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
                                 <span className="text-lg">{SERVICES[ServiceType.VISIT_HOTEL].label}</span>
                             </button>
                             <button type="button" onClick={() => setServiceStepView('pet_movel_condo')} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
@@ -6406,7 +6406,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                             <h3 className="text-lg font-semibold text-gray-800">Check-list de Hospedagem - Hotel Pet</h3>
                             <p className="text-base text-gray-600 mt-1">Preencha todos os dados do pet e tutor para o check-in</p>
                         </div>
-                        <button type="button" onClick={() => setView('hotelRegistration')} className="w-full bg-pink-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-pink-700 transition-colors">
+                        <button type="button" onClick={() => { console.log('Clicou em Preencher Formulário de Hotel Pet'); setViewWithLog('hotelRegistration'); }} className="w-full bg-pink-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-pink-700 transition-colors">
                             Preencher Formulário de Hotel Pet
                         </button>
                         <button type="button" onClick={() => setServiceStepView('main')} className="text-sm text-pink-600 hover:underline">← Voltar</button>
@@ -6547,7 +6547,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
       </main>
 
       <footer className="text-center mt-8 text-base">
-        <button onClick={() => setView('login')} className="text-gray-500 hover:text-pink-600 font-medium transition-colors underline-offset-4 hover:underline">Acesso Administrativo</button>
+        <button onClick={() => setViewWithLog('login')} className="text-gray-500 hover:text-pink-600 font-medium transition-colors underline-offset-4 hover:underline">Acesso Administrativo</button>
       </footer>
       
       {isModalOpen && (
@@ -7749,6 +7749,12 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
 const App: React.FC = () => {
     const [view, setView] = useState<'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration'>('scheduler');
+    
+    // Debug: Log mudanças de view
+    const setViewWithLog = (newView: 'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration') => {
+        console.log('Mudando view de', view, 'para', newView);
+        setView(newView);
+    };
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loadingAuth, setLoadingAuth] = useState(true);
     const [showDaycareStatistics, setShowDaycareStatistics] = useState(false);
@@ -7773,7 +7779,7 @@ const App: React.FC = () => {
                 if (isMounted) {
                     setIsAuthenticated(!!session);
                     if (!!session) {
-                        setView('admin');
+                        setViewWithLog('admin');
                     }
                 }
             } catch (error) {
@@ -7797,9 +7803,9 @@ const App: React.FC = () => {
                 const { data } = supabase.auth.onAuthStateChange((_event, session) => {
                     if (isMounted) {
                         setIsAuthenticated(!!session);
-                        if (!session) {
-                            setView('scheduler');
-                        }
+                    if (!session) {
+                        setViewWithLog('scheduler');
+                    }
                     }
                 });
                 authListener = data;
@@ -7831,7 +7837,7 @@ const App: React.FC = () => {
             console.warn('Logout failed:', error);
         }
         setIsAuthenticated(false);
-        setView('scheduler');
+        setViewWithLog('scheduler');
     };
     
     if (isAuthenticated) {
@@ -7855,18 +7861,18 @@ const App: React.FC = () => {
     }
 
     if (view === 'login') {
-        return <AdminLogin onLoginSuccess={() => { setIsAuthenticated(true); setView('admin'); }} />;
+        return <AdminLogin onLoginSuccess={() => { setIsAuthenticated(true); setViewWithLog('admin'); }} />;
     }
     
     if (view === 'daycareRegistration') {
-        return <DaycareRegistrationForm setView={setView} />;
+        return <DaycareRegistrationForm setView={setViewWithLog} />;
     }
 
     if (view === 'hotelRegistration') {
-        return <HotelRegistrationForm setView={setView} />;
+        return <HotelRegistrationForm setView={setViewWithLog} />;
     }
 
-    return <Scheduler setView={setView} />;
+    return <Scheduler setView={setViewWithLog} />;
 };
 
 export default App;
