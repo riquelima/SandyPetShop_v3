@@ -791,21 +791,25 @@ const StatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({ 
                 const price = appointment.price || 0;
                 const service = appointment.service || 'Não especificado';
 
-                // Estatísticas diárias
-                if (appointmentDate >= today) {
+                // Criar data de fim do dia para comparação correta
+                const endOfToday = new Date(today);
+                endOfToday.setHours(23, 59, 59, 999);
+
+                // Estatísticas diárias - apenas agendamentos de hoje
+                if (appointmentDate >= today && appointmentDate <= endOfToday) {
                     stats.daily.count++;
                     stats.daily.revenue += price;
                     stats.daily.services[service] = (stats.daily.services[service] || 0) + 1;
                 }
 
-                // Estatísticas semanais
+                // Estatísticas semanais - agendamentos desta semana
                 if (appointmentDate >= weekStart) {
                     stats.weekly.count++;
                     stats.weekly.revenue += price;
                     stats.weekly.services[service] = (stats.weekly.services[service] || 0) + 1;
                 }
 
-                // Estatísticas mensais
+                // Estatísticas mensais - agendamentos deste mês
                 if (appointmentDate >= monthStart) {
                     stats.monthly.count++;
                     stats.monthly.revenue += price;
