@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 // FIX: Moved AddonService from constants import to types import, as it's a type defined in types.ts.
 import { Appointment, ServiceType, PetWeight, AdminAppointment, Client, MonthlyClient, DaycareRegistration, PetMovelAppointment, AddonService, HotelRegistration } from './types';
-import { SERVICES, WORKING_HOURS, MAX_CAPACITY_PER_SLOT, LUNCH_HOUR, PET_WEIGHT_OPTIONS, SERVICE_PRICES, ADDON_SERVICES, VISIT_WORKING_HOURS } from './constants';
+import { SERVICES, WORKING_HOURS, MAX_CAPACITY_PER_SLOT, LUNCH_HOUR, PET_WEIGHT_OPTIONS, SERVICE_PRICES, ADDON_SERVICES, VISIT_WORKING_HOURS, DAYCARE_PLAN_PRICES, DAYCARE_EXTRA_SERVICES_PRICES, HOTEL_BASE_PRICE, HOTEL_EXTRA_SERVICES_PRICES } from './constants';
 import { supabase } from './supabaseClient';
 import ExtraServicesModal from './ExtraServicesModal';
 
@@ -72,6 +72,143 @@ const formatDateToBR = (dateString: string | null): string => {
     return `${day}/${month}/${year}`;
 };
 
+const formatDateToISO = (dateString: string | null): string => {
+    if (!dateString) return '';
+    // Handles both date (YYYY-MM-DD) and datetime (YYYY-MM-DDTHH:mm:ss.sssZ) strings
+    const datePart = dateString.split('T')[0];
+    return datePart;
+};
+
+// Função para calcular o valor total dos serviços extras
+const calculateExtraServicesTotal = (extraServices: any): number => {
+    let total = 0;
+    
+    if (extraServices?.pernoite && extraServices.pernoite_quantity && extraServices.pernoite_price) {
+        total += Number(extraServices.pernoite_quantity) * Number(extraServices.pernoite_price);
+    }
+    
+    if (extraServices?.banho_tosa && extraServices.banho_tosa_quantity && extraServices.banho_tosa_price) {
+        total += Number(extraServices.banho_tosa_quantity) * Number(extraServices.banho_tosa_price);
+    }
+    
+    if (extraServices?.so_banho && extraServices.so_banho_quantity && extraServices.so_banho_price) {
+        total += Number(extraServices.so_banho_quantity) * Number(extraServices.so_banho_price);
+    }
+    
+    if (extraServices?.adestrador && extraServices.adestrador_quantity && extraServices.adestrador_price) {
+        total += Number(extraServices.adestrador_quantity) * Number(extraServices.adestrador_price);
+    }
+    
+    if (extraServices?.despesa_medica && extraServices.despesa_medica_quantity && extraServices.despesa_medica_price) {
+        total += Number(extraServices.despesa_medica_quantity) * Number(extraServices.despesa_medica_price);
+    }
+    
+    if (extraServices?.dia_extra && extraServices.dia_extra_quantity && extraServices.dia_extra_price) {
+        total += Number(extraServices.dia_extra_quantity) * Number(extraServices.dia_extra_price);
+    }
+    
+    return total;
+};
+
+// Função para calcular o valor total da fatura da creche
+const calculateDaycareInvoiceTotal = (enrollment: DaycareRegistration): number => {
+    let total = 0;
+    
+    // Valor base do plano contratado
+    if (enrollment.contracted_plan && DAYCARE_PLAN_PRICES[enrollment.contracted_plan]) {
+        total += DAYCARE_PLAN_PRICES[enrollment.contracted_plan];
+    }
+    
+    // Valor dos serviços extras
+    if (enrollment.extra_services) {
+        if (enrollment.extra_services.pernoite) {
+            total += DAYCARE_EXTRA_SERVICES_PRICES.pernoite;
+        }
+        if (enrollment.extra_services.banho_tosa) {
+            total += DAYCARE_EXTRA_SERVICES_PRICES.banho_tosa;
+        }
+        if (enrollment.extra_services.so_banho) {
+            total += DAYCARE_EXTRA_SERVICES_PRICES.so_banho;
+        }
+        if (enrollment.extra_services.adestrador) {
+            total += DAYCARE_EXTRA_SERVICES_PRICES.adestrador;
+        }
+        if (enrollment.extra_services.despesa_medica) {
+            total += DAYCARE_EXTRA_SERVICES_PRICES.despesa_medica;
+        }
+        if (enrollment.extra_services.dia_extra && enrollment.extra_services.dia_extra > 0) {
+            total += enrollment.extra_services.dia_extra * DAYCARE_EXTRA_SERVICES_PRICES.dia_extra;
+        }
+    }
+    
+    // Se existe um total_price definido, usar ele ao invés do calculado
+    if (enrollment.total_price && enrollment.total_price > 0) {
+        return enrollment.total_price;
+    }
+    
+    return total;
+};
+
+// Função para calcular o valor total da fatura do hotel pet
+const calculateHotelInvoiceTotal = (registration: HotelRegistration): number => {
+    let total = 0;
+    
+    // Calcular número de dias de hospedagem
+    let days = 1; // Valor padrão
+    if (registration.check_in_date && registration.check_out_date) {
+        const checkIn = new Date(registration.check_in_date);
+        const checkOut = new Date(registration.check_out_date);
+        const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
+        days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+    }
+    
+    // Valor base por dia
+    total += HOTEL_BASE_PRICE * days;
+    
+    // Valor dos serviços extras
+    if (registration.extra_services) {
+        if (registration.extra_services.banho_tosa?.enabled) {
+            total += registration.extra_services.banho_tosa.value || HOTEL_EXTRA_SERVICES_PRICES.banho_tosa;
+        }
+        if (registration.extra_services.adestrador?.enabled) {
+            total += registration.extra_services.adestrador.value || HOTEL_EXTRA_SERVICES_PRICES.adestramento;
+        }
+        if (registration.extra_services.despesa_medica?.enabled) {
+            total += registration.extra_services.despesa_medica.value || HOTEL_EXTRA_SERVICES_PRICES.veterinario;
+        }
+        if (registration.extra_services.so_banho?.enabled) {
+            total += registration.extra_services.so_banho.value || 40; // Preço do banho simples
+        }
+        if (registration.extra_services.pernoite?.enabled) {
+            total += registration.extra_services.pernoite.value || 50; // Preço do pernoite
+        }
+        if (registration.extra_services.dias_extras?.quantity > 0) {
+            total += registration.extra_services.dias_extras.quantity * (registration.extra_services.dias_extras.value || 30);
+        }
+    }
+    
+    // Verificar serviços booleanos do registro
+    if (registration.service_transport) {
+        total += HOTEL_EXTRA_SERVICES_PRICES.transporte;
+    }
+    if (registration.service_vet) {
+        total += HOTEL_EXTRA_SERVICES_PRICES.veterinario;
+    }
+    if (registration.service_training) {
+        total += HOTEL_EXTRA_SERVICES_PRICES.adestramento;
+    }
+    if (registration.service_bath) {
+        total += HOTEL_EXTRA_SERVICES_PRICES.banho_tosa;
+    }
+    
+    // Se existe um total_services_price definido, usar ele ao invés do calculado
+    if (registration.total_services_price && registration.total_services_price > 0) {
+        return registration.total_services_price;
+    }
+    
+    return total;
+};
+
 
 // --- SVG ICONS ---
 // FIX: Update ChevronLeftIcon and ChevronRightIcon to accept SVG props to allow passing className.
@@ -81,6 +218,7 @@ const PawIcon = () => <img src="https://static.thenounproject.com/png/pet-icon-6
 const UserIcon = () => <img src="https://static.thenounproject.com/png/profile-icon-709597-512.png" alt="User Icon" className="h-7 w-7 opacity-60" />;
 const WhatsAppIcon = () => <img src="https://static.thenounproject.com/png/whatsapp-icon-6592278-512.png" alt="WhatsApp Icon" className="h-7 w-7 opacity-60" />;
 const SuccessIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="min-h-[64px] w-24 text-green-500 mx-auto mb-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>;
+const ChartBarIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>;
 const BreedIcon = () => <img src="https://static.thenounproject.com/png/pet-icon-7326432-512.png" alt="Breed Icon" className="h-7 w-7 opacity-60" />;
 const AddressIcon = () => <img src="https://static.thenounproject.com/png/location-icon-7979305-512.png" alt="Address Icon" className="h-7 w-7 opacity-60" />;
 const LogoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V5h10a1 1 0 100-2H3zm12.293 4.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L16.586 13H9a1 1 0 110-2h7.586l-1.293-1.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>;
@@ -3964,6 +4102,50 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
     const [isMonthlyExtraServicesModalOpen, setIsMonthlyExtraServicesModalOpen] = useState(false);
     const [monthlyClientForExtraServices, setMonthlyClientForExtraServices] = useState<MonthlyClient | null>(null);
 
+    const createTestData = async () => {
+        console.log('Criando dados de teste...');
+        const testClients = [
+            {
+                pet_name: 'Rex Teste',
+                pet_breed: 'Golden Retriever',
+                owner_name: 'João Silva',
+                owner_address: 'Rua Teste, 123',
+                whatsapp: '11999999999',
+                service: 'Banho e Tosa',
+                weight: 'Grande (20-40kg)',
+                price: 80,
+                recurrence_type: 'monthly',
+                recurrence_day: 15,
+                recurrence_time: 9,
+                payment_due_date: '2025-11-30',
+                is_active: true,
+                payment_status: 'Pendente'
+            },
+            {
+                pet_name: 'Bella Teste',
+                pet_breed: 'Poodle',
+                owner_name: 'Maria Santos',
+                owner_address: 'Av. Teste, 456',
+                whatsapp: '11888888888',
+                service: 'Banho',
+                weight: 'Médio (10-20kg)',
+                price: 50,
+                recurrence_type: 'weekly',
+                recurrence_day: 2,
+                recurrence_time: 14,
+                payment_due_date: '2025-10-29',
+                is_active: true,
+                payment_status: 'Pendente'
+            }
+        ];
+
+        const { error } = await supabase.from('monthly_clients').insert(testClients);
+        if (error) {
+            console.error('Erro ao criar dados de teste:', error);
+        } else {
+            console.log('Dados de teste criados com sucesso!');
+        }
+    };
 
     const fetchMonthlyClients = useCallback(async () => {
         setLoading(true);
@@ -3973,7 +4155,18 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
         if (error) {
             console.error('Error fetching monthly clients:', error);
         } else {
-            const sortedData = (data as MonthlyClient[]).sort((a, b) => a.owner_name.localeCompare(b.owner_name));
+            let sortedData = (data as MonthlyClient[]).sort((a, b) => a.owner_name.localeCompare(b.owner_name));
+            
+            // Se não há dados, criar dados de teste
+            if (!data || data.length === 0) {
+                await createTestData();
+                // Buscar novamente após criar dados de teste
+                const { data: newData, error: newError } = await supabase.from('monthly_clients').select('*');
+                if (!newError && newData) {
+                    sortedData = (newData as MonthlyClient[]).sort((a, b) => a.owner_name.localeCompare(b.owner_name));
+                }
+            }
+            
             setMonthlyClients(sortedData);
         }
         setLoading(false);
@@ -4064,7 +4257,17 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
         
         // Filtro por data de vencimento
         if (filterDueDate) {
-            filtered = filtered.filter(client => client.payment_due_date === filterDueDate);
+            console.log('Filtro por data:', filterDueDate);
+            console.log('Clientes antes do filtro:', filtered.length);
+            filtered = filtered.filter(client => {
+                const clientDate = formatDateToISO(client.payment_due_date);
+                const match = clientDate === filterDueDate;
+                if (match) {
+                    console.log('Cliente encontrado:', client.name, 'Data original:', client.payment_due_date, 'Data formatada:', clientDate);
+                }
+                return match;
+            });
+            console.log('Clientes após filtro:', filtered.length);
         }
         
         // Ordenação
@@ -4389,13 +4592,25 @@ const MonthlyClientCard: React.FC<{
         let total = Number(client.price || 0);
         
         if (client.extra_services) {
-            // Valores dos serviços extras (você pode ajustar estes valores conforme necessário)
-            if (client.extra_services.pernoite) total += 50;
-            if (client.extra_services.banho_tosa) total += 80;
-            if (client.extra_services.so_banho) total += 40;
-            if (client.extra_services.adestrador) total += 100;
-            if (client.extra_services.despesa_medica) total += 150;
-            if (client.extra_services.dias_extras) total += (client.extra_services.dias_extras * 30);
+            // Usar os valores dinâmicos dos serviços extras
+            if (client.extra_services.pernoite?.enabled) {
+                total += Number(client.extra_services.pernoite.value || 0);
+            }
+            if (client.extra_services.banho_tosa?.enabled) {
+                total += Number(client.extra_services.banho_tosa.value || 0);
+            }
+            if (client.extra_services.so_banho?.enabled) {
+                total += Number(client.extra_services.so_banho.value || 0);
+            }
+            if (client.extra_services.adestrador?.enabled) {
+                total += Number(client.extra_services.adestrador.value || 0);
+            }
+            if (client.extra_services.despesa_medica?.enabled) {
+                total += Number(client.extra_services.despesa_medica.value || 0);
+            }
+            if (client.extra_services.dias_extras?.quantity > 0) {
+                total += (client.extra_services.dias_extras.quantity * Number(client.extra_services.dias_extras.value || 0));
+            }
         }
         
         return total;
@@ -4578,6 +4793,9 @@ const DaycareEnrollmentCard: React.FC<{
       '5x_week': '5x por Semana',
     };
 
+    // Calcular o valor total da fatura
+    const invoiceTotal = calculateDaycareInvoiceTotal(enrollment);
+
     return (
         <div 
             draggable={isDraggable}
@@ -4603,9 +4821,15 @@ const DaycareEnrollmentCard: React.FC<{
                 </div>
                 
                 <div className="mt-4 border-t border-gray-200 pt-4">
-                    <div className="flex items-center text-base text-gray-700">
-                        <TagIcon />
-                        <span className="font-semibold mr-2">Plano:</span> {contracted_plan ? planLabels[contracted_plan] : 'Não informado'}
+                    <div className="flex items-center justify-between text-base text-gray-700 mb-3">
+                        <div className="flex items-center">
+                            <TagIcon />
+                            <span className="font-semibold mr-2">Plano:</span> {contracted_plan ? planLabels[contracted_plan] : 'Não informado'}
+                        </div>
+                        <div className="text-right">
+                            <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Valor Total</div>
+                            <div className="text-lg font-bold text-pink-600">R$ {invoiceTotal.toFixed(2).replace('.', ',')}</div>
+                        </div>
                     </div>
                     
                     {/* Serviços Extras */}
@@ -4851,6 +5075,26 @@ const EditDaycareEnrollmentModal: React.FC<{
         setFormData(prev => ({ ...prev, [name]: checked }));
     };
 
+    // useEffect para calcular automaticamente o valor total incluindo serviços extras
+    useEffect(() => {
+        const basePrice = Number(formData.total_services_price) || 0;
+        const extraServicesTotal = calculateExtraServicesTotal(formData);
+        const totalWithExtras = basePrice + extraServicesTotal;
+        
+        // Só atualiza se o valor calculado for diferente do atual
+        if (formData.total_price !== totalWithExtras) {
+            setFormData(prev => ({ ...prev, total_price: totalWithExtras }));
+        }
+    }, [
+        formData.total_services_price,
+        formData.pernoite, formData.pernoite_quantity, formData.pernoite_price,
+        formData.banho_tosa, formData.banho_tosa_quantity, formData.banho_tosa_price,
+        formData.so_banho, formData.so_banho_quantity, formData.so_banho_price,
+        formData.adestrador, formData.adestrador_quantity, formData.adestrador_price,
+        formData.despesa_medica, formData.despesa_medica_quantity, formData.despesa_medica_price,
+        formData.dia_extra, formData.dia_extra_quantity, formData.dia_extra_price
+    ]);
+
     const handleBelongingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { value, checked } = e.target;
         setFormData(prev => {
@@ -4937,113 +5181,313 @@ const EditDaycareEnrollmentModal: React.FC<{
                         </div>
                         {renderRadioGroup('Plano', 'contracted_plan', [ {label: '2x Semana', value: '2x_week'}, {label: '3x Semana', value: '3x_week'}, {label: '4x Semana', value: '4x_week'}, {label: '5x Semana', value: '5x_week'}])}
                         
+                        {/* Enrollment Date */}
+                        <div>
+                            <label className="block text-base font-semibold text-gray-700">Data de Matrícula</label>
+                            <input 
+                                type="date" 
+                                name="enrollment_date" 
+                                value={formData.enrollment_date || ''} 
+                                onChange={handleInputChange} 
+                                className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"
+                            />
+                        </div>
+                        
                         {/* Extra Services */}
                         <div className="space-y-4">
                             <h4 className="text-base font-semibold text-pink-700 border-b pb-1">Serviços Extras</h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <label className="flex items-center gap-2 text-gray-700 font-medium bg-white p-3 rounded-lg border">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={formData.extra_services?.pernoite || false}
-                                        onChange={(e) => setFormData(prev => ({
-                                            ...prev,
-                                            extra_services: {
-                                                ...prev.extra_services,
-                                                pernoite: e.target.checked
-                                            }
-                                        }))}
-                                        className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
-                                    />
-                                    Pernoite
-                                </label>
-                                <label className="flex items-center gap-2 text-gray-700 font-medium bg-white p-3 rounded-lg border">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={formData.extra_services?.banho_tosa || false}
-                                        onChange={(e) => setFormData(prev => ({
-                                            ...prev,
-                                            extra_services: {
-                                                ...prev.extra_services,
-                                                banho_tosa: e.target.checked
-                                            }
-                                        }))}
-                                        className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
-                                    />
-                                    Banho & Tosa
-                                </label>
-                                <label className="flex items-center gap-2 text-gray-700 font-medium bg-white p-3 rounded-lg border">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={formData.extra_services?.so_banho || false}
-                                        onChange={(e) => setFormData(prev => ({
-                                            ...prev,
-                                            extra_services: {
-                                                ...prev.extra_services,
-                                                so_banho: e.target.checked
-                                            }
-                                        }))}
-                                        className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
-                                    />
-                                    Só banho
-                                </label>
-                                <label className="flex items-center gap-2 text-gray-700 font-medium bg-white p-3 rounded-lg border">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={formData.extra_services?.adestrador || false}
-                                        onChange={(e) => setFormData(prev => ({
-                                            ...prev,
-                                            extra_services: {
-                                                ...prev.extra_services,
-                                                adestrador: e.target.checked
-                                            }
-                                        }))}
-                                        className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
-                                    />
-                                    Adestrador
-                                </label>
-                                <label className="flex items-center gap-2 text-gray-700 font-medium bg-white p-3 rounded-lg border">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={formData.extra_services?.despesa_medica || false}
-                                        onChange={(e) => setFormData(prev => ({
-                                            ...prev,
-                                            extra_services: {
-                                                ...prev.extra_services,
-                                                despesa_medica: e.target.checked
-                                            }
-                                        }))}
-                                        className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
-                                    />
-                                    Despesa médica
-                                </label>
-                                <div className="flex items-center gap-2 text-gray-700 font-medium bg-white p-3 rounded-lg border">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={(formData.extra_services?.dia_extra || 0) > 0}
-                                        onChange={(e) => setFormData(prev => ({
-                                            ...prev,
-                                            extra_services: {
-                                                ...prev.extra_services,
-                                                dia_extra: e.target.checked ? 1 : 0
-                                            }
-                                        }))}
-                                        className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
-                                    />
-                                    <span>Dia extra</span>
-                                    {(formData.extra_services?.dia_extra || 0) > 0 && (
+                            <div className="grid grid-cols-1 gap-4">
+                                {/* Pernoite */}
+                                <div className="bg-white p-4 rounded-lg border">
+                                    <div className="flex items-center gap-2 mb-2">
                                         <input 
-                                            type="number" 
-                                            min="1"
-                                            value={formData.extra_services?.dia_extra || 1}
+                                            type="checkbox" 
+                                            checked={formData.pernoite || false}
                                             onChange={(e) => setFormData(prev => ({
                                                 ...prev,
-                                                extra_services: {
-                                                    ...prev.extra_services,
-                                                    dia_extra: parseInt(e.target.value) || 1
-                                                }
+                                                pernoite: e.target.checked,
+                                                pernoite_quantity: e.target.checked ? (prev.pernoite_quantity || 1) : undefined,
+                                                pernoite_price: e.target.checked ? (prev.pernoite_price || 0) : undefined
                                             }))}
-                                            className="w-12 px-1 py-0.5 border border-gray-300 rounded text-center text-sm"
+                                            className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
                                         />
+                                        <span className="text-gray-700 font-medium">Pernoite</span>
+                                    </div>
+                                    {formData.pernoite && (
+                                        <div className="flex gap-2 ml-6">
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-sm text-gray-600">Qtd:</span>
+                                                <input 
+                                                    type="number" 
+                                                    min="1"
+                                                    value={formData.pernoite_quantity || 1}
+                                                    onChange={(e) => setFormData(prev => ({
+                                                        ...prev,
+                                                        pernoite_quantity: parseInt(e.target.value) || 1
+                                                    }))}
+                                                    className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-sm text-gray-600">R$:</span>
+                                                <input 
+                                                    type="number" 
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={formData.pernoite_price || 0}
+                                                    onChange={(e) => setFormData(prev => ({
+                                                        ...prev,
+                                                        pernoite_price: parseFloat(e.target.value) || 0
+                                                    }))}
+                                                    className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Banho & Tosa */}
+                                <div className="bg-white p-4 rounded-lg border">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={formData.banho_tosa || false}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                banho_tosa: e.target.checked,
+                                                banho_tosa_quantity: e.target.checked ? (prev.banho_tosa_quantity || 1) : undefined,
+                                                banho_tosa_price: e.target.checked ? (prev.banho_tosa_price || 0) : undefined
+                                            }))}
+                                            className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                                        />
+                                        <span className="text-gray-700 font-medium">Banho & Tosa</span>
+                                    </div>
+                                    {formData.banho_tosa && (
+                                        <div className="flex gap-2 ml-6">
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-sm text-gray-600">Qtd:</span>
+                                                <input 
+                                                    type="number" 
+                                                    min="1"
+                                                    value={formData.banho_tosa_quantity || 1}
+                                                    onChange={(e) => setFormData(prev => ({
+                                                        ...prev,
+                                                        banho_tosa_quantity: parseInt(e.target.value) || 1
+                                                    }))}
+                                                    className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-sm text-gray-600">R$:</span>
+                                                <input 
+                                                    type="number" 
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={formData.banho_tosa_price || 0}
+                                                    onChange={(e) => setFormData(prev => ({
+                                                        ...prev,
+                                                        banho_tosa_price: parseFloat(e.target.value) || 0
+                                                    }))}
+                                                    className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Só banho */}
+                                <div className="bg-white p-4 rounded-lg border">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={formData.so_banho || false}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                so_banho: e.target.checked,
+                                                so_banho_quantity: e.target.checked ? (prev.so_banho_quantity || 1) : undefined,
+                                                so_banho_price: e.target.checked ? (prev.so_banho_price || 0) : undefined
+                                            }))}
+                                            className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                                        />
+                                        <span className="text-gray-700 font-medium">Só banho</span>
+                                    </div>
+                                    {formData.so_banho && (
+                                        <div className="flex gap-2 ml-6">
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-sm text-gray-600">Qtd:</span>
+                                                <input 
+                                                    type="number" 
+                                                    min="1"
+                                                    value={formData.so_banho_quantity || 1}
+                                                    onChange={(e) => setFormData(prev => ({
+                                                        ...prev,
+                                                        so_banho_quantity: parseInt(e.target.value) || 1
+                                                    }))}
+                                                    className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-sm text-gray-600">R$:</span>
+                                                <input 
+                                                    type="number" 
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={formData.so_banho_price || 0}
+                                                    onChange={(e) => setFormData(prev => ({
+                                                        ...prev,
+                                                        so_banho_price: parseFloat(e.target.value) || 0
+                                                    }))}
+                                                    className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Adestrador */}
+                                <div className="bg-white p-4 rounded-lg border">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={formData.adestrador || false}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                adestrador: e.target.checked,
+                                                adestrador_quantity: e.target.checked ? (prev.adestrador_quantity || 1) : undefined,
+                                                adestrador_price: e.target.checked ? (prev.adestrador_price || 0) : undefined
+                                            }))}
+                                            className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                                        />
+                                        <span className="text-gray-700 font-medium">Adestrador</span>
+                                    </div>
+                                    {formData.adestrador && (
+                                        <div className="flex gap-2 ml-6">
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-sm text-gray-600">Qtd:</span>
+                                                <input 
+                                                    type="number" 
+                                                    min="1"
+                                                    value={formData.adestrador_quantity || 1}
+                                                    onChange={(e) => setFormData(prev => ({
+                                                        ...prev,
+                                                        adestrador_quantity: parseInt(e.target.value) || 1
+                                                    }))}
+                                                    className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-sm text-gray-600">R$:</span>
+                                                <input 
+                                                    type="number" 
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={formData.adestrador_price || 0}
+                                                    onChange={(e) => setFormData(prev => ({
+                                                        ...prev,
+                                                        adestrador_price: parseFloat(e.target.value) || 0
+                                                    }))}
+                                                    className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Despesa médica */}
+                                <div className="bg-white p-4 rounded-lg border">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={formData.despesa_medica || false}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                despesa_medica: e.target.checked,
+                                                despesa_medica_quantity: e.target.checked ? (prev.despesa_medica_quantity || 1) : undefined,
+                                                despesa_medica_price: e.target.checked ? (prev.despesa_medica_price || 0) : undefined
+                                            }))}
+                                            className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                                        />
+                                        <span className="text-gray-700 font-medium">Despesa médica</span>
+                                    </div>
+                                    {formData.despesa_medica && (
+                                        <div className="flex gap-2 ml-6">
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-sm text-gray-600">Qtd:</span>
+                                                <input 
+                                                    type="number" 
+                                                    min="1"
+                                                    value={formData.despesa_medica_quantity || 1}
+                                                    onChange={(e) => setFormData(prev => ({
+                                                        ...prev,
+                                                        despesa_medica_quantity: parseInt(e.target.value) || 1
+                                                    }))}
+                                                    className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-sm text-gray-600">R$:</span>
+                                                <input 
+                                                    type="number" 
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={formData.despesa_medica_price || 0}
+                                                    onChange={(e) => setFormData(prev => ({
+                                                        ...prev,
+                                                        despesa_medica_price: parseFloat(e.target.value) || 0
+                                                    }))}
+                                                    className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Dia extra */}
+                                <div className="bg-white p-4 rounded-lg border">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={formData.dia_extra || false}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                dia_extra: e.target.checked,
+                                                dia_extra_quantity: e.target.checked ? (prev.dia_extra_quantity || 1) : undefined,
+                                                dia_extra_price: e.target.checked ? (prev.dia_extra_price || 0) : undefined
+                                            }))}
+                                            className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                                        />
+                                        <span className="text-gray-700 font-medium">Dia extra</span>
+                                    </div>
+                                    {formData.dia_extra && (
+                                        <div className="flex gap-2 ml-6">
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-sm text-gray-600">Qtd:</span>
+                                                <input 
+                                                    type="number" 
+                                                    min="1"
+                                                    value={formData.dia_extra_quantity || 1}
+                                                    onChange={(e) => setFormData(prev => ({
+                                                        ...prev,
+                                                        dia_extra_quantity: parseInt(e.target.value) || 1
+                                                    }))}
+                                                    className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-sm text-gray-600">R$:</span>
+                                                <input 
+                                                    type="number" 
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={formData.dia_extra_price || 0}
+                                                    onChange={(e) => setFormData(prev => ({
+                                                        ...prev,
+                                                        dia_extra_price: parseFloat(e.target.value) || 0
+                                                    }))}
+                                                    className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm"
+                                                />
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -5072,8 +5516,6 @@ const HotelRegistrationForm: React.FC<{
     setView?: (view: 'scheduler' | 'login' | 'hotelRegistration') => void;
     onSuccess?: () => void;
 }> = ({ setView, onSuccess }) => {
-    const [step, setStep] = useState(1);
-    const [isAnimating, setIsAnimating] = useState(false);
     const [formData, setFormData] = useState<HotelRegistration>({
         pet_name: '', pet_sex: null, pet_breed: '', is_neutered: null, pet_age: '',
         tutor_name: '', tutor_rg: '', tutor_address: '', tutor_phone: '', tutor_email: '', tutor_social_media: '',
@@ -5087,9 +5529,18 @@ const HotelRegistrationForm: React.FC<{
         service_vet: false, service_training: false, total_services_price: 0, additional_info: '',
         professional_name: '', registration_date: new Date().toISOString().split('T')[0],
         tutor_check_in_signature: '', tutor_check_out_signature: '', declaration_accepted: false, status: 'Ativo',
+        extra_services: {
+            pernoite: false, pernoite_quantity: 0, pernoite_price: 0,
+            banho_tosa: false, banho_tosa_price: 0,
+            so_banho: false, so_banho_price: 0,
+            adestrador: false, adestrador_price: 0,
+            despesa_medica: false, despesa_medica_price: 0,
+            dias_extras: false, dias_extras_quantity: 0, dias_extras_price: 0
+        }
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [step, setStep] = useState(1);
     const [checkInDate, setCheckInDate] = useState(new Date());
     const [checkOutDate, setCheckOutDate] = useState(new Date());
     const [checkInHour, setCheckInHour] = useState<number | null>(null);
@@ -5099,17 +5550,6 @@ const HotelRegistrationForm: React.FC<{
     const [serviceDailyText, setServiceDailyText] = useState('');
     const [serviceExtraHourText, setServiceExtraHourText] = useState('');
     const [serviceTrainingText, setServiceTrainingText] = useState('');
-    const [vaccinationCardFile, setVaccinationCardFile] = useState<string>('');
-    const [vetCertificateFile, setVetCertificateFile] = useState<string>('');
-    const [woundsPhotoFile, setWoundsPhotoFile] = useState<string>('');
-
-    const changeStep = (nextStep: number) => {
-        setIsAnimating(true);
-        setTimeout(() => {
-            setStep(nextStep);
-            setIsAnimating(false);
-        }, 300);
-    };
 
     useEffect(() => {
         if (checkInDate && checkInHour !== null) {
@@ -5126,6 +5566,45 @@ const HotelRegistrationForm: React.FC<{
             setFormData(prev => ({ ...prev, check_out_date: dateStr, check_out_time: timeStr }));
         }
     }, [checkOutDate, checkOutHour]);
+
+    // Cálculo automático do total de serviços
+    useEffect(() => {
+        let total = 0;
+        
+        // Serviços básicos (valores fixos para exemplo)
+        if (formData.service_bath) total += 50;
+        if (formData.service_transport) total += 30;
+        if (formData.service_daily_rate) total += 80;
+        if (formData.service_extra_hour) total += 20;
+        if (formData.service_vet) total += 100;
+        if (formData.service_training) total += 150;
+        
+        // Serviços extras
+        if (formData.extra_services?.pernoite) {
+            total += (formData.extra_services.pernoite_quantity || 0) * (formData.extra_services.pernoite_price || 0);
+        }
+        if (formData.extra_services?.banho_tosa) {
+            total += formData.extra_services.banho_tosa_price || 0;
+        }
+        if (formData.extra_services?.so_banho) {
+            total += formData.extra_services.so_banho_price || 0;
+        }
+        if (formData.extra_services?.adestrador) {
+            total += formData.extra_services.adestrador_price || 0;
+        }
+        if (formData.extra_services?.despesa_medica) {
+            total += formData.extra_services.despesa_medica_price || 0;
+        }
+        if (formData.extra_services?.dias_extras) {
+            total += (formData.extra_services.dias_extras_quantity || 0) * (formData.extra_services.dias_extras_price || 0);
+        }
+        
+        setFormData(prev => ({ ...prev, total_services_price: total }));
+    }, [
+        formData.service_bath, formData.service_transport, formData.service_daily_rate,
+        formData.service_extra_hour, formData.service_vet, formData.service_training,
+        formData.extra_services
+    ]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
@@ -5177,7 +5656,7 @@ const HotelRegistrationForm: React.FC<{
                     <SuccessIcon />
                     <h2 className="text-3xl font-bold text-gray-800 mt-2">Check-in Realizado!</h2>
                     <p className="text-gray-600 mt-2">Registro de hospedagem criado com sucesso.</p>
-                    <button onClick={() => setView && setViewWithLog('scheduler')} className="mt-6 bg-pink-600 text-white font-bold py-3.5 px-8 rounded-lg hover:bg-pink-700 transition-colors">OK</button>
+                    <button onClick={() => setView && setView('scheduler')} className="mt-6 bg-pink-600 text-white font-bold py-3.5 px-8 rounded-lg hover:bg-pink-700 transition-colors">OK</button>
                 </div>
             </div>
         );
@@ -5197,13 +5676,13 @@ const HotelRegistrationForm: React.FC<{
         </div>
     );
 
-    const hotelHours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+    const hotelHours = [8, 9, 10, 11, 12, 14, 15, 16, 17, 18];
 
     const onBack = () => {
         if (step > 1) {
-            changeStep(step - 1);
+            setStep(step - 1);
         } else {
-            setView && setViewWithLog('scheduler');
+            setView && setView('scheduler');
         }
     };
 
@@ -5228,317 +5707,226 @@ const HotelRegistrationForm: React.FC<{
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit} className={`relative p-6 sm:p-8 transition-all duration-300 ${isAnimating ? 'animate-slideOutToLeft' : 'animate-slideInFromRight'}`}>
-                {step === 1 && (
-                    <div className="space-y-7">
-                        <h2 className="text-3xl font-bold text-gray-800">Dados do Pet e Tutor</h2>
-                        <div className="space-y-6">
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-700 mb-4">Informações do Pet</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label htmlFor="pet_name" className="block text-base font-semibold text-gray-700">Nome do Pet</label>
-                                        <input type="text" name="pet_name" id="pet_name" value={formData.pet_name} onChange={handleInputChange} required className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="pet_breed" className="block text-base font-semibold text-gray-700">Raça</label>
-                                        <input type="text" name="pet_breed" id="pet_breed" value={formData.pet_breed} onChange={handleInputChange} required className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="pet_age" className="block text-base font-semibold text-gray-700">Idade</label>
-                                        <input type="text" name="pet_age" id="pet_age" value={formData.pet_age} onChange={handleInputChange} required placeholder="Ex: 2 anos" className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                    </div>
-                                    <div className="md:col-span-1">{renderRadioGroup('Sexo', 'pet_sex', [{label: 'Macho', value: 'Macho'}, {label: 'Fêmea', value: 'Fêmea'}])}</div>
-                                    <div className="md:col-span-2">{renderRadioGroup('Castrado(a)', 'is_neutered', [{label: 'Sim', value: true}, {label: 'Não', value: false}])}</div>
-                                </div>
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-700 mb-4">Informações do Tutor</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="md:col-span-2">
-                                        <label htmlFor="tutor_name" className="block text-base font-semibold text-gray-700">Nome do Tutor</label>
-                                        <input type="text" name="tutor_name" id="tutor_name" value={formData.tutor_name} onChange={handleInputChange} required className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                    </div>
-                                    <div className="md:col-span-2">
-                                        <label htmlFor="tutor_address" className="block text-base font-semibold text-gray-700">Endereço</label>
-                                        <input type="text" name="tutor_address" id="tutor_address" value={formData.tutor_address} onChange={handleInputChange} required className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="tutor_phone" className="block text-base font-semibold text-gray-700">Telefone</label>
-                                        <input type="tel" name="tutor_phone" id="tutor_phone" value={formData.tutor_phone} onChange={handleInputChange} required className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="tutor_email" className="block text-base font-semibold text-gray-700">Email</label>
-                                        <input type="email" name="tutor_email" id="tutor_email" value={formData.tutor_email} onChange={handleInputChange} className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                    </div>
-                                </div>
-                            </div>
+            <form onSubmit={handleSubmit} className="relative p-6 sm:p-8">
+                {/* Seção 1: Dados do Pet e Tutor */}
+                <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">📋 Dados do Pet e Tutor</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Nome do Pet *</label>
+                            <input type="text" name="pet_name" value={formData.pet_name} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Espécie *</label>
+                            <select name="species" value={formData.species} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                                <option value="">Selecione a espécie</option>
+                                <option value="Cão">Cão</option>
+                                <option value="Gato">Gato</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Raça</label>
+                            <input type="text" name="breed" value={formData.breed} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Idade</label>
+                            <input type="text" name="age" value={formData.age} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Peso (kg)</label>
+                            <input type="number" name="weight" value={formData.weight} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" step="0.1" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Sexo</label>
+                            <select name="gender" value={formData.gender} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Selecione o sexo</option>
+                                <option value="Macho">Macho</option>
+                                <option value="Fêmea">Fêmea</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Nome do Tutor *</label>
+                            <input type="text" name="tutor_name" value={formData.tutor_name} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Telefone *</label>
+                            <input type="tel" name="tutor_phone" value={formData.tutor_phone} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                            <input type="email" name="tutor_email" value={formData.tutor_email} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                         </div>
                     </div>
-                )}
+                </div>
 
-                {step === 2 && (
-                    <div className="space-y-7">
-                        <h2 className="text-3xl font-bold text-gray-800">Documentos e Anamnese</h2>
-                        <div className="space-y-6">
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-700 mb-4">Documentos</h3>
-                                <div className="space-y-6">
-                                    <div>
-                                        <label htmlFor="tutor_rg" className="block text-base font-semibold text-gray-700">RG (número)</label>
-                                        <input type="text" name="tutor_rg" id="tutor_rg" value={formData.tutor_rg} onChange={handleInputChange} placeholder="Digite o número do RG" className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                    </div>
-                                    
-                                    <div>
-                                        <label className="block text-base font-semibold text-gray-700 mb-2">Carteira de Vacinação (opcional)</label>
-                                        <input type="file" accept="image/*,application/pdf" onChange={(e) => setVaccinationCardFile(e.target.files?.[0]?.name || '')} className="block w-full text-base text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"/>
-                                        {vaccinationCardFile && <p className="mt-1 text-base text-gray-600">Arquivo selecionado: {vaccinationCardFile}</p>}
-                                    </div>
-                                    
-                                    <div>
-                                        <label className="block text-base font-semibold text-gray-700 mb-2">Atestado Veterinário</label>
-                                        <input type="file" accept="image/*,application/pdf" onChange={(e) => setVetCertificateFile(e.target.files?.[0]?.name || '')} className="block w-full text-base text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"/>
-                                        {vetCertificateFile && <p className="mt-1 text-base text-gray-600">Arquivo selecionado: {vetCertificateFile}</p>}
-                                    </div>
-                                    
-                                    <div>
-                                        <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
-                                            <input type="checkbox" name="has_flea_tick_remedy" checked={formData.has_flea_tick_remedy} onChange={handleInputChange} className="h-7 w-7 rounded border-gray-300 text-pink-600"/>
-                                            <span className="font-semibold">Remédio Pulga/Carrapato</span>
-                                        </label>
-                                        {formData.has_flea_tick_remedy && (
-                                            <div className="mt-2 ml-7">
-                                                <label htmlFor="flea_tick_remedy_date" className="block text-base font-semibold text-gray-700">Data de aplicação</label>
-                                                <input type="date" name="flea_tick_remedy_date" id="flea_tick_remedy_date" value={formData.flea_tick_remedy_date} onChange={handleInputChange} className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-700 mb-4">Anamnese</h3>
-                                <div className="space-y-6">
-                                    <div>
-                                        <label htmlFor="preexisting_disease" className="block text-base font-semibold text-gray-700">Doença preexistente</label>
-                                        <textarea name="preexisting_disease" id="preexisting_disease" value={formData.preexisting_disease} onChange={handleInputChange} rows={2} className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="allergies" className="block text-base font-semibold text-gray-700">Alergias</label>
-                                        <textarea name="allergies" id="allergies" value={formData.allergies} onChange={handleInputChange} rows={2} className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="behavior" className="block text-base font-semibold text-gray-700">Comportamento</label>
-                                        <textarea name="behavior" id="behavior" value={formData.behavior} onChange={handleInputChange} rows={2} className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="fears_traumas" className="block text-base font-semibold text-gray-700">Algum medo ou trauma?</label>
-                                        <textarea name="fears_traumas" id="fears_traumas" value={formData.fears_traumas} onChange={handleInputChange} rows={2} placeholder="Descreva medos ou traumas do pet" className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                    </div>
-                                    <div>
-                                        <label className="block text-base font-semibold text-gray-700 mb-2">Feridas: marque na foto</label>
-                                        <input type="file" accept="image/*" onChange={(e) => setWoundsPhotoFile(e.target.files?.[0]?.name || '')} className="block w-full text-base text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"/>
-                                        {woundsPhotoFile && <p className="mt-1 text-base text-gray-600">Foto selecionada: {woundsPhotoFile}</p>}
-                                    </div>
-                                </div>
-                            </div>
+                {/* Seção 2: Informações Médicas */}
+                <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">🏥 Informações Médicas</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Veterinário</label>
+                            <input type="text" name="veterinarian" value={formData.veterinarian} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Telefone do Veterinário</label>
+                            <input type="tel" name="vet_phone" value={formData.vet_phone} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Medicamentos em Uso</label>
+                            <textarea name="medications" value={formData.medications} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Alergias</label>
+                            <textarea name="allergies" value={formData.allergies} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Observações Médicas</label>
+                            <textarea name="medical_observations" value={formData.medical_observations} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} />
                         </div>
                     </div>
-                )}
+                </div>
 
-                {step === 3 && (
-                    <div className="space-y-7">
-                        <h2 className="text-3xl font-bold text-gray-800">Alimentação</h2>
-                        <div className="space-y-6">
-                            <div className="space-y-6">
-                                <div>
-                                    <label htmlFor="food_brand" className="block text-base font-semibold text-gray-700">Ração</label>
-                                    <input type="text" name="food_brand" id="food_brand" value={formData.food_brand} onChange={handleInputChange} placeholder="Marca e tipo da ração" className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                </div>
-                                <div>
-                                    <label htmlFor="food_quantity" className="block text-base font-semibold text-gray-700">Quantidade</label>
-                                    <input type="text" name="food_quantity" id="food_quantity" value={formData.food_quantity} onChange={handleInputChange} placeholder="Ex: 200g, 1 xícara" className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                </div>
-                                <div>
-                                    <label htmlFor="feeding_frequency" className="block text-base font-semibold text-gray-700">1 ou 2x por dia</label>
-                                    <input type="text" name="feeding_frequency" id="feeding_frequency" value={formData.feeding_frequency} onChange={handleInputChange} placeholder="Ex: 1x ao dia, 2x ao dia" className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                </div>
-                                <div>
-                                    <label htmlFor="accepts_treats" className="block text-base font-semibold text-gray-700">Petisco ok?</label>
-                                    <input type="text" name="accepts_treats" id="accepts_treats" value={formData.accepts_treats} onChange={handleInputChange} placeholder="Sim/Não, quais tipos" className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                </div>
-                                <div>
-                                    <label htmlFor="special_food_care" className="block text-base font-semibold text-gray-700">Algum cuidado especial?</label>
-                                    <textarea name="special_food_care" id="special_food_care" value={formData.special_food_care} onChange={handleInputChange} rows={3} placeholder="Descreva cuidados especiais com alimentação" className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                </div>
-                            </div>
+                {/* Seção 3: Alimentação */}
+                <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">🍽️ Alimentação</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Ração</label>
+                            <input type="text" name="food_type" value={formData.food_type} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Quantidade por Refeição</label>
+                            <input type="text" name="food_amount" value={formData.food_amount} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Frequência de Alimentação</label>
+                            <select name="feeding_frequency" value={formData.feeding_frequency} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Selecione a frequência</option>
+                                <option value="1x ao dia">1x ao dia</option>
+                                <option value="2x ao dia">2x ao dia</option>
+                                <option value="3x ao dia">3x ao dia</option>
+                                <option value="Livre demanda">Livre demanda</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Horários de Alimentação</label>
+                            <input type="text" name="feeding_times" value={formData.feeding_times} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Ex: 8h, 12h, 18h" />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Observações sobre Alimentação</label>
+                            <textarea name="food_observations" value={formData.food_observations} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} />
                         </div>
                     </div>
-                )}
+                </div>
 
-                {step === 4 && (
-                    <div className="space-y-7">
-                        <h2 className="text-3xl font-bold text-gray-800">Hospedagem</h2>
-                        <div className="space-y-6">
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-700 mb-4">Check-in</h3>
-                                <div className="bg-white p-6 sm:p-5 rounded-lg border border-gray-200">
-                                    <Calendar selectedDate={checkInDate} onDateChange={setCheckInDate} disablePast={true} />
-                                </div>
-                                <div className="mt-4">
-                                    <label className="block text-base font-semibold text-gray-700 mb-2">Horário do Check-in</label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                                        {hotelHours.map(hour => (
-                                            <button type="button" key={hour} onClick={() => setCheckInHour(hour)}
-                                                className={`p-2 rounded-lg text-center font-semibold transition-colors ${checkInHour === hour ? 'bg-pink-600 text-white' : 'bg-gray-50 border border-gray-300 hover:border-pink-500'}`}>
-                                                {`${hour}:00`}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-700 mb-4">Check-out</h3>
-                                <div className="bg-white p-6 sm:p-5 rounded-lg border border-gray-200">
-                                    <Calendar selectedDate={checkOutDate} onDateChange={setCheckOutDate} disablePast={true} />
-                                </div>
-                                <div className="mt-4">
-                                    <label className="block text-base font-semibold text-gray-700 mb-2">Horário do Check-out</label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                                        {hotelHours.map(hour => (
-                                            <button type="button" key={hour} onClick={() => setCheckOutHour(hour)}
-                                                className={`p-2 rounded-lg text-center font-semibold transition-colors ${checkOutHour === hour ? 'bg-pink-600 text-white' : 'bg-gray-50 border border-gray-300 hover:border-pink-500'}`}>
-                                                {`${hour}:00`}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
+                {/* Seção 4: Check-in e Check-out */}
+                <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">📅 Datas e Horários</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Data de Check-in *</label>
+                            <input type="date" name="check_in_date" value={formData.check_in_date} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Horário de Check-in *</label>
+                            <input type="time" name="check_in_time" value={formData.check_in_time} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Data de Check-out *</label>
+                            <input type="date" name="check_out_date" value={formData.check_out_date} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Horário de Check-out *</label>
+                            <input type="time" name="check_out_time" value={formData.check_out_time} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
                         </div>
                     </div>
-                )}
+                </div>
 
-                {step === 5 && (
-                    <div className="space-y-7">
-                        <h2 className="text-3xl font-bold text-gray-800">Serviços Adicionais</h2>
-                        <div className="space-y-6">
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
-                                        <input type="checkbox" name="service_bath" checked={formData.service_bath} onChange={handleInputChange} className="h-7 w-7 rounded border-gray-300 text-pink-600"/>
-                                        <span className="font-semibold">Banho</span>
-                                    </label>
-                                    {formData.service_bath && (
-                                        <input type="text" value={serviceBathText} onChange={(e) => setServiceBathText(e.target.value)} placeholder="Detalhes do banho" className="mt-2 ml-7 w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                    )}
-                                </div>
-                                
-                                <div>
-                                    <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
-                                        <input type="checkbox" name="service_transport" checked={formData.service_transport} onChange={handleInputChange} className="h-7 w-7 rounded border-gray-300 text-pink-600"/>
-                                        <span className="font-semibold">Transporte</span>
-                                    </label>
-                                    {formData.service_transport && (
-                                        <input type="text" value={serviceTransportText} onChange={(e) => setServiceTransportText(e.target.value)} placeholder="Endereço/detalhes do transporte" className="mt-2 ml-7 w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                    )}
-                                </div>
-                                
-                                <div>
-                                    <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
-                                        <input type="checkbox" name="service_daily_rate" checked={formData.service_daily_rate} onChange={handleInputChange} className="h-7 w-7 rounded border-gray-300 text-pink-600"/>
-                                        <span className="font-semibold">Diária</span>
-                                    </label>
-                                    {formData.service_daily_rate && (
-                                        <input type="text" value={serviceDailyText} onChange={(e) => setServiceDailyText(e.target.value)} placeholder="Número de diárias" className="mt-2 ml-7 w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                    )}
-                                </div>
-                                
-                                <div>
-                                    <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
-                                        <input type="checkbox" name="service_extra_hour" checked={formData.service_extra_hour} onChange={handleInputChange} className="h-7 w-7 rounded border-gray-300 text-pink-600"/>
-                                        <span className="font-semibold">Hora extra</span>
-                                    </label>
-                                    {formData.service_extra_hour && (
-                                        <input type="text" value={serviceExtraHourText} onChange={(e) => setServiceExtraHourText(e.target.value)} placeholder="Quantidade de horas extras" className="mt-2 ml-7 w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                    )}
-                                </div>
-                                
-                                <div>
-                                    <label htmlFor="service_vet" className="block text-base font-semibold text-gray-700">Médico(a) veterinário(a)</label>
-                                    <textarea name="vet_phone" id="vet_phone" value={formData.vet_phone} onChange={handleInputChange} rows={2} placeholder="Nome e telefone do veterinário" className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                </div>
-                                
-                                <div>
-                                    <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
-                                        <input type="checkbox" name="service_training" checked={formData.service_training} onChange={handleInputChange} className="h-7 w-7 rounded border-gray-300 text-pink-600"/>
-                                        <span className="font-semibold">Adestramento</span>
-                                    </label>
-                                    {formData.service_training && (
-                                        <input type="text" value={serviceTrainingText} onChange={(e) => setServiceTrainingText(e.target.value)} placeholder="Tipo de adestramento" className="mt-2 ml-7 w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                    )}
-                                </div>
-                                
-                                <div>
-                                    <label htmlFor="total_services_price" className="block text-base font-semibold text-gray-700">Total Serviços: R$</label>
-                                    <input type="number" name="total_services_price" id="total_services_price" value={formData.total_services_price} onChange={handleInputChange} step="0.01" placeholder="0.00" className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                </div>
-                                
-                                <div>
-                                    <label htmlFor="additional_info" className="block text-base font-semibold text-gray-700">Informações Adicionais</label>
-                                    <textarea name="additional_info" id="additional_info" value={formData.additional_info} onChange={handleInputChange} rows={3} placeholder="Outras observações importantes" className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                </div>
-                            </div>
+                {/* Seção 5: Serviços Adicionais */}
+                <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">🛁 Serviços Adicionais</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="flex items-center space-x-3">
+                            <input type="checkbox" name="bath" checked={formData.extra_services.bath} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, bath: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
+                            <label className="text-sm font-medium text-gray-700">Banho (R$ 30,00)</label>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                            <input type="checkbox" name="transport" checked={formData.extra_services.transport} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, transport: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
+                            <label className="text-sm font-medium text-gray-700">Transporte (R$ 20,00)</label>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                            <input type="checkbox" name="vet" checked={formData.extra_services.vet} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, vet: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
+                            <label className="text-sm font-medium text-gray-700">Veterinário (R$ 80,00)</label>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                            <input type="checkbox" name="training" checked={formData.extra_services.training} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, training: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
+                            <label className="text-sm font-medium text-gray-700">Adestramento (R$ 50,00)</label>
+                        </div>
+                        <div className="md:col-span-2 lg:col-span-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Diária (R$ 80,00/dia)</label>
+                            <input type="number" name="daily_rate" value={formData.extra_services.daily_rate} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, daily_rate: parseInt(e.target.value) || 0}}))} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" min="0" />
+                        </div>
+                        <div className="md:col-span-2 lg:col-span-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Hora Extra (R$ 10,00/hora)</label>
+                            <input type="number" name="extra_hour" value={formData.extra_services.extra_hour} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, extra_hour: parseInt(e.target.value) || 0}}))} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" min="0" />
+                        </div>
+                        <div className="md:col-span-2 lg:col-span-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Total dos Serviços</label>
+                            <input type="number" name="total_services_price" value={formData.total_services_price} readOnly className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600" />
                         </div>
                     </div>
-                )}
+                </div>
 
-                {step === 6 && (
-                    <div className="space-y-7">
-                        <h2 className="text-3xl font-bold text-gray-800">Assinatura e Resumo</h2>
-                        <div className="p-4 bg-white rounded-lg space-y-2 text-gray-700 border">
-                            <h3 className="font-semibold mb-2 text-gray-700">Resumo do Check-in</h3>
-                            <p><strong>Pet:</strong> {formData.pet_name} ({formData.pet_breed})</p>
-                            <p><strong>Tutor:</strong> {formData.tutor_name}</p>
-                            <p><strong>Telefone:</strong> {formData.tutor_phone}</p>
-                            <p><strong>Check-in:</strong> {formData.check_in_date} às {formData.check_in_time}</p>
-                            <p><strong>Check-out:</strong> {formData.check_out_date} às {formData.check_out_time}</p>
+                {/* Seção 6: Informações Finais */}
+                <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">📝 Informações Finais</h3>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Informações Adicionais</label>
+                            <textarea name="additional_info" value={formData.additional_info} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={4} placeholder="Observações gerais, comportamento do pet, preferências, etc." />
                         </div>
                         
-                        <div className="space-y-6">
-                            <div className="bg-gray-50 p-6 sm:p-5 rounded-lg border border-gray-200">
-                                <p className="text-base text-gray-700 mb-3">Declaro estar ciente, de ter recebido o pet em perfeito estado, bem como os serviços solicitados realizados de acordo com o combinado.</p>
-                                <label className="flex items-center gap-3 cursor-pointer">
-                                    <input type="checkbox" name="declaration_accepted" checked={formData.declaration_accepted} onChange={handleInputChange} required className="h-7 w-7 rounded border-gray-300 text-pink-600"/>
-                                    <span className="text-base font-semibold text-gray-700">Li e aceito os termos acima</span>
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                            <h4 className="font-semibold text-blue-800 mb-2">Resumo do Check-in</h4>
+                            <p className="text-sm text-blue-700">Pet: {formData.pet_name || 'Não informado'}</p>
+                            <p className="text-sm text-blue-700">Check-in: {formData.check_in_date} às {formData.check_in_time}</p>
+                            <p className="text-sm text-blue-700">Check-out: {formData.check_out_date} às {formData.check_out_time}</p>
+                            <p className="text-sm text-blue-700 font-semibold">Total: R$ {formData.total_services_price.toFixed(2)}</p>
+                        </div>
+
+                        <div className="space-y-3">
+                            <div className="flex items-start space-x-3">
+                                <input type="checkbox" name="declaration_accepted" checked={formData.declaration_accepted} onChange={(e) => setFormData(prev => ({...prev, declaration_accepted: e.target.checked}))} className="w-5 h-5 text-blue-600 mt-1" required />
+                                <label className="text-sm text-gray-700">
+                                    Declaro que todas as informações fornecidas são verdadeiras e autorizo o hotel pet a cuidar do meu animal de acordo com as instruções fornecidas. *
                                 </label>
                             </div>
-                            
-                            <div className="bg-gray-50 p-6 sm:p-5 rounded-lg border border-gray-200">
-                                <label className="flex items-center gap-3 cursor-pointer">
-                                    <input type="checkbox" name="photo_authorization" checked={formData.photo_authorization} onChange={handleInputChange} className="h-7 w-7 rounded border-gray-300 text-pink-600"/>
-                                    <span className="text-base text-gray-700">Autorizo registro fotográfico, para documentação e divulgação publicitária em veículos de comunicação e redes sociais</span>
+                            <div className="flex items-start space-x-3">
+                                <input type="checkbox" name="photo_authorization" checked={formData.photo_authorization} onChange={(e) => setFormData(prev => ({...prev, photo_authorization: e.target.checked}))} className="w-5 h-5 text-blue-600 mt-1" />
+                                <label className="text-sm text-gray-700">
+                                    Autorizo o uso de fotos do meu pet para divulgação nas redes sociais do estabelecimento.
                                 </label>
                             </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label htmlFor="tutor_check_in_signature" className="block text-base font-semibold text-gray-700">Tutor (check in)</label>
-                                    <input type="text" name="tutor_check_in_signature" id="tutor_check_in_signature" value={formData.tutor_check_in_signature} onChange={handleInputChange} placeholder="Nome completo" className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                </div>
-                                <div>
-                                    <label htmlFor="tutor_check_out_signature" className="block text-base font-semibold text-gray-700">Tutor (check out)</label>
-                                    <input type="text" name="tutor_check_out_signature" id="tutor_check_out_signature" value={formData.tutor_check_out_signature} onChange={handleInputChange} placeholder="Nome completo" className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"/>
-                                </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Assinatura do Tutor *</label>
+                                <input type="text" name="tutor_signature" value={formData.tutor_signature} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Digite seu nome completo" required />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Assinatura do Responsável</label>
+                                <input type="text" name="responsible_signature" value={formData.responsible_signature} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Funcionário responsável" />
                             </div>
                         </div>
                     </div>
-                )}
+                </div>
 
                 <div className="mt-8 flex justify-between items-center">
-                    <button type="button" onClick={onBack} className="bg-gray-200 text-gray-800 font-bold py-3.5 px-5 rounded-lg hover:bg-gray-300 transition-colors">{step === 1 ? 'Cancelar' : 'Voltar'}</button>
+                    <button type="button" onClick={onBack} className="bg-gray-200 text-gray-800 font-bold py-3.5 px-5 rounded-lg hover:bg-gray-300 transition-colors">Voltar</button>
                     <div className="flex-grow"></div>
-                    {step < 6 && <button type="button" onClick={() => changeStep(step + 1)} disabled={(step === 1 && !isStep1Valid) || (step === 4 && !isStep4Valid)} className="w-full md:w-auto bg-pink-600 text-white font-bold py-3.5 px-5 rounded-lg hover:bg-pink-700 transition-colors disabled:bg-gray-300">Avançar</button>}
-                    {step === 6 && <button type="submit" disabled={isSubmitting || !formData.declaration_accepted} className="w-full md:w-auto bg-green-500 text-white font-bold py-3.5 px-5 rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-300">{isSubmitting ? 'Salvando...' : 'Finalizar Check-in'}</button>}
+                    <button type="submit" disabled={isSubmitting || !formData.declaration_accepted} className="w-full md:w-auto bg-green-500 text-white font-bold py-3.5 px-5 rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-300">{isSubmitting ? 'Salvando...' : 'Finalizar Check-in'}</button>
                 </div>
             </form>
         </div>
@@ -5601,6 +5989,7 @@ const DaycareRegistrationForm: React.FC<{
                 last_flea_remedy: formData.last_flea_remedy || null,
                 total_price: formData.total_price ? parseFloat(String(formData.total_price)) : null,
                 payment_date: formData.payment_date || null,
+                enrollment_date: formData.enrollment_date || null,
             };
             
             const { data, error } = await supabase.from('daycare_enrollments').insert(payload).select().single();
@@ -5625,7 +6014,7 @@ const DaycareRegistrationForm: React.FC<{
                 <SuccessIcon />
                 <h2 className="text-3xl font-bold text-gray-800 mt-2">Solicitação Enviada!</h2>
                 <p className="text-gray-600 mt-2">Recebemos seu pedido. Entraremos em contato em breve para os próximos passos.</p>
-                <button onClick={() => setView && setViewWithLog('scheduler')} className="mt-6 bg-pink-600 text-white font-bold py-3.5 px-8 rounded-lg hover:bg-pink-700 transition-colors">OK</button>
+                <button onClick={() => setView && setView('scheduler')} className="mt-6 bg-pink-600 text-white font-bold py-3.5 px-8 rounded-lg hover:bg-pink-700 transition-colors">OK</button>
             </div>
         </div>
       );
@@ -5716,115 +6105,373 @@ const DaycareRegistrationForm: React.FC<{
                 {/* Extra Services */}
                 <div className="space-y-6 pt-6 border-t border-gray-200 mt-6">
                     <h3 className="text-lg font-semibold text-pink-700 border-b pb-2 mb-2">Serviços Extras</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <label className="flex items-center gap-3 text-gray-700 font-semibold bg-white p-4 rounded-lg border-2 border-gray-200">
-                            <input 
-                                type="checkbox" 
-                                checked={formData.extra_services?.pernoite || false}
-                                onChange={(e) => setFormData(prev => ({
-                                    ...prev,
-                                    extra_services: {
-                                        ...prev.extra_services,
-                                        pernoite: e.target.checked
-                                    }
-                                }))}
-                                className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
-                            />
-                            Pernoite
-                        </label>
-                        <label className="flex items-center gap-3 text-gray-700 font-semibold bg-white p-4 rounded-lg border-2 border-gray-200">
-                            <input 
-                                type="checkbox" 
-                                checked={formData.extra_services?.banho_tosa || false}
-                                onChange={(e) => setFormData(prev => ({
-                                    ...prev,
-                                    extra_services: {
-                                        ...prev.extra_services,
-                                        banho_tosa: e.target.checked
-                                    }
-                                }))}
-                                className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
-                            />
-                            Banho & Tosa
-                        </label>
-                        <label className="flex items-center gap-3 text-gray-700 font-semibold bg-white p-4 rounded-lg border-2 border-gray-200">
-                            <input 
-                                type="checkbox" 
-                                checked={formData.extra_services?.so_banho || false}
-                                onChange={(e) => setFormData(prev => ({
-                                    ...prev,
-                                    extra_services: {
-                                        ...prev.extra_services,
-                                        so_banho: e.target.checked
-                                    }
-                                }))}
-                                className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
-                            />
-                            Só banho
-                        </label>
-                        <label className="flex items-center gap-3 text-gray-700 font-semibold bg-white p-4 rounded-lg border-2 border-gray-200">
-                            <input 
-                                type="checkbox" 
-                                checked={formData.extra_services?.adestrador || false}
-                                onChange={(e) => setFormData(prev => ({
-                                    ...prev,
-                                    extra_services: {
-                                        ...prev.extra_services,
-                                        adestrador: e.target.checked
-                                    }
-                                }))}
-                                className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
-                            />
-                            Adestrador
-                        </label>
-                        <label className="flex items-center gap-3 text-gray-700 font-semibold bg-white p-4 rounded-lg border-2 border-gray-200">
-                            <input 
-                                type="checkbox" 
-                                checked={formData.extra_services?.despesa_medica || false}
-                                onChange={(e) => setFormData(prev => ({
-                                    ...prev,
-                                    extra_services: {
-                                        ...prev.extra_services,
-                                        despesa_medica: e.target.checked
-                                    }
-                                }))}
-                                className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
-                            />
-                            Despesa médica
-                        </label>
-                        <div className="flex items-center gap-3 text-gray-700 font-semibold bg-white p-4 rounded-lg border-2 border-gray-200">
-                            <input 
-                                type="checkbox" 
-                                checked={(formData.extra_services?.dia_extra || 0) > 0}
-                                onChange={(e) => setFormData(prev => ({
-                                    ...prev,
-                                    extra_services: {
-                                        ...prev.extra_services,
-                                        dia_extra: e.target.checked ? 1 : 0
-                                    }
-                                }))}
-                                className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
-                            />
-                            <span>Dia extra</span>
-                            {(formData.extra_services?.dia_extra || 0) > 0 && (
+                    <div className="grid grid-cols-1 gap-4">
+                        {/* Pernoite */}
+                        <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+                            <label className="flex items-center gap-3 text-gray-700 font-semibold mb-3">
                                 <input 
-                                    type="number" 
-                                    min="1"
-                                    value={formData.extra_services?.dia_extra || 1}
+                                    type="checkbox" 
+                                    checked={formData.extra_services?.pernoite || false}
                                     onChange={(e) => setFormData(prev => ({
                                         ...prev,
                                         extra_services: {
                                             ...prev.extra_services,
-                                            dia_extra: parseInt(e.target.value) || 1
+                                            pernoite: e.target.checked,
+                                            pernoite_quantity: e.target.checked ? (prev.extra_services?.pernoite_quantity || 1) : undefined,
+                                            pernoite_price: e.target.checked ? (prev.extra_services?.pernoite_price || 0) : undefined
                                         }
                                     }))}
-                                    className="w-16 px-2 py-1 border border-gray-300 rounded text-center"
+                                    className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
                                 />
+                                Pernoite
+                            </label>
+                            {formData.extra_services?.pernoite && (
+                                <div className="grid grid-cols-2 gap-3 ml-7">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade (dias)</label>
+                                        <input 
+                                            type="number" 
+                                            min="1"
+                                            value={formData.extra_services?.pernoite_quantity || 1}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                extra_services: {
+                                                    ...prev.extra_services,
+                                                    pernoite_quantity: parseInt(e.target.value) || 1
+                                                }
+                                            }))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+                                        <input 
+                                            type="number" 
+                                            min="0"
+                                            step="0.01"
+                                            value={formData.extra_services?.pernoite_price || 0}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                extra_services: {
+                                                    ...prev.extra_services,
+                                                    pernoite_price: parseFloat(e.target.value) || 0
+                                                }
+                                            }))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Banho & Tosa */}
+                        <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+                            <label className="flex items-center gap-3 text-gray-700 font-semibold mb-3">
+                                <input 
+                                    type="checkbox" 
+                                    checked={formData.extra_services?.banho_tosa || false}
+                                    onChange={(e) => setFormData(prev => ({
+                                        ...prev,
+                                        extra_services: {
+                                            ...prev.extra_services,
+                                            banho_tosa: e.target.checked,
+                                            banho_tosa_quantity: e.target.checked ? (prev.extra_services?.banho_tosa_quantity || 1) : undefined,
+                                            banho_tosa_price: e.target.checked ? (prev.extra_services?.banho_tosa_price || 0) : undefined
+                                        }
+                                    }))}
+                                    className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                                />
+                                Banho & Tosa
+                            </label>
+                            {formData.extra_services?.banho_tosa && (
+                                <div className="grid grid-cols-2 gap-3 ml-7">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade</label>
+                                        <input 
+                                            type="number" 
+                                            min="1"
+                                            value={formData.extra_services?.banho_tosa_quantity || 1}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                extra_services: {
+                                                    ...prev.extra_services,
+                                                    banho_tosa_quantity: parseInt(e.target.value) || 1
+                                                }
+                                            }))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+                                        <input 
+                                            type="number" 
+                                            min="0"
+                                            step="0.01"
+                                            value={formData.extra_services?.banho_tosa_price || 0}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                extra_services: {
+                                                    ...prev.extra_services,
+                                                    banho_tosa_price: parseFloat(e.target.value) || 0
+                                                }
+                                            }))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Só banho */}
+                        <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+                            <label className="flex items-center gap-3 text-gray-700 font-semibold mb-3">
+                                <input 
+                                    type="checkbox" 
+                                    checked={formData.extra_services?.so_banho || false}
+                                    onChange={(e) => setFormData(prev => ({
+                                        ...prev,
+                                        extra_services: {
+                                            ...prev.extra_services,
+                                            so_banho: e.target.checked,
+                                            so_banho_quantity: e.target.checked ? (prev.extra_services?.so_banho_quantity || 1) : undefined,
+                                            so_banho_price: e.target.checked ? (prev.extra_services?.so_banho_price || 0) : undefined
+                                        }
+                                    }))}
+                                    className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                                />
+                                Só banho
+                            </label>
+                            {formData.extra_services?.so_banho && (
+                                <div className="grid grid-cols-2 gap-3 ml-7">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade</label>
+                                        <input 
+                                            type="number" 
+                                            min="1"
+                                            value={formData.extra_services?.so_banho_quantity || 1}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                extra_services: {
+                                                    ...prev.extra_services,
+                                                    so_banho_quantity: parseInt(e.target.value) || 1
+                                                }
+                                            }))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+                                        <input 
+                                            type="number" 
+                                            min="0"
+                                            step="0.01"
+                                            value={formData.extra_services?.so_banho_price || 0}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                extra_services: {
+                                                    ...prev.extra_services,
+                                                    so_banho_price: parseFloat(e.target.value) || 0
+                                                }
+                                            }))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Adestrador */}
+                        <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+                            <label className="flex items-center gap-3 text-gray-700 font-semibold mb-3">
+                                <input 
+                                    type="checkbox" 
+                                    checked={formData.extra_services?.adestrador || false}
+                                    onChange={(e) => setFormData(prev => ({
+                                        ...prev,
+                                        extra_services: {
+                                            ...prev.extra_services,
+                                            adestrador: e.target.checked,
+                                            adestrador_quantity: e.target.checked ? (prev.extra_services?.adestrador_quantity || 1) : undefined,
+                                            adestrador_price: e.target.checked ? (prev.extra_services?.adestrador_price || 0) : undefined
+                                        }
+                                    }))}
+                                    className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                                />
+                                Adestrador
+                            </label>
+                            {formData.extra_services?.adestrador && (
+                                <div className="grid grid-cols-2 gap-3 ml-7">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade (sessões)</label>
+                                        <input 
+                                            type="number" 
+                                            min="1"
+                                            value={formData.extra_services?.adestrador_quantity || 1}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                extra_services: {
+                                                    ...prev.extra_services,
+                                                    adestrador_quantity: parseInt(e.target.value) || 1
+                                                }
+                                            }))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+                                        <input 
+                                            type="number" 
+                                            min="0"
+                                            step="0.01"
+                                            value={formData.extra_services?.adestrador_price || 0}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                extra_services: {
+                                                    ...prev.extra_services,
+                                                    adestrador_price: parseFloat(e.target.value) || 0
+                                                }
+                                            }))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Despesa médica */}
+                        <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+                            <label className="flex items-center gap-3 text-gray-700 font-semibold mb-3">
+                                <input 
+                                    type="checkbox" 
+                                    checked={formData.extra_services?.despesa_medica || false}
+                                    onChange={(e) => setFormData(prev => ({
+                                        ...prev,
+                                        extra_services: {
+                                            ...prev.extra_services,
+                                            despesa_medica: e.target.checked,
+                                            despesa_medica_quantity: e.target.checked ? (prev.extra_services?.despesa_medica_quantity || 1) : undefined,
+                                            despesa_medica_price: e.target.checked ? (prev.extra_services?.despesa_medica_price || 0) : undefined
+                                        }
+                                    }))}
+                                    className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                                />
+                                Despesa médica
+                            </label>
+                            {formData.extra_services?.despesa_medica && (
+                                <div className="grid grid-cols-2 gap-3 ml-7">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade</label>
+                                        <input 
+                                            type="number" 
+                                            min="1"
+                                            value={formData.extra_services?.despesa_medica_quantity || 1}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                extra_services: {
+                                                    ...prev.extra_services,
+                                                    despesa_medica_quantity: parseInt(e.target.value) || 1
+                                                }
+                                            }))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+                                        <input 
+                                            type="number" 
+                                            min="0"
+                                            step="0.01"
+                                            value={formData.extra_services?.despesa_medica_price || 0}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                extra_services: {
+                                                    ...prev.extra_services,
+                                                    despesa_medica_price: parseFloat(e.target.value) || 0
+                                                }
+                                            }))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Dia extra */}
+                        <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+                            <label className="flex items-center gap-3 text-gray-700 font-semibold mb-3">
+                                <input 
+                                    type="checkbox" 
+                                    checked={(formData.extra_services?.dia_extra || 0) > 0}
+                                    onChange={(e) => setFormData(prev => ({
+                                        ...prev,
+                                        extra_services: {
+                                            ...prev.extra_services,
+                                            dia_extra: e.target.checked ? 1 : 0,
+                                            dia_extra_price: e.target.checked ? (prev.extra_services?.dia_extra_price || 0) : undefined
+                                        }
+                                    }))}
+                                    className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                                />
+                                Dia extra
+                            </label>
+                            {(formData.extra_services?.dia_extra || 0) > 0 && (
+                                <div className="grid grid-cols-2 gap-3 ml-7">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade (dias)</label>
+                                        <input 
+                                            type="number" 
+                                            min="1"
+                                            value={formData.extra_services?.dia_extra || 1}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                extra_services: {
+                                                    ...prev.extra_services,
+                                                    dia_extra: parseInt(e.target.value) || 1
+                                                }
+                                            }))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+                                        <input 
+                                            type="number" 
+                                            min="0"
+                                            step="0.01"
+                                            value={formData.extra_services?.dia_extra_price || 0}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                extra_services: {
+                                                    ...prev.extra_services,
+                                                    dia_extra_price: parseFloat(e.target.value) || 0
+                                                }
+                                            }))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        />
+                                    </div>
+                                </div>
                             )}
                         </div>
                     </div>
                 </div>
                 
+                {/* Enrollment Date */}
+                <div className="space-y-6 pt-6 border-t border-gray-200 mt-6">
+                    <h3 className="text-lg font-semibold text-pink-700 border-b pb-2 mb-2">Data de Matrícula</h3>
+                    <div className="grid grid-cols-1 gap-4">
+                        <div>
+                            <DatePicker 
+                                value={formData.enrollment_date || ''} 
+                                onChange={(value) => setFormData(prev => ({ ...prev, enrollment_date: value }))}
+                                label="Data de Matrícula"
+                                placeholder="Selecione a data de matrícula"
+                                required={true}
+                                className="mt-1" 
+                            />
+                        </div>
+                    </div>
+                </div>
+
                 {/* Payment Details */}
                 <div className="space-y-6 pt-6 border-t border-gray-200 mt-6">
                     <h3 className="text-lg font-semibold text-pink-700 border-b pb-2 mb-2">Detalhes Financeiros</h3>
@@ -5836,10 +6483,11 @@ const DaycareRegistrationForm: React.FC<{
                                 id="total_price"
                                 name="total_price" 
                                 value={formData.total_price || ''} 
-                                onChange={handleInputChange} 
-                                placeholder="Ex: 500.00"
+                                readOnly
+                                placeholder="Calculado automaticamente"
                                 step="0.01"
-                                className="mt-1 block w-full px-5 py-4 bg-gray-50 border border-gray-300 rounded-md"/>
+                                className="mt-1 block w-full px-5 py-4 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"/>
+                            <p className="text-sm text-gray-500 mt-1">Valor calculado automaticamente (Serviços + Extras)</p>
                         </div>
                         <div>
                             <DatePicker 
@@ -5853,7 +6501,7 @@ const DaycareRegistrationForm: React.FC<{
                 </div>
             </div>
             <div className="p-6 bg-white flex justify-between items-center mt-auto rounded-b-2xl">
-                <button type="button" onClick={onBack || (() => setView && setViewWithLog('scheduler'))} className="w-auto bg-gray-200 text-gray-800 font-bold py-3 px-6 rounded-lg hover:bg-gray-300 transition-colors">
+                <button type="button" onClick={onBack || (() => setView && setView('scheduler'))} className="w-auto bg-gray-200 text-gray-800 font-bold py-3 px-6 rounded-lg hover:bg-gray-300 transition-colors">
                     {isAdmin ? 'Cancelar' : 'Voltar'}
                 </button>
                 <button type="submit" disabled={isSubmitting} className="w-auto bg-green-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-400">
@@ -5923,10 +6571,18 @@ const TimeSlotPicker: React.FC<{
             }
         });
 
-        // Todos os horários estão disponíveis
+        // Check availability considering capacity and lunch hour
         const finalAvailability = new Map<number, boolean>();
         workingHours.forEach(hour => {
-            finalAvailability.set(hour, true);
+            // Block lunch hour (13h)
+            if (hour === LUNCH_HOUR) {
+                finalAvailability.set(hour, false);
+                return;
+            }
+            
+            // Check if slot has available capacity
+            const availableCapacity = availability.get(hour) || 0;
+            finalAvailability.set(hour, availableCapacity > 0);
         });
 
         return finalAvailability;
@@ -5938,8 +6594,9 @@ const TimeSlotPicker: React.FC<{
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {workingHours.map(hour => {
-          // Todos os horários estão disponíveis
-          const isDisabled = false;
+          // Check if hour is available (not lunch hour and has capacity)
+          const isAvailable = getAvailability.get(hour) || false;
+          const isDisabled = !isAvailable;
           
           return (
             <button
@@ -6329,10 +6986,10 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                              <button type="button" onClick={() => { setServiceStepView('bath_groom'); setSelectedService(null); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
                                 <span className="text-lg">Banho & Tosa</span>
                             </button>
-                            <button type="button" onClick={() => { console.log('Clicou em Creche Pet'); setViewWithLog('daycareRegistration'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
+                            <button type="button" onClick={() => { console.log('Clicou em Creche Pet'); setView('daycareRegistration'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
                                 <span className="text-lg">{SERVICES[ServiceType.VISIT_DAYCARE].label}</span>
                             </button>
-                             <button type="button" onClick={() => { console.log('Clicou em Hotel Pet'); setViewWithLog('hotelRegistration'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
+                             <button type="button" onClick={() => { console.log('Clicou em Hotel Pet'); setView('hotelRegistration'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
                                 <span className="text-lg">{SERVICES[ServiceType.VISIT_HOTEL].label}</span>
                             </button>
                             <button type="button" onClick={() => { console.log('Clicou em Pet Móvel'); setServiceStepView('pet_movel_condo'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
@@ -6406,7 +7063,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                             <h3 className="text-lg font-semibold text-gray-800">Check-list de Hospedagem - Hotel Pet</h3>
                             <p className="text-base text-gray-600 mt-1">Preencha todos os dados do pet e tutor para o check-in</p>
                         </div>
-                        <button type="button" onClick={() => { console.log('Clicou em Preencher Formulário de Hotel Pet'); setViewWithLog('hotelRegistration'); }} className="w-full bg-pink-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-pink-700 transition-colors">
+                        <button type="button" onClick={() => { console.log('Clicou em Preencher Formulário de Hotel Pet'); setView('hotelRegistration'); }} className="w-full bg-pink-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-pink-700 transition-colors">
                             Preencher Formulário de Hotel Pet
                         </button>
                         <button type="button" onClick={() => setServiceStepView('main')} className="text-sm text-pink-600 hover:underline">← Voltar</button>
@@ -6547,7 +7204,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
       </main>
 
       <footer className="text-center mt-8 text-base">
-        <button onClick={() => setViewWithLog('login')} className="text-gray-500 hover:text-pink-600 font-medium transition-colors underline-offset-4 hover:underline">Acesso Administrativo</button>
+        <button onClick={() => setView('login')} className="text-gray-500 hover:text-pink-600 font-medium transition-colors underline-offset-4 hover:underline">Acesso Administrativo</button>
       </footer>
       
       {isModalOpen && (
@@ -6567,7 +7224,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
 };
 
 // Hotel View Component for managing hotel registrations
-const HotelView: React.FC<{ key?: number }> = ({ key }) => {
+const HotelView: React.FC<{ key?: number; setShowHotelStatistics?: (show: boolean) => void }> = ({ key, setShowHotelStatistics }) => {
     const [registrations, setRegistrations] = useState<HotelRegistration[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedRegistration, setSelectedRegistration] = useState<HotelRegistration | null>(null);
@@ -6690,6 +7347,7 @@ const HotelView: React.FC<{ key?: number }> = ({ key }) => {
         registration: HotelRegistration;
         onAddExtraServices: (registration: HotelRegistration) => void;
     }> = ({ registration, onAddExtraServices }) => {
+        const invoiceTotal = calculateHotelInvoiceTotal(registration);
         const currentCheckInStatus = registration.check_in_status || 'pending';
         const isUpdating = updatingId === registration.id;
         
@@ -6728,6 +7386,7 @@ const HotelView: React.FC<{ key?: number }> = ({ key }) => {
                     <div>
                         <h3 className="text-lg font-semibold text-gray-800">{registration.pet_name}</h3>
                         <p className="text-base text-gray-600">{registration.pet_breed} • {registration.pet_age}</p>
+                        <p className="text-lg font-bold text-green-600 mt-1">R$ {invoiceTotal.toFixed(2).replace('.', ',')}</p>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusBadge.bg} ${statusBadge.text}`}>
                         {statusBadge.label}
@@ -6813,7 +7472,7 @@ const HotelView: React.FC<{ key?: number }> = ({ key }) => {
                     </div>
                     <div className="flex gap-3">
                         <button
-                            onClick={() => setShowHotelStatistics(true)}
+                            onClick={() => setShowHotelStatistics?.(true)}
                             className="bg-blue-600 text-white font-bold py-3.5 px-5 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                         >
                             <ChartBarIcon className="w-5 h-5" />
@@ -7009,6 +7668,40 @@ const EditHotelRegistrationModal: React.FC<{
 }> = ({ registration, onClose, onRegistrationUpdated }) => {
     const [formData, setFormData] = useState<HotelRegistration>({ ...registration });
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Calcular automaticamente o valor total dos serviços
+    useEffect(() => {
+        let totalServicesPrice = 0;
+
+        // Preços base dos serviços (valores estimados - ajustar conforme necessário)
+        if (formData.service_bath) totalServicesPrice += 50; // Banho
+        if (formData.service_transport) totalServicesPrice += 30; // Transporte
+        if (formData.service_daily_rate) totalServicesPrice += 80; // Diária
+        if (formData.service_extra_hour) totalServicesPrice += 20; // Hora extra
+        if (formData.service_vet) totalServicesPrice += 100; // Veterinário
+        if (formData.service_training) totalServicesPrice += 120; // Adestramento
+
+        // Adicionar valores dos serviços extras se existirem
+        if (formData.extra_services) {
+            const extras = formData.extra_services;
+            if (extras.pernoite?.enabled) totalServicesPrice += extras.pernoite.value;
+            if (extras.banho_tosa?.enabled) totalServicesPrice += extras.banho_tosa.value;
+            if (extras.so_banho?.enabled) totalServicesPrice += extras.so_banho.value;
+            if (extras.adestrador?.enabled) totalServicesPrice += extras.adestrador.value;
+            if (extras.despesa_medica?.enabled) totalServicesPrice += extras.despesa_medica.value;
+            if (extras.dias_extras?.quantity > 0) totalServicesPrice += extras.dias_extras.quantity * extras.dias_extras.value;
+        }
+
+        setFormData(prev => ({ ...prev, total_services_price: totalServicesPrice }));
+    }, [
+        formData.service_bath,
+        formData.service_transport,
+        formData.service_daily_rate,
+        formData.service_extra_hour,
+        formData.service_vet,
+        formData.service_training,
+        formData.extra_services
+    ]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
@@ -7331,11 +8024,15 @@ const EditHotelRegistrationModal: React.FC<{
                                     type="number"
                                     name="total_services_price"
                                     value={formData.total_services_price}
-                                    onChange={handleInputChange}
+                                    readOnly
                                     step="0.01"
                                     min="0"
-                                    className="w-full md:w-1/3 px-5 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                                    placeholder="Calculado automaticamente"
+                                    className="w-full md:w-1/3 px-5 py-4 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
                                 />
+                                <p className="text-sm text-gray-500 mt-1">
+                                    Valor calculado automaticamente com base nos serviços selecionados e serviços extras adicionados.
+                                </p>
                             </div>
                         </div>
 
@@ -7376,7 +8073,7 @@ const EditHotelRegistrationModal: React.FC<{
 };
 
 // FIX: Add the missing DaycareView component to manage daycare enrollments.
-const DaycareView: React.FC<{ key?: number }> = ({ key }) => {
+const DaycareView: React.FC<{ key?: number; setShowDaycareStatistics?: (show: boolean) => void }> = ({ key, setShowDaycareStatistics }) => {
     const [enrollments, setEnrollments] = useState<DaycareRegistration[]>([]);
     const [petsInDaycareNow, setPetsInDaycareNow] = useState<DaycareRegistration[]>([]);
     const [loading, setLoading] = useState(true);
@@ -7620,7 +8317,7 @@ const DaycareView: React.FC<{ key?: number }> = ({ key }) => {
                 <h2 className="text-3xl font-bold text-gray-800">Matrículas da Creche</h2>
                 <div className="flex gap-3">
                     <button 
-                        onClick={() => setShowDaycareStatistics(true)} 
+                        onClick={() => setShowDaycareStatistics?.(true)} 
                         className="flex items-center gap-2 bg-blue-600 text-white font-semibold py-3.5 px-4 rounded-lg hover:bg-blue-700 transition-colors"
                     >
                         <ChartBarIcon className="w-5 h-5" />
@@ -7647,6 +8344,8 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     const [activeView, setActiveView] = useState('appointments');
     const [dataKey, setDataKey] = useState(Date.now()); // Used to force re-fetches
     const [showMobileMenu, setShowMobileMenu] = useState(false);
+    const [showDaycareStatistics, setShowDaycareStatistics] = useState(false);
+    const [showHotelStatistics, setShowHotelStatistics] = useState(false);
 
     const handleDataChanged = () => setDataKey(Date.now());
     const handleAddMonthlyClient = () => setActiveView('addMonthlyClient');
@@ -7665,8 +8364,8 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         switch (activeView) {
             case 'appointments': return <AppointmentsView key={dataKey} />;
             case 'petMovel': return <PetMovelView key={dataKey} />;
-            case 'daycare': return <DaycareView key={dataKey} />;
-            case 'hotel': return <HotelView key={dataKey} />;
+            case 'daycare': return <DaycareView key={dataKey} setShowDaycareStatistics={setShowDaycareStatistics} />;
+            case 'hotel': return <HotelView key={dataKey} setShowHotelStatistics={setShowHotelStatistics} />;
             case 'clients': return <ClientsView key={dataKey} />;
             case 'monthlyClients': return <MonthlyClientsView onAddClient={handleAddMonthlyClient} onDataChanged={handleDataChanged} />;
             case 'addMonthlyClient': return <AddMonthlyClientView onBack={() => setActiveView('monthlyClients')} onSuccess={() => { handleDataChanged(); setActiveView('monthlyClients'); }}/>;
@@ -7744,6 +8443,18 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                     </main>
                 </div>
             </div>
+            {showDaycareStatistics && (
+                <DaycareStatisticsModal 
+                    isOpen={showDaycareStatistics} 
+                    onClose={() => setShowDaycareStatistics(false)} 
+                />
+            )}
+            {showHotelStatistics && (
+                <HotelStatisticsModal 
+                    isOpen={showHotelStatistics} 
+                    onClose={() => setShowHotelStatistics(false)} 
+                />
+            )}
         </div>
     );
 };
@@ -7759,8 +8470,6 @@ const App: React.FC = () => {
     
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loadingAuth, setLoadingAuth] = useState(true);
-    const [showDaycareStatistics, setShowDaycareStatistics] = useState(false);
-    const [showHotelStatistics, setShowHotelStatistics] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
@@ -7846,18 +8555,6 @@ const App: React.FC = () => {
         return (
             <>
                 <AdminDashboard onLogout={handleLogout} />
-                {showDaycareStatistics && (
-                    <DaycareStatisticsModal 
-                        isOpen={showDaycareStatistics} 
-                        onClose={() => setShowDaycareStatistics(false)} 
-                    />
-                )}
-                {showHotelStatistics && (
-                    <HotelStatisticsModal 
-                        isOpen={showHotelStatistics} 
-                        onClose={() => setShowHotelStatistics(false)} 
-                    />
-                )}
             </>
         );
     }

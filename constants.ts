@@ -70,7 +70,36 @@ export const ADDON_SERVICES: AddonService[] = [
 ];
 
 
-export const WORKING_HOURS: number[] = [9, 10, 11, 13, 14, 15, 16, 17];
-export const VISIT_WORKING_HOURS: number[] = [9, 10, 11, 12, 13, 14, 15, 16];
-export const LUNCH_HOUR = 12;
+// Preços dos planos da creche
+export const DAYCARE_PLAN_PRICES: Record<string, number> = {
+  '2x_week': 200, // 2x por semana
+  '3x_week': 280, // 3x por semana
+  '4x_week': 350, // 4x por semana
+  '5x_week': 400, // 5x por semana
+};
+
+// Preços dos serviços extras da creche
+export const DAYCARE_EXTRA_SERVICES_PRICES: Record<string, number> = {
+  pernoite: 50,
+  banho_tosa: 80,
+  so_banho: 40,
+  adestrador: 60,
+  despesa_medica: 100,
+  dia_extra: 30,
+};
+
+// Preços base do hotel pet (por dia)
+export const HOTEL_BASE_PRICE = 80;
+
+// Preços dos serviços extras do hotel pet
+export const HOTEL_EXTRA_SERVICES_PRICES: Record<string, number> = {
+  banho_tosa: 100,
+  transporte: 50,
+  veterinario: 120,
+  adestramento: 80,
+};
+
+export const WORKING_HOURS: number[] = [9, 10, 11, 12, 14, 15, 16, 17];
+export const VISIT_WORKING_HOURS: number[] = [9, 10, 11, 12, 14, 15, 16];
+export const LUNCH_HOUR = 13;
 export const MAX_CAPACITY_PER_SLOT = 2; // Two groomers

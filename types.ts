@@ -109,6 +109,7 @@ export interface MonthlyClient {
 export interface DaycareRegistration {
     id?: string;
     created_at?: string;
+    enrollment_date: string;
     pet_name: string;
     pet_breed: string;
     is_neutered: boolean | null;
@@ -136,12 +137,23 @@ export interface DaycareRegistration {
     contracted_plan: '2x_week' | '3x_week' | '4x_week' | '5x_week' | null;
     // Serviços extras
     extra_services?: {
-        pernoite: { enabled: boolean; value: number };
-        banho_tosa: { enabled: boolean; value: number };
-        so_banho: { enabled: boolean; value: number };
-        adestrador: { enabled: boolean; value: number };
-        despesa_medica: { enabled: boolean; value: number };
-        dias_extras: { quantity: number; value: number };
+        pernoite?: boolean;
+        banho_tosa?: boolean;
+        so_banho?: boolean;
+        adestrador?: boolean;
+        despesa_medica?: boolean;
+        dia_extra?: number;
+        pernoite_quantity?: number;
+        pernoite_price?: number;
+        banho_tosa_quantity?: number;
+        banho_tosa_price?: number;
+        so_banho_quantity?: number;
+        so_banho_price?: number;
+        adestrador_quantity?: number;
+        adestrador_price?: number;
+        despesa_medica_quantity?: number;
+        despesa_medica_price?: number;
+        dia_extra_price?: number;
     };
     total_price?: number;
     payment_date: string;
