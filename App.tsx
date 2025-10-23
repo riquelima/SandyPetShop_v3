@@ -2210,6 +2210,9 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
     const [selectedForDetails, setSelectedForDetails] = useState<MonthlyClient | null>(null);
     const [selectedForEdit, setSelectedForEdit] = useState<MonthlyClient | null>(null);
     const [selectedForDelete, setSelectedForDelete] = useState<MonthlyClient | null>(null);
+    const [selectedAppointmentForDetails, setSelectedAppointmentForDetails] = useState<PetMovelAppointment | null>(null);
+    const [selectedAppointmentForEdit, setSelectedAppointmentForEdit] = useState<PetMovelAppointment | null>(null);
+    const [selectedAppointmentForDelete, setSelectedAppointmentForDelete] = useState<PetMovelAppointment | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [selectedClientForAppointments, setSelectedClientForAppointments] = useState<MonthlyClient | null>(null);
@@ -2303,6 +2306,31 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
     const handleCloseAppointmentsModal = () => {
         setSelectedClientForAppointments(null);
         setClientAppointments([]);
+    };
+
+    const handleAppointmentUpdated = (updatedAppointment: PetMovelAppointment) => {
+        setCalendarAppointments(prev => prev.map(appt => appt.id === updatedAppointment.id ? updatedAppointment : appt));
+        setSelectedAppointmentForEdit(null);
+    };
+
+    const handleConfirmDeleteAppointment = async () => {
+        if (!selectedAppointmentForDelete) return;
+        
+        setIsDeleting(true);
+        const { error } = await supabase
+            .from('pet_movel_appointments')
+            .delete()
+            .eq('id', selectedAppointmentForDelete.id);
+
+        if (error) {
+            alert('Falha ao excluir o agendamento.');
+            console.error(error);
+        } else {
+            setCalendarAppointments(prev => prev.filter(appt => appt.id !== selectedAppointmentForDelete.id));
+        }
+        
+        setIsDeleting(false);
+        setSelectedAppointmentForDelete(null);
     };
 
     const fetchCalendarAppointments = useCallback(async () => {
@@ -2639,6 +2667,85 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
                             )}
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Modo Calendário */}
+            {viewMode === 'calendar' && (
+                <div className="space-y-4">
+                    {loadingCalendar ? (
+                        <div className="flex justify-center items-center py-12">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
+                        </div>
+                    ) : calendarAppointments.length === 0 ? (
+                        <div className="text-center py-12">
+                            <p className="text-gray-500">Nenhum agendamento encontrado para esta data.</p>
+                        </div>
+                    ) : (
+                        <div className="grid gap-4">
+                            {calendarAppointments.map((appointment) => (
+                                <div key={appointment.id} className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <h3 className="font-semibold text-lg text-gray-800">{appointment.pet_name}</h3>
+                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                    appointment.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                                                    appointment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-red-100 text-red-800'
+                                                }`}>
+                                                    {appointment.status === 'confirmed' ? 'Confirmado' :
+                                                     appointment.status === 'pending' ? 'Pendente' : 'Cancelado'}
+                                                </span>
+                                            </div>
+                                            
+                                            <div className="space-y-1 text-sm text-gray-600">
+                                                <p><span className="font-medium">Dono:</span> {appointment.owner_name}</p>
+                                                <p><span className="font-medium">Serviço:</span> {appointment.service}</p>
+                                                <p><span className="font-medium">Horário:</span> {new Date(appointment.appointment_time).toLocaleString('pt-BR')}</p>
+                                                <p><span className="font-medium">Endereço:</span> {appointment.address}</p>
+                                                {appointment.condominium && (
+                                                    <p><span className="font-medium">Condomínio:</span> {appointment.condominium}</p>
+                                                )}
+                                                <p><span className="font-medium">Preço:</span> R$ {(appointment.price ?? 0).toFixed(2).replace('.', ',')}</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex gap-2 ml-4">
+                                            <button
+                                                onClick={() => setSelectedAppointmentForDetails(appointment)}
+                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="Ver detalhes"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                onClick={() => setSelectedAppointmentForEdit(appointment)}
+                                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                title="Editar"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                onClick={() => setSelectedAppointmentForDelete(appointment)}
+                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Excluir"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
             
