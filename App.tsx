@@ -1546,7 +1546,7 @@ const AdminAddAppointmentModal: React.FC<{
 
 
 {/* FIX: Changed the `status` prop type from `string` to the specific union type to match the `AdminAppointment` interface. */}
-const AppointmentCard: React.FC<{ appointment: AdminAppointment; onUpdateStatus: (id: string, status: 'AGENDADO' | 'CONCLUÍDO') => void; isUpdating: boolean; onEdit: (appointment: AdminAppointment) => void; onDelete: (appointment: AdminAppointment) => void; isDeleting: boolean; }> = ({ appointment, onUpdateStatus, isUpdating, onEdit, onDelete, isDeleting }) => {
+const AppointmentCard: React.FC<{ appointment: AdminAppointment; onUpdateStatus: (id: string, status: 'AGENDADO' | 'CONCLUÍDO') => void; isUpdating: boolean; onEdit: (appointment: AdminAppointment) => void; onDelete: (appointment: AdminAppointment) => void; isDeleting: boolean; onAddExtraServices: (appointment: AdminAppointment) => void; }> = ({ appointment, onUpdateStatus, isUpdating, onEdit, onDelete, isDeleting, onAddExtraServices }) => {
     const { id, appointment_time, pet_name, owner_name, service, status, price, addons, whatsapp, monthly_client_id } = appointment;
     const isCompleted = status === 'CONCLUÍDO';
     
@@ -1600,6 +1600,16 @@ const AppointmentCard: React.FC<{ appointment: AdminAppointment; onUpdateStatus:
                 <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
                     <p className="text-2xl font-bold text-gray-800">R$ {(price ?? 0).toFixed(2).replace('.', ',')}</p>
                     <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => onAddExtraServices(appointment)}
+                            disabled={isCompleted || isUpdating || isDeleting}
+                            className="p-2 rounded-full text-blue-500 hover:bg-blue-100 hover:text-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-label="Adicionar serviços extras"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                        </button>
                          <button 
                             onClick={() => onEdit(appointment)}
                             disabled={isCompleted || isUpdating || isDeleting}
@@ -1842,6 +1852,8 @@ const AppointmentsView: React.FC<{ key?: number }> = ({ key }) => {
     const [appointmentToDelete, setAppointmentToDelete] = useState<AdminAppointment | null>(null);
     const [deletingAppointmentId, setDeletingAppointmentId] = useState<string | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isAppointmentExtraServicesModalOpen, setIsAppointmentExtraServicesModalOpen] = useState(false);
+    const [appointmentForExtraServices, setAppointmentForExtraServices] = useState<AdminAppointment | null>(null);
 
     const fetchAppointments = useCallback(async () => {
         setLoading(true);
@@ -1884,7 +1896,7 @@ const AppointmentsView: React.FC<{ key?: number }> = ({ key }) => {
 
     useEffect(() => {
         fetchAppointments();
-    }, [fetchAppointments, key]);
+    }, [key]);
 
     // FIX: Changed `newStatus` type from `string` to the specific union type to match `AdminAppointment['status']`.
     const handleUpdateStatus = async (id: string, newStatus: 'AGENDADO' | 'CONCLUÍDO') => {
@@ -1926,6 +1938,18 @@ const AppointmentsView: React.FC<{ key?: number }> = ({ key }) => {
     const handleAppointmentUpdated = (updatedAppointment: AdminAppointment) => {
         setAppointments(prev => prev.map(app => app.id === updatedAppointment.id ? updatedAppointment : app));
         handleCloseEditModal();
+    };
+    const handleOpenExtraServicesModal = (appointment: AdminAppointment) => {
+        setAppointmentForExtraServices(appointment);
+        setIsAppointmentExtraServicesModalOpen(true);
+    };
+    const handleCloseExtraServicesModal = () => {
+        setAppointmentForExtraServices(null);
+        setIsAppointmentExtraServicesModalOpen(false);
+    };
+    const handleExtraServicesSuccess = (updatedAppointment: AdminAppointment) => {
+        setAppointments(prev => prev.map(app => app.id === updatedAppointment.id ? updatedAppointment : app));
+        handleCloseExtraServicesModal();
     };
     const handleOpenAddModal = () => {
         setIsAddModalOpen(true);
@@ -1983,11 +2007,12 @@ const AppointmentsView: React.FC<{ key?: number }> = ({ key }) => {
         return { upcomingAppointments: upcoming, pastAppointments: past };
     }, [filteredAppointments, adminView]);
 
-    const renderAppointments = (apps: AdminAppointment[]) => apps.map(app => <AppointmentCard key={app.id} appointment={app} onUpdateStatus={handleUpdateStatus} isUpdating={updatingStatusId === app.id} onEdit={handleOpenEditModal} onDelete={handleRequestDelete} isDeleting={deletingAppointmentId === app.id} />);
+    const renderAppointments = (apps: AdminAppointment[]) => apps.map(app => <AppointmentCard key={app.id} appointment={app} onUpdateStatus={handleUpdateStatus} isUpdating={updatingStatusId === app.id} onEdit={handleOpenEditModal} onDelete={handleRequestDelete} isDeleting={deletingAppointmentId === app.id} onAddExtraServices={handleOpenExtraServicesModal} />);
 
     return (
         <>
             {isEditModalOpen && editingAppointment && <EditAppointmentModal appointment={editingAppointment} onClose={handleCloseEditModal} onAppointmentUpdated={handleAppointmentUpdated} />}
+            {isAppointmentExtraServicesModalOpen && appointmentForExtraServices && <AddAppointmentExtraServicesModal appointment={appointmentForExtraServices} onClose={handleCloseExtraServicesModal} onSuccess={handleExtraServicesSuccess} />}
             {isAddModalOpen && <AdminAddAppointmentModal isOpen={isAddModalOpen} onClose={handleCloseAddModal} onAppointmentCreated={handleAppointmentCreated} />}
             {appointmentToDelete && <ConfirmationModal isOpen={!!appointmentToDelete} onClose={() => setAppointmentToDelete(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o agendamento para ${appointmentToDelete.pet_name}?`} confirmText="Excluir" variant="danger" isLoading={deletingAppointmentId === appointmentToDelete.id} />}
 
@@ -2240,7 +2265,7 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
 
     useEffect(() => {
         fetchMonthlyClients();
-    }, [fetchMonthlyClients, key]);
+    }, [key]);
 
     const fetchClientAppointments = useCallback(async (clientId: string) => {
         setLoadingAppointments(true);
@@ -3194,6 +3219,10 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
     const [filterCondominium, setFilterCondominium] = useState('');
     const [filterDueDate, setFilterDueDate] = useState('');
     const [sortBy, setSortBy] = useState(''); // 'pet-az', 'owner-az'
+    
+    // Estados para modal de serviços extras
+    const [isMonthlyExtraServicesModalOpen, setIsMonthlyExtraServicesModalOpen] = useState(false);
+    const [monthlyClientForExtraServices, setMonthlyClientForExtraServices] = useState<MonthlyClient | null>(null);
 
 
     const fetchMonthlyClients = useCallback(async () => {
@@ -3212,7 +3241,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
 
     useEffect(() => {
         fetchMonthlyClients();
-    }, [fetchMonthlyClients]);
+    }, []);
     
     const handleUpdateSuccess = () => { fetchMonthlyClients(); onDataChanged(); setEditingClient(null); };
 
@@ -3337,6 +3366,18 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
             );
             setAlertInfo({ title: 'Erro de Atualização', message: 'Não foi possível alterar o status do pagamento. Tente novamente.', variant: 'error' });
         }
+    };
+
+    const handleAddExtraServices = (client: MonthlyClient) => {
+        setMonthlyClientForExtraServices(client);
+        setIsMonthlyExtraServicesModalOpen(true);
+    };
+
+    const handleExtraServicesSuccess = (updatedClient: MonthlyClient) => {
+        setMonthlyClients(prev => prev.map(client => client.id === updatedClient.id ? updatedClient : client));
+        setIsMonthlyExtraServicesModalOpen(false);
+        setMonthlyClientForExtraServices(null);
+        onDataChanged();
     };
 
     return (
@@ -3488,84 +3529,14 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                         // Visualização em Cards
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {filteredClients.map(client => (
-                                <div key={client.id} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] cursor-pointer overflow-hidden border border-gray-100" onClick={() => setEditingClient(client)}>
-                                    {/* Header do Card */}
-                                    <div className="bg-gradient-to-r from-pink-500 to-purple-600 p-4 text-white">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center space-x-3">
-                                                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                                                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                                                    </svg>
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-xl font-bold truncate">{client.pet_name}</h3>
-                                                    <p className="text-pink-100 text-sm truncate">{client.owner_name}</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-                                                <button onClick={() => setEditingClient(client)} className="p-2 rounded-full text-white hover:bg-white hover:bg-opacity-20 transition-colors" aria-label="Editar mensalista">
-                                                    <EditIcon />
-                                                </button>
-                                                <button onClick={() => setDeletingClient(client)} className="p-2 rounded-full text-white hover:bg-white hover:bg-opacity-20 transition-colors" aria-label="Excluir mensalista">
-                                                    <DeleteIcon />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Conteúdo do Card */}
-                                    <div className="p-5 space-y-4">
-                                        {/* Informações do Condomínio */}
-                                        {client.condominium && (
-                                            <div className="flex items-center space-x-2 text-gray-600">
-                                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H9m0 0H5m0 0h2M7 16h6M7 8h6v4H7V8z" />
-                                                </svg>
-                                                <span className="text-sm font-medium">Condomínio:</span>
-                                                <span className="text-sm truncate">{client.condominium}</span>
-                                            </div>
-                                        )}
-
-                                        {/* Recorrência */}
-                                        <div className="flex items-center space-x-2">
-                                            <svg className="w-4 h-4 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            <span className="text-sm font-semibold text-pink-700 bg-pink-50 px-3 py-1 rounded-full">
-                                                {getRecurrenceText(client)}
-                                            </span>
-                                        </div>
-
-                                        {/* Data de Vencimento */}
-                                        {client.payment_due_date && (
-                                            <div className="flex items-center space-x-2">
-                                                <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                </svg>
-                                                <span className="text-sm font-medium text-gray-600">Vencimento:</span>
-                                                <span className="text-sm font-semibold text-blue-700 bg-blue-50 px-3 py-1 rounded-full">
-                                                    {formatDateToBR(client.payment_due_date)}
-                                                </span>
-                                            </div>
-                                        )}
-
-                                        {/* Status do Pagamento */}
-                                        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                                            <span className="text-sm font-medium text-gray-600">Status do Pagamento:</span>
-                                            <button
-                                                onClick={(e) => handleTogglePaymentStatus(client, e)}
-                                                className={`px-4 py-2 text-sm font-bold rounded-full transition-all duration-200 ${
-                                                    client.payment_status === 'Pendente' 
-                                                    ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 hover:shadow-md' 
-                                                    : 'bg-green-100 text-green-800 hover:bg-green-200 hover:shadow-md'
-                                                }`}
-                                            >
-                                                {client.payment_status === 'Pendente' ? '⏳ Pendente' : '✅ Pago'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
+                                <MonthlyClientCard
+                                    key={client.id}
+                                    client={client}
+                                    onEdit={() => setEditingClient(client)}
+                                    onDelete={() => setDeletingClient(client)}
+                                    onAddExtraServices={() => handleAddExtraServices(client)}
+                                    onTogglePaymentStatus={(e) => handleTogglePaymentStatus(client, e)}
+                                />
                             ))}
                         </div>
                     ) : (
@@ -3633,7 +3604,210 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                     </div>
                 )
             )}
+
+            {/* Modal de Serviços Extras para Mensalistas */}
+            {isMonthlyExtraServicesModalOpen && monthlyClientForExtraServices && (
+                <AddMonthlyExtraServicesModal
+                    client={monthlyClientForExtraServices}
+                    onClose={() => {
+                        setIsMonthlyExtraServicesModalOpen(false);
+                        setMonthlyClientForExtraServices(null);
+                    }}
+                    onSuccess={handleExtraServicesSuccess}
+                />
+            )}
         </>
+    );
+};
+
+// Add Extra Services Modal for Hotel
+// Monthly Client Card Component
+const MonthlyClientCard: React.FC<{
+    client: MonthlyClient;
+    onClick: (client: MonthlyClient) => void;
+    onEdit: (client: MonthlyClient) => void;
+    onDelete: (client: MonthlyClient) => void;
+    onAddExtraServices: (client: MonthlyClient) => void;
+    onTogglePaymentStatus: (client: MonthlyClient, e: React.MouseEvent) => void;
+}> = ({ client, onClick, onEdit, onDelete, onAddExtraServices, onTogglePaymentStatus }) => {
+    
+    const getRecurrenceText = (client: MonthlyClient) => {
+        if (client.recurrence_type === 'weekly') return 'Semanal';
+        if (client.recurrence_type === 'biweekly') return 'Quinzenal';
+        if (client.recurrence_type === 'monthly') return 'Mensal';
+        return 'Não definido';
+    };
+
+    const formatDateToBR = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('pt-BR');
+    };
+
+    const calculateTotalInvoiceValue = (client: MonthlyClient) => {
+        let total = Number(client.price || 0);
+        
+        if (client.extra_services) {
+            // Valores dos serviços extras (você pode ajustar estes valores conforme necessário)
+            if (client.extra_services.pernoite) total += 50;
+            if (client.extra_services.banho_tosa) total += 80;
+            if (client.extra_services.so_banho) total += 40;
+            if (client.extra_services.adestrador) total += 100;
+            if (client.extra_services.despesa_medica) total += 150;
+            if (client.extra_services.dias_extras) total += (client.extra_services.dias_extras * 30);
+        }
+        
+        return total;
+    };
+
+    const totalInvoiceValue = calculateTotalInvoiceValue(client);
+
+    return (
+        <div 
+            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] cursor-pointer overflow-hidden border border-gray-100"
+            onClick={() => onClick(client)}
+        >
+            {/* Header do Card */}
+            <div className="bg-gradient-to-r from-pink-500 to-purple-600 p-4 text-white">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold truncate">{client.pet_name}</h3>
+                            <p className="text-pink-100 text-sm truncate">{client.owner_name}</p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-xs text-pink-100">Valor Total</p>
+                        <p className="text-lg font-bold">R$ {totalInvoiceValue.toFixed(2).replace('.', ',')}</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Conteúdo do Card */}
+            <div className="p-5 space-y-4">
+                {/* Informações básicas */}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Serviço</p>
+                        <p className="text-gray-800 font-medium">{client.service}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Preço Base</p>
+                        <p className="text-gray-800 font-medium">R$ {Number(client.price || 0).toFixed(2).replace('.', ',')}</p>
+                    </div>
+                </div>
+
+                {/* Condomínio */}
+                {client.condominium && (
+                    <div className="flex items-center space-x-2 text-gray-600">
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H9m0 0H5m0 0h2M7 16h6M7 8h6v4H7V8z" />
+                        </svg>
+                        <span className="text-sm font-medium">Condomínio:</span>
+                        <span className="text-sm truncate">{client.condominium}</span>
+                    </div>
+                )}
+
+                {/* Recorrência */}
+                <div className="flex items-center space-x-2">
+                    <svg className="w-4 h-4 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-sm font-semibold text-pink-700 bg-pink-50 px-3 py-1 rounded-full">
+                        {getRecurrenceText(client)}
+                    </span>
+                </div>
+
+                {/* Data de Vencimento */}
+                {client.payment_due_date && (
+                    <div className="flex items-center space-x-2">
+                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span className="text-sm font-medium text-gray-600">Vencimento:</span>
+                        <span className="text-sm font-semibold text-blue-700 bg-blue-50 px-3 py-1 rounded-full">
+                            {formatDateToBR(client.payment_due_date)}
+                        </span>
+                    </div>
+                )}
+
+                {/* Serviços Extras */}
+                {client.extra_services && Object.values(client.extra_services).some(value => value === true || (typeof value === 'number' && value > 0)) && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                        <div className="text-sm text-gray-600 font-semibold mb-2">Serviços Extras:</div>
+                        <div className="flex flex-wrap gap-1">
+                            {client.extra_services.pernoite && (
+                                <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">Pernoite</span>
+                            )}
+                            {client.extra_services.banho_tosa && (
+                                <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">Banho & Tosa</span>
+                            )}
+                            {client.extra_services.so_banho && (
+                                <span className="px-2 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full">Só banho</span>
+                            )}
+                            {client.extra_services.adestrador && (
+                                <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Adestrador</span>
+                            )}
+                            {client.extra_services.despesa_medica && (
+                                <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">Despesa médica</span>
+                            )}
+                            {client.extra_services.dias_extras && client.extra_services.dias_extras > 0 && (
+                                <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
+                                    {client.extra_services.dias_extras} dia{client.extra_services.dias_extras > 1 ? 's' : ''} extra{client.extra_services.dias_extras > 1 ? 's' : ''}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Status do Pagamento */}
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <span className="text-sm font-medium text-gray-600">Status do Pagamento:</span>
+                    <button
+                        onClick={(e) => onTogglePaymentStatus(client, e)}
+                        className={`px-4 py-2 text-sm font-bold rounded-full transition-all duration-200 ${
+                            client.payment_status === 'Pendente' 
+                            ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 hover:shadow-md' 
+                            : 'bg-green-100 text-green-800 hover:bg-green-200 hover:shadow-md'
+                        }`}
+                    >
+                        {client.payment_status === 'Pendente' ? '⏳ Pendente' : '✅ Pago'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Footer com botões de ação */}
+            <div className="p-2 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onAddExtraServices(client); }}
+                    className="px-3 py-2 bg-purple-100 text-purple-700 text-sm font-semibold rounded-lg hover:bg-purple-200 transition-colors flex items-center gap-1"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Serviços Extras
+                </button>
+                <div className="flex gap-1">
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onEdit(client); }}
+                        className="p-2 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors"
+                        aria-label="Editar mensalista"
+                    >
+                        <EditIcon />
+                    </button>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onDelete(client); }}
+                        className="p-2 rounded-full text-red-500 hover:bg-red-100 transition-colors"
+                        aria-label="Excluir mensalista"
+                    >
+                        <DeleteIcon />
+                    </button>
+                </div>
+            </div>
+        </div>
     );
 };
 
@@ -3642,9 +3816,10 @@ const DaycareEnrollmentCard: React.FC<{
     onClick: () => void;
     onEdit: (enrollment: DaycareRegistration) => void;
     onDelete: (enrollment: DaycareRegistration) => void;
+    onAddExtraServices: (enrollment: DaycareRegistration) => void;
     isDraggable?: boolean;
     onDragStart?: (e: React.DragEvent<HTMLDivElement>) => void;
-}> = ({ enrollment, onClick, onEdit, onDelete, isDraggable = false, onDragStart }) => {
+}> = ({ enrollment, onClick, onEdit, onDelete, onAddExtraServices, isDraggable = false, onDragStart }) => {
     const { created_at, pet_name, tutor_name, contracted_plan, status } = enrollment;
 
     const statusStyles: Record<string, string> = {
@@ -3689,9 +3864,47 @@ const DaycareEnrollmentCard: React.FC<{
                         <TagIcon />
                         <span className="font-semibold mr-2">Plano:</span> {contracted_plan ? planLabels[contracted_plan] : 'Não informado'}
                     </div>
+                    
+                    {/* Serviços Extras */}
+                    {enrollment.extra_services && Object.values(enrollment.extra_services).some(value => value === true || (typeof value === 'number' && value > 0)) && (
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                            <div className="text-sm text-gray-600 font-semibold mb-2">Serviços Extras:</div>
+                            <div className="flex flex-wrap gap-1">
+                                {enrollment.extra_services.pernoite && (
+                                    <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">Pernoite</span>
+                                )}
+                                {enrollment.extra_services.banho_tosa && (
+                                    <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">Banho & Tosa</span>
+                                )}
+                                {enrollment.extra_services.so_banho && (
+                                    <span className="px-2 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full">Só banho</span>
+                                )}
+                                {enrollment.extra_services.adestrador && (
+                                    <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Adestrador</span>
+                                )}
+                                {enrollment.extra_services.despesa_medica && (
+                                    <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">Despesa médica</span>
+                                )}
+                                {enrollment.extra_services.dia_extra && enrollment.extra_services.dia_extra > 0 && (
+                                    <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
+                                        {enrollment.extra_services.dia_extra} dia{enrollment.extra_services.dia_extra > 1 ? 's' : ''} extra{enrollment.extra_services.dia_extra > 1 ? 's' : ''}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
              <div className="p-2 bg-gray-50 border-t border-gray-100 flex justify-end items-center gap-1">
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onAddExtraServices(enrollment); }}
+                    className="p-2 rounded-full text-green-600 hover:bg-green-100 transition-colors"
+                    title="Adicionar serviços extras"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                </button>
                 <button 
                     onClick={(e) => { e.stopPropagation(); onEdit(enrollment); }}
                     className="p-2 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors"
@@ -3711,12 +3924,703 @@ const DaycareEnrollmentCard: React.FC<{
     );
 };
 
+const AddExtraServicesModal: React.FC<{
+    enrollment: DaycareRegistration;
+    onClose: () => void;
+    onSuccess: (updated: DaycareRegistration) => void;
+}> = ({ enrollment, onClose, onSuccess }) => {
+    const [extraServices, setExtraServices] = useState({
+        pernoite: enrollment.extra_services?.pernoite || false,
+        banho_tosa: enrollment.extra_services?.banho_tosa || false,
+        so_banho: enrollment.extra_services?.so_banho || false,
+        adestrador: enrollment.extra_services?.adestrador || false,
+        despesa_medica: enrollment.extra_services?.despesa_medica || false,
+        dia_extra: enrollment.extra_services?.dia_extra || 0
+    });
+    const [isUpdating, setIsUpdating] = useState(false);
+
+    const handleCheckboxChange = (field: keyof typeof extraServices) => {
+        setExtraServices(prev => ({
+            ...prev,
+            [field]: !prev[field]
+        }));
+    };
+
+    const handleNumberChange = (field: keyof typeof extraServices, value: number) => {
+        setExtraServices(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    const handleSave = async () => {
+        setIsUpdating(true);
+        const { data, error } = await supabase
+            .from('daycare_enrollments')
+            .update({ extra_services: extraServices })
+            .eq('id', enrollment.id)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error updating extra services:', error);
+            alert('Erro ao atualizar serviços extras.');
+        } else {
+            onSuccess(data as DaycareRegistration);
+            onClose();
+        }
+        setIsUpdating(false);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold text-gray-800">Adicionar Serviços Extras</h2>
+                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                            <CloseIcon />
+                        </button>
+                    </div>
+
+                    <div className="mb-4">
+                        <p className="text-sm text-gray-600 mb-4">
+                            Pet: <span className="font-semibold">{enrollment.pet_name}</span>
+                        </p>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="pernoite"
+                                checked={extraServices.pernoite}
+                                onChange={() => handleCheckboxChange('pernoite')}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="pernoite" className="text-sm font-medium text-gray-700">
+                                Pernoite
+                            </label>
+                        </div>
+
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="banho_tosa"
+                                checked={extraServices.banho_tosa}
+                                onChange={() => handleCheckboxChange('banho_tosa')}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="banho_tosa" className="text-sm font-medium text-gray-700">
+                                Banho & Tosa
+                            </label>
+                        </div>
+
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="so_banho"
+                                checked={extraServices.so_banho}
+                                onChange={() => handleCheckboxChange('so_banho')}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="so_banho" className="text-sm font-medium text-gray-700">
+                                Só banho
+                            </label>
+                        </div>
+
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="adestrador"
+                                checked={extraServices.adestrador}
+                                onChange={() => handleCheckboxChange('adestrador')}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="adestrador" className="text-sm font-medium text-gray-700">
+                                Adestrador
+                            </label>
+                        </div>
+
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="despesa_medica"
+                                checked={extraServices.despesa_medica}
+                                onChange={() => handleCheckboxChange('despesa_medica')}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="despesa_medica" className="text-sm font-medium text-gray-700">
+                                Despesa médica
+                            </label>
+                        </div>
+
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="dia_extra_checkbox"
+                                checked={extraServices.dia_extra > 0}
+                                onChange={() => {
+                                    if (extraServices.dia_extra > 0) {
+                                        handleNumberChange('dia_extra', 0);
+                                    } else {
+                                        handleNumberChange('dia_extra', 1);
+                                    }
+                                }}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="dia_extra_checkbox" className="text-sm font-medium text-gray-700 mr-3">
+                                Dia extra
+                            </label>
+                            {extraServices.dia_extra > 0 && (
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={extraServices.dia_extra}
+                                    onChange={(e) => handleNumberChange('dia_extra', parseInt(e.target.value) || 0)}
+                                    className="w-16 px-2 py-1 border border-gray-300 rounded-md text-sm"
+                                />
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 mt-6">
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            disabled={isUpdating}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                        >
+                            {isUpdating ? 'Salvando...' : 'Salvar'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Add Hotel Extra Services Modal Component
+const AddHotelExtraServicesModal: React.FC<{
+    registration: HotelRegistration;
+    onClose: () => void;
+    onSuccess: (updatedRegistration: HotelRegistration) => void;
+}> = ({ registration, onClose, onSuccess }) => {
+    const [extraServices, setExtraServices] = useState({
+        pernoite: registration.extra_services?.pernoite || false,
+        banho_tosa: registration.extra_services?.banho_tosa || false,
+        so_banho: registration.extra_services?.so_banho || false,
+        adestrador: registration.extra_services?.adestrador || false,
+        despesa_medica: registration.extra_services?.despesa_medica || false,
+        dia_extra: registration.extra_services?.dia_extra || 0
+    });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleServiceChange = (field: keyof typeof extraServices, value: boolean | number) => {
+        setExtraServices(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+
+        try {
+            const { data, error } = await supabase
+                .from('hotel_registrations')
+                .update({ extra_services: extraServices })
+                .eq('id', registration.id)
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            onSuccess(data as HotelRegistration);
+            onClose();
+        } catch (error: any) {
+            console.error('Error updating hotel extra services:', error);
+            alert('Erro ao atualizar serviços extras do hotel.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold text-gray-800">Serviços Extras - Hotel</h2>
+                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                            <CloseIcon />
+                        </button>
+                    </div>
+
+                    <div className="mb-4">
+                        <p className="text-sm text-gray-600 mb-4">
+                            Pet: <span className="font-semibold">{registration.pet_name}</span><br />
+                            Tutor: <span className="font-semibold">{registration.tutor_name}</span>
+                        </p>
+                    </div>
+
+                    <form onSubmit={handleSubmit}>
+                        <div className="space-y-4">
+                            <label className="flex items-center space-x-3">
+                                <input
+                                    type="checkbox"
+                                    checked={extraServices.pernoite}
+                                    onChange={(e) => handleServiceChange('pernoite', e.target.checked)}
+                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                />
+                                <span className="text-gray-700">Pernoite</span>
+                            </label>
+
+                            <label className="flex items-center space-x-3">
+                                <input
+                                    type="checkbox"
+                                    checked={extraServices.banho_tosa}
+                                    onChange={(e) => handleServiceChange('banho_tosa', e.target.checked)}
+                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                />
+                                <span className="text-gray-700">Banho & Tosa</span>
+                            </label>
+
+                            <label className="flex items-center space-x-3">
+                                <input
+                                    type="checkbox"
+                                    checked={extraServices.so_banho}
+                                    onChange={(e) => handleServiceChange('so_banho', e.target.checked)}
+                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                />
+                                <span className="text-gray-700">Só Banho</span>
+                            </label>
+
+                            <label className="flex items-center space-x-3">
+                                <input
+                                    type="checkbox"
+                                    checked={extraServices.adestrador}
+                                    onChange={(e) => handleServiceChange('adestrador', e.target.checked)}
+                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                />
+                                <span className="text-gray-700">Adestrador</span>
+                            </label>
+
+                            <label className="flex items-center space-x-3">
+                                <input
+                                    type="checkbox"
+                                    checked={extraServices.despesa_medica}
+                                    onChange={(e) => handleServiceChange('despesa_medica', e.target.checked)}
+                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                />
+                                <span className="text-gray-700">Despesa Médica</span>
+                            </label>
+
+                            <div className="space-y-2">
+                                <label className="block text-gray-700 font-medium">Dias Extras</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={extraServices.dia_extra}
+                                    onChange={(e) => handleServiceChange('dia_extra', parseInt(e.target.value) || 0)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end space-x-3 pt-4">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                            >
+                                {isSubmitting ? 'Salvando...' : 'Salvar'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Add Monthly Extra Services Modal Component
+const AddAppointmentExtraServicesModal: React.FC<{
+    appointment: AdminAppointment;
+    onClose: () => void;
+    onSuccess: (updatedAppointment: AdminAppointment) => void;
+}> = ({ appointment, onClose, onSuccess }) => {
+    const [extraServices, setExtraServices] = useState({
+        pernoite: appointment.extra_services?.pernoite || false,
+        banho_tosa: appointment.extra_services?.banho_tosa || false,
+        so_banho: appointment.extra_services?.so_banho || false,
+        adestrador: appointment.extra_services?.adestrador || false,
+        despesa_medica: appointment.extra_services?.despesa_medica || false,
+        dias_extras: appointment.extra_services?.dias_extras || 0,
+    });
+    const [isUpdating, setIsUpdating] = useState(false);
+
+    const handleCheckboxChange = (service: keyof typeof extraServices) => {
+        if (service === 'dias_extras') return;
+        setExtraServices(prev => ({
+            ...prev,
+            [service]: !prev[service]
+        }));
+    };
+
+    const handleNumberChange = (service: keyof typeof extraServices, value: number) => {
+        setExtraServices(prev => ({
+            ...prev,
+            [service]: value
+        }));
+    };
+
+    const handleSave = async () => {
+        setIsUpdating(true);
+        try {
+            const { data, error } = await supabase
+                .from('appointments')
+                .update({ extra_services: extraServices })
+                .eq('id', appointment.id)
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            onSuccess(data as AdminAppointment);
+            onClose();
+        } catch (error) {
+            console.error('Error updating extra services:', error);
+            alert('Erro ao salvar serviços extras. Tente novamente.');
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold text-gray-800">Adicionar Serviços Extras</h2>
+                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                            <CloseIcon />
+                        </button>
+                    </div>
+
+                    <div className="mb-4">
+                        <p className="text-sm text-gray-600 mb-4">
+                            Pet: <span className="font-semibold">{appointment.pet_name}</span>
+                        </p>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="appointment_pernoite"
+                                checked={extraServices.pernoite}
+                                onChange={() => handleCheckboxChange('pernoite')}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="appointment_pernoite" className="text-sm font-medium text-gray-700">
+                                Pernoite
+                            </label>
+                        </div>
+
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="appointment_banho_tosa"
+                                checked={extraServices.banho_tosa}
+                                onChange={() => handleCheckboxChange('banho_tosa')}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="appointment_banho_tosa" className="text-sm font-medium text-gray-700">
+                                Banho & Tosa
+                            </label>
+                        </div>
+
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="appointment_so_banho"
+                                checked={extraServices.so_banho}
+                                onChange={() => handleCheckboxChange('so_banho')}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="appointment_so_banho" className="text-sm font-medium text-gray-700">
+                                Só Banho
+                            </label>
+                        </div>
+
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="appointment_adestrador"
+                                checked={extraServices.adestrador}
+                                onChange={() => handleCheckboxChange('adestrador')}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="appointment_adestrador" className="text-sm font-medium text-gray-700">
+                                Adestrador
+                            </label>
+                        </div>
+
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="appointment_despesa_medica"
+                                checked={extraServices.despesa_medica}
+                                onChange={() => handleCheckboxChange('despesa_medica')}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="appointment_despesa_medica" className="text-sm font-medium text-gray-700">
+                                Despesa Médica
+                            </label>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <label htmlFor="appointment_dias_extras" className="text-sm font-medium text-gray-700">
+                                Dias Extras:
+                            </label>
+                            <input
+                                type="number"
+                                id="appointment_dias_extras"
+                                min="0"
+                                value={extraServices.dias_extras}
+                                onChange={(e) => handleNumberChange('dias_extras', parseInt(e.target.value) || 0)}
+                                className="w-20 px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 mt-6">
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            disabled={isUpdating}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isUpdating ? 'Salvando...' : 'Salvar'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const AddMonthlyExtraServicesModal: React.FC<{
+    client: MonthlyClient;
+    onClose: () => void;
+    onSuccess: (updatedClient: MonthlyClient) => void;
+}> = ({ client, onClose, onSuccess }) => {
+    const [extraServices, setExtraServices] = useState({
+        pernoite: client.extra_services?.pernoite || false,
+        banho_tosa: client.extra_services?.banho_tosa || false,
+        so_banho: client.extra_services?.so_banho || false,
+        adestrador: client.extra_services?.adestrador || false,
+        despesa_medica: client.extra_services?.despesa_medica || false,
+        dias_extras: client.extra_services?.dias_extras || 0,
+    });
+    const [isUpdating, setIsUpdating] = useState(false);
+
+    const handleCheckboxChange = (service: keyof typeof extraServices) => {
+        if (service === 'dias_extras') return;
+        setExtraServices(prev => ({
+            ...prev,
+            [service]: !prev[service]
+        }));
+    };
+
+    const handleNumberChange = (service: keyof typeof extraServices, value: number) => {
+        setExtraServices(prev => ({
+            ...prev,
+            [service]: value
+        }));
+    };
+
+    const handleSave = async () => {
+        setIsUpdating(true);
+        try {
+            const { data, error } = await supabase
+                .from('monthly_clients')
+                .update({ extra_services: extraServices })
+                .eq('id', client.id)
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            onSuccess(data as MonthlyClient);
+            onClose();
+        } catch (error) {
+            console.error('Error updating extra services:', error);
+            alert('Erro ao salvar serviços extras. Tente novamente.');
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold text-gray-800">Adicionar Serviços Extras</h2>
+                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                            <CloseIcon />
+                        </button>
+                    </div>
+
+                    <div className="mb-4">
+                        <p className="text-sm text-gray-600 mb-4">
+                            Pet: <span className="font-semibold">{client.pet_name}</span>
+                        </p>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="monthly_pernoite"
+                                checked={extraServices.pernoite}
+                                onChange={() => handleCheckboxChange('pernoite')}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="monthly_pernoite" className="text-sm font-medium text-gray-700">
+                                Pernoite
+                            </label>
+                        </div>
+
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="monthly_banho_tosa"
+                                checked={extraServices.banho_tosa}
+                                onChange={() => handleCheckboxChange('banho_tosa')}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="monthly_banho_tosa" className="text-sm font-medium text-gray-700">
+                                Banho & Tosa
+                            </label>
+                        </div>
+
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="monthly_so_banho"
+                                checked={extraServices.so_banho}
+                                onChange={() => handleCheckboxChange('so_banho')}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="monthly_so_banho" className="text-sm font-medium text-gray-700">
+                                Só Banho
+                            </label>
+                        </div>
+
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="monthly_adestrador"
+                                checked={extraServices.adestrador}
+                                onChange={() => handleCheckboxChange('adestrador')}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="monthly_adestrador" className="text-sm font-medium text-gray-700">
+                                Adestrador
+                            </label>
+                        </div>
+
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="monthly_despesa_medica"
+                                checked={extraServices.despesa_medica}
+                                onChange={() => handleCheckboxChange('despesa_medica')}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="monthly_despesa_medica" className="text-sm font-medium text-gray-700">
+                                Despesa Médica
+                            </label>
+                        </div>
+
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="monthly_dias_extras"
+                                checked={extraServices.dias_extras > 0}
+                                onChange={() => {
+                                    if (extraServices.dias_extras > 0) {
+                                        handleNumberChange('dias_extras', 0);
+                                    } else {
+                                        handleNumberChange('dias_extras', 1);
+                                    }
+                                }}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="monthly_dias_extras" className="text-sm font-medium text-gray-700 mr-2">
+                                Dias Extras
+                            </label>
+                            {extraServices.dias_extras > 0 && (
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={extraServices.dias_extras}
+                                    onChange={(e) => handleNumberChange('dias_extras', parseInt(e.target.value) || 0)}
+                                    className="w-16 px-2 py-1 border border-gray-300 rounded-md text-sm"
+                                />
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 mt-6">
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            disabled={isUpdating}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                        >
+                            {isUpdating ? 'Salvando...' : 'Salvar'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const DaycareEnrollmentDetailsModal: React.FC<{
     enrollment: DaycareRegistration;
     onClose: () => void;
     onUpdateStatus: (id: string, status: 'Pendente' | 'Aprovado' | 'Rejeitado') => void;
     isUpdating: boolean;
-}> = ({ enrollment, onClose, onUpdateStatus, isUpdating }) => {
+    onAddExtraServices?: (enrollment: DaycareRegistration) => void;
+}> = ({ enrollment, onClose, onUpdateStatus, isUpdating, onAddExtraServices }) => {
     const { id, status } = enrollment;
 
     const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
@@ -3792,16 +4696,60 @@ const DaycareEnrollmentDetailsModal: React.FC<{
                              <DetailItem label="Data Pagamento" value={formatDateToBR(enrollment.payment_date || null)} />
                          </div>
                     </section>
+                    
+                    {/* Extra Services */}
+                    {enrollment.extra_services && Object.values(enrollment.extra_services).some(value => value === true || (typeof value === 'number' && value > 0)) && (
+                        <section>
+                            <h3 className="text-lg font-semibold text-pink-700 border-b pb-2 mb-4">Serviços Extras</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                                {enrollment.extra_services.pernoite && (
+                                    <DetailItem label="Pernoite" value="Sim" />
+                                )}
+                                {enrollment.extra_services.banho_tosa && (
+                                    <DetailItem label="Banho & Tosa" value="Sim" />
+                                )}
+                                {enrollment.extra_services.so_banho && (
+                                    <DetailItem label="Só banho" value="Sim" />
+                                )}
+                                {enrollment.extra_services.adestrador && (
+                                    <DetailItem label="Adestrador" value="Sim" />
+                                )}
+                                {enrollment.extra_services.despesa_medica && (
+                                    <DetailItem label="Despesa médica" value="Sim" />
+                                )}
+                                {enrollment.extra_services.dia_extra && enrollment.extra_services.dia_extra > 0 && (
+                                    <DetailItem 
+                                        label="Dias extras" 
+                                        value={`${enrollment.extra_services.dia_extra} dia${enrollment.extra_services.dia_extra > 1 ? 's' : ''}`} 
+                                    />
+                                )}
+                            </div>
+                        </section>
+                    )}
                 </div>
                 <div className="p-6 bg-white mt-auto rounded-b-2xl">
-                    {status === 'Pendente' ? (
-                        <div className="flex justify-end items-center gap-3">
-                            <button onClick={() => onUpdateStatus(id!, 'Rejeitado')} disabled={isUpdating} className="bg-red-500 text-white font-bold py-3.5 px-4 rounded-lg hover:bg-red-600 transition-colors disabled:bg-gray-300">Rejeitar</button>
-                            <button onClick={() => onUpdateStatus(id!, 'Aprovado')} disabled={isUpdating} className="bg-green-500 text-white font-bold py-3.5 px-4 rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-300">{isUpdating ? <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-white mx-auto"></div> : 'Aprovar'}</button>
-                        </div>
-                    ) : (
-                         <div className="text-right text-gray-600 font-semibold">Esta matrícula já foi {status === 'Aprovado' ? 'aprovada' : 'rejeitada'}.</div>
-                    )}
+                    <div className="flex justify-between items-center">
+                        {/* Botão Adicionar Serviços Extras */}
+                        {onAddExtraServices && (
+                            <button 
+                                onClick={() => onAddExtraServices(enrollment)}
+                                className="bg-purple-500 text-white font-bold py-3.5 px-4 rounded-lg hover:bg-purple-600 transition-colors flex items-center gap-2"
+                            >
+                                <span>+</span>
+                                Adicionar Serviços Extras
+                            </button>
+                        )}
+                        
+                        {/* Botões de Status */}
+                        {status === 'Pendente' ? (
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => onUpdateStatus(id!, 'Rejeitado')} disabled={isUpdating} className="bg-red-500 text-white font-bold py-3.5 px-4 rounded-lg hover:bg-red-600 transition-colors disabled:bg-gray-300">Rejeitar</button>
+                                <button onClick={() => onUpdateStatus(id!, 'Aprovado')} disabled={isUpdating} className="bg-green-500 text-white font-bold py-3.5 px-4 rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-300">{isUpdating ? <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-white mx-auto"></div> : 'Aprovar'}</button>
+                            </div>
+                        ) : (
+                             <div className="text-gray-600 font-semibold">Esta matrícula já foi {status === 'Aprovado' ? 'aprovada' : 'rejeitada'}.</div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
@@ -3927,6 +4875,119 @@ const EditDaycareEnrollmentModal: React.FC<{
                            <div><label className="block text-base font-semibold text-gray-700">Último antipulgas</label><input type="date" name="last_flea_remedy" value={formData.last_flea_remedy} onChange={handleInputChange} className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
                         </div>
                         {renderRadioGroup('Plano', 'contracted_plan', [ {label: '2x Semana', value: '2x_week'}, {label: '3x Semana', value: '3x_week'}, {label: '4x Semana', value: '4x_week'}, {label: '5x Semana', value: '5x_week'}])}
+                        
+                        {/* Extra Services */}
+                        <div className="space-y-4">
+                            <h4 className="text-base font-semibold text-pink-700 border-b pb-1">Serviços Extras</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <label className="flex items-center gap-2 text-gray-700 font-medium bg-white p-3 rounded-lg border">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={formData.extra_services?.pernoite || false}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            extra_services: {
+                                                ...prev.extra_services,
+                                                pernoite: e.target.checked
+                                            }
+                                        }))}
+                                        className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                                    />
+                                    Pernoite
+                                </label>
+                                <label className="flex items-center gap-2 text-gray-700 font-medium bg-white p-3 rounded-lg border">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={formData.extra_services?.banho_tosa || false}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            extra_services: {
+                                                ...prev.extra_services,
+                                                banho_tosa: e.target.checked
+                                            }
+                                        }))}
+                                        className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                                    />
+                                    Banho & Tosa
+                                </label>
+                                <label className="flex items-center gap-2 text-gray-700 font-medium bg-white p-3 rounded-lg border">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={formData.extra_services?.so_banho || false}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            extra_services: {
+                                                ...prev.extra_services,
+                                                so_banho: e.target.checked
+                                            }
+                                        }))}
+                                        className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                                    />
+                                    Só banho
+                                </label>
+                                <label className="flex items-center gap-2 text-gray-700 font-medium bg-white p-3 rounded-lg border">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={formData.extra_services?.adestrador || false}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            extra_services: {
+                                                ...prev.extra_services,
+                                                adestrador: e.target.checked
+                                            }
+                                        }))}
+                                        className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                                    />
+                                    Adestrador
+                                </label>
+                                <label className="flex items-center gap-2 text-gray-700 font-medium bg-white p-3 rounded-lg border">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={formData.extra_services?.despesa_medica || false}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            extra_services: {
+                                                ...prev.extra_services,
+                                                despesa_medica: e.target.checked
+                                            }
+                                        }))}
+                                        className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                                    />
+                                    Despesa médica
+                                </label>
+                                <div className="flex items-center gap-2 text-gray-700 font-medium bg-white p-3 rounded-lg border">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={(formData.extra_services?.dia_extra || 0) > 0}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            extra_services: {
+                                                ...prev.extra_services,
+                                                dia_extra: e.target.checked ? 1 : 0
+                                            }
+                                        }))}
+                                        className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                                    />
+                                    <span>Dia extra</span>
+                                    {(formData.extra_services?.dia_extra || 0) > 0 && (
+                                        <input 
+                                            type="number" 
+                                            min="1"
+                                            value={formData.extra_services?.dia_extra || 1}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                extra_services: {
+                                                    ...prev.extra_services,
+                                                    dia_extra: parseInt(e.target.value) || 1
+                                                }
+                                            }))}
+                                            className="w-12 px-1 py-0.5 border border-gray-300 rounded text-center text-sm"
+                                        />
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div>
                             <label className="block text-base font-semibold text-gray-700">Status</label>
                             <select name="status" value={formData.status} onChange={handleInputChange} className="mt-1 block w-full p-2 bg-gray-50 border rounded-md">
@@ -4590,6 +5651,119 @@ const DaycareRegistrationForm: React.FC<{
                     {label: '4 X SEMANA', value: '4x_week'},
                     {label: '5 X SEMANA', value: '5x_week'},
                 ])}
+                
+                {/* Extra Services */}
+                <div className="space-y-6 pt-6 border-t border-gray-200 mt-6">
+                    <h3 className="text-lg font-semibold text-pink-700 border-b pb-2 mb-2">Serviços Extras</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <label className="flex items-center gap-3 text-gray-700 font-semibold bg-white p-4 rounded-lg border-2 border-gray-200">
+                            <input 
+                                type="checkbox" 
+                                checked={formData.extra_services?.pernoite || false}
+                                onChange={(e) => setFormData(prev => ({
+                                    ...prev,
+                                    extra_services: {
+                                        ...prev.extra_services,
+                                        pernoite: e.target.checked
+                                    }
+                                }))}
+                                className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                            />
+                            Pernoite
+                        </label>
+                        <label className="flex items-center gap-3 text-gray-700 font-semibold bg-white p-4 rounded-lg border-2 border-gray-200">
+                            <input 
+                                type="checkbox" 
+                                checked={formData.extra_services?.banho_tosa || false}
+                                onChange={(e) => setFormData(prev => ({
+                                    ...prev,
+                                    extra_services: {
+                                        ...prev.extra_services,
+                                        banho_tosa: e.target.checked
+                                    }
+                                }))}
+                                className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                            />
+                            Banho & Tosa
+                        </label>
+                        <label className="flex items-center gap-3 text-gray-700 font-semibold bg-white p-4 rounded-lg border-2 border-gray-200">
+                            <input 
+                                type="checkbox" 
+                                checked={formData.extra_services?.so_banho || false}
+                                onChange={(e) => setFormData(prev => ({
+                                    ...prev,
+                                    extra_services: {
+                                        ...prev.extra_services,
+                                        so_banho: e.target.checked
+                                    }
+                                }))}
+                                className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                            />
+                            Só banho
+                        </label>
+                        <label className="flex items-center gap-3 text-gray-700 font-semibold bg-white p-4 rounded-lg border-2 border-gray-200">
+                            <input 
+                                type="checkbox" 
+                                checked={formData.extra_services?.adestrador || false}
+                                onChange={(e) => setFormData(prev => ({
+                                    ...prev,
+                                    extra_services: {
+                                        ...prev.extra_services,
+                                        adestrador: e.target.checked
+                                    }
+                                }))}
+                                className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                            />
+                            Adestrador
+                        </label>
+                        <label className="flex items-center gap-3 text-gray-700 font-semibold bg-white p-4 rounded-lg border-2 border-gray-200">
+                            <input 
+                                type="checkbox" 
+                                checked={formData.extra_services?.despesa_medica || false}
+                                onChange={(e) => setFormData(prev => ({
+                                    ...prev,
+                                    extra_services: {
+                                        ...prev.extra_services,
+                                        despesa_medica: e.target.checked
+                                    }
+                                }))}
+                                className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                            />
+                            Despesa médica
+                        </label>
+                        <div className="flex items-center gap-3 text-gray-700 font-semibold bg-white p-4 rounded-lg border-2 border-gray-200">
+                            <input 
+                                type="checkbox" 
+                                checked={(formData.extra_services?.dia_extra || 0) > 0}
+                                onChange={(e) => setFormData(prev => ({
+                                    ...prev,
+                                    extra_services: {
+                                        ...prev.extra_services,
+                                        dia_extra: e.target.checked ? 1 : 0
+                                    }
+                                }))}
+                                className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
+                            />
+                            <span>Dia extra</span>
+                            {(formData.extra_services?.dia_extra || 0) > 0 && (
+                                <input 
+                                    type="number" 
+                                    min="1"
+                                    value={formData.extra_services?.dia_extra || 1}
+                                    onChange={(e) => setFormData(prev => ({
+                                        ...prev,
+                                        extra_services: {
+                                            ...prev.extra_services,
+                                            dia_extra: parseInt(e.target.value) || 1
+                                        }
+                                    }))}
+                                    className="w-16 px-2 py-1 border border-gray-300 rounded text-center"
+                                />
+                            )}
+                        </div>
+                    </div>
+                </div>
+                
                 {/* Payment Details */}
                 <div className="space-y-6 pt-6 border-t border-gray-200 mt-6">
                     <h3 className="text-lg font-semibold text-pink-700 border-b pb-2 mb-2">Detalhes Financeiros</h3>
@@ -5342,6 +6516,8 @@ const HotelView: React.FC<{ key?: number }> = ({ key }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [updatingId, setUpdatingId] = useState<string | null>(null);
     const [registrationToEdit, setRegistrationToEdit] = useState<HotelRegistration | null>(null);
+    const [isHotelExtraServicesModalOpen, setIsHotelExtraServicesModalOpen] = useState(false);
+    const [hotelRegistrationForExtraServices, setHotelRegistrationForExtraServices] = useState<HotelRegistration | null>(null);
 
     const fetchRegistrations = useCallback(async () => {
         setLoading(true);
@@ -5422,6 +6598,20 @@ const HotelView: React.FC<{ key?: number }> = ({ key }) => {
         setRegistrationToDelete(null);
     };
 
+    const handleAddHotelExtraServices = (registration: HotelRegistration) => {
+        setHotelRegistrationForExtraServices(registration);
+        setIsHotelExtraServicesModalOpen(true);
+        setSelectedRegistration(null);
+    };
+
+    const handleHotelExtraServicesUpdated = (updatedRegistration: HotelRegistration) => {
+        setRegistrations(prev => prev.map(r => 
+            r.id === updatedRegistration.id ? updatedRegistration : r
+        ));
+        setIsHotelExtraServicesModalOpen(false);
+        setHotelRegistrationForExtraServices(null);
+    };
+
     const filteredRegistrations = registrations.filter(reg => 
         reg.pet_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         reg.tutor_name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -5435,7 +6625,10 @@ const HotelView: React.FC<{ key?: number }> = ({ key }) => {
         return <HotelRegistrationForm setView={() => setIsAddFormOpen(false)} onSuccess={() => { fetchRegistrations(); setIsAddFormOpen(false); }} />;
     }
 
-    const HotelRegistrationCard: React.FC<{ registration: HotelRegistration }> = ({ registration }) => {
+    const HotelRegistrationCard: React.FC<{ 
+        registration: HotelRegistration;
+        onAddExtraServices: (registration: HotelRegistration) => void;
+    }> = ({ registration, onAddExtraServices }) => {
         const currentCheckInStatus = registration.check_in_status || 'pending';
         const isUpdating = updatingId === registration.id;
         
@@ -5532,6 +6725,13 @@ const HotelView: React.FC<{ key?: number }> = ({ key }) => {
                         Editar
                     </button>
                     <button
+                        onClick={() => onAddExtraServices(registration)}
+                        className="bg-green-100 text-green-700 py-3.5 px-3 rounded-lg hover:bg-green-200 transition-colors text-sm font-semibold"
+                        title="Adicionar Serviços Extras"
+                    >
+                        +
+                    </button>
+                    <button
                         onClick={() => setRegistrationToDelete(registration)}
                         className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
                     >
@@ -5579,7 +6779,11 @@ const HotelView: React.FC<{ key?: number }> = ({ key }) => {
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {filteredRegistrations.map(reg => (
-                            <HotelRegistrationCard key={reg.id} registration={reg} />
+                            <HotelRegistrationCard 
+                                key={reg.id} 
+                                registration={reg} 
+                                onAddExtraServices={handleAddHotelExtraServices}
+                            />
                         ))}
                     </div>
                 </div>
@@ -5626,6 +6830,17 @@ const HotelView: React.FC<{ key?: number }> = ({ key }) => {
                 />
             )}
 
+            {isHotelExtraServicesModalOpen && hotelRegistrationForExtraServices && (
+                <AddHotelExtraServicesModal
+                    registration={hotelRegistrationForExtraServices}
+                    onClose={() => {
+                        setIsHotelExtraServicesModalOpen(false);
+                        setHotelRegistrationForExtraServices(null);
+                    }}
+                    onSuccess={handleHotelExtraServicesUpdated}
+                />
+            )}
+
             {selectedRegistration && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
                     <div className="bg-white rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
@@ -5668,6 +6883,43 @@ const HotelView: React.FC<{ key?: number }> = ({ key }) => {
                                     </div>
                                 </div>
                             )}
+                            
+                            {selectedRegistration.extra_services && (
+                                <div>
+                                    <h4 className="font-semibold text-gray-700 mb-2">Serviços Extras</h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {selectedRegistration.extra_services.pernoite && (
+                                            <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">Pernoite</span>
+                                        )}
+                                        {selectedRegistration.extra_services.banho_tosa && (
+                                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">Banho & Tosa</span>
+                                        )}
+                                        {selectedRegistration.extra_services.so_banho && (
+                                            <span className="px-2 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full">Só banho</span>
+                                        )}
+                                        {selectedRegistration.extra_services.adestrador && (
+                                            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Adestrador</span>
+                                        )}
+                                        {selectedRegistration.extra_services.despesa_medica && (
+                                            <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">Despesa médica</span>
+                                        )}
+                                        {selectedRegistration.extra_services.dia_extra && selectedRegistration.extra_services.dia_extra > 0 && (
+                                            <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
+                                                {selectedRegistration.extra_services.dia_extra} dia{selectedRegistration.extra_services.dia_extra > 1 ? 's' : ''} extra{selectedRegistration.extra_services.dia_extra > 1 ? 's' : ''}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="flex justify-end mt-6">
+                            <button
+                                onClick={() => handleAddHotelExtraServices(selectedRegistration)}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                            >
+                                Adicionar Serviços Extras
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -6064,6 +7316,8 @@ const DaycareView: React.FC<{ key?: number }> = ({ key }) => {
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
     const [draggingOver, setDraggingOver] = useState<string | null>(null);
     const [expandedSections, setExpandedSections] = useState<string[]>(['inDaycare', 'approved', 'pending']);
+    const [isExtraServicesModalOpen, setIsExtraServicesModalOpen] = useState(false);
+    const [enrollmentForExtraServices, setEnrollmentForExtraServices] = useState<DaycareRegistration | null>(null);
 
 
     const fetchEnrollments = useCallback(async () => {
@@ -6117,6 +7371,18 @@ const DaycareView: React.FC<{ key?: number }> = ({ key }) => {
         setEnrollments(prev => [added, ...prev]);
         setIsAddFormOpen(false);
     }
+
+    const handleAddExtraServices = (enrollment: DaycareRegistration) => {
+        setEnrollmentForExtraServices(enrollment);
+        setIsExtraServicesModalOpen(true);
+        setIsDetailsModalOpen(false);
+    };
+
+    const handleExtraServicesUpdated = (updated: DaycareRegistration) => {
+        setEnrollments(prev => prev.map(e => e.id === updated.id ? updated : e));
+        setIsExtraServicesModalOpen(false);
+        setEnrollmentForExtraServices(null);
+    };
     
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>, enrollment: DaycareRegistration, source: 'pending' | 'approved' | 'inDaycare') => {
         e.dataTransfer.effectAllowed = 'move';
@@ -6222,6 +7488,7 @@ const DaycareView: React.FC<{ key?: number }> = ({ key }) => {
                                 onClick={() => { setSelectedEnrollment(enrollment); setIsDetailsModalOpen(true); }}
                                 onEdit={() => { setSelectedEnrollment(enrollment); setIsEditModalOpen(true); }}
                                 onDelete={() => setEnrollmentToDelete(enrollment)}
+                                onAddExtraServices={handleAddExtraServices}
                             />
                         ))}
                         {count === 0 && <div className="text-center text-gray-500 py-6 sm:py-8"><p>Nenhuma matrícula aqui.</p></div>}
@@ -6243,6 +7510,7 @@ const DaycareView: React.FC<{ key?: number }> = ({ key }) => {
                     onClose={() => { setIsDetailsModalOpen(false); setSelectedEnrollment(null); }}
                     onUpdateStatus={handleUpdateStatus}
                     isUpdating={isUpdatingStatus}
+                    onAddExtraServices={() => handleAddExtraServices(selectedEnrollment)}
                 />
             )}
             {isEditModalOpen && selectedEnrollment && (
@@ -6250,6 +7518,13 @@ const DaycareView: React.FC<{ key?: number }> = ({ key }) => {
                     enrollment={selectedEnrollment}
                     onClose={() => { setIsEditModalOpen(false); setSelectedEnrollment(null); }}
                     onUpdated={handleEnrollmentUpdated}
+                />
+            )}
+            {isExtraServicesModalOpen && enrollmentForExtraServices && (
+                <AddExtraServicesModal
+                    enrollment={enrollmentForExtraServices}
+                    onClose={() => { setIsExtraServicesModalOpen(false); setEnrollmentForExtraServices(null); }}
+                    onSuccess={handleExtraServicesUpdated}
                 />
             )}
              {enrollmentToDelete && (
@@ -6388,30 +7663,73 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 };
 
 const App: React.FC = () => {
-    const [view, setView] = useState<'scheduler' | 'login' | 'admin' | 'daycareRegistration'>('scheduler');
+    const [view, setView] = useState<'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration'>('scheduler');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loadingAuth, setLoadingAuth] = useState(true);
 
     useEffect(() => {
+        let isMounted = true;
+        
         const checkAuth = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            setIsAuthenticated(!!session);
-            if (!!session) {
-                setView('admin');
+            try {
+                // Verificar se o supabase está disponível
+                if (!supabase || !supabase.auth) {
+                    console.warn('Supabase não está disponível, continuando sem autenticação');
+                    if (isMounted) {
+                        setIsAuthenticated(false);
+                        setLoadingAuth(false);
+                    }
+                    return;
+                }
+                
+                const { data: { session } } = await supabase.auth.getSession();
+                if (isMounted) {
+                    setIsAuthenticated(!!session);
+                    if (!!session) {
+                        setView('admin');
+                    }
+                }
+            } catch (error) {
+                console.warn('Auth check failed, continuing without authentication:', error);
+                if (isMounted) {
+                    setIsAuthenticated(false);
+                }
+            } finally {
+                if (isMounted) {
+                    setLoadingAuth(false);
+                }
             }
-            setLoadingAuth(false);
         };
+        
         checkAuth();
         
-        const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-            setIsAuthenticated(!!session);
-            if (!session) {
-                setView('scheduler');
+        // Setup auth listener com proteção adicional
+        let authListener: any = null;
+        try {
+            if (supabase && supabase.auth && supabase.auth.onAuthStateChange) {
+                const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+                    if (isMounted) {
+                        setIsAuthenticated(!!session);
+                        if (!session) {
+                            setView('scheduler');
+                        }
+                    }
+                });
+                authListener = data;
             }
-        });
+        } catch (error) {
+            console.warn('Auth listener setup failed:', error);
+        }
 
         return () => {
-            authListener.subscription.unsubscribe();
+            isMounted = false;
+            if (authListener && authListener.subscription) {
+                try {
+                    authListener.subscription.unsubscribe();
+                } catch (error) {
+                    console.warn('Error unsubscribing auth listener:', error);
+                }
+            }
         };
     }, []);
 
@@ -6420,7 +7738,11 @@ const App: React.FC = () => {
     }
     
     const handleLogout = async () => {
-        await supabase.auth.signOut();
+        try {
+            await supabase.auth.signOut();
+        } catch (error) {
+            console.warn('Logout failed:', error);
+        }
         setIsAuthenticated(false);
         setView('scheduler');
     };

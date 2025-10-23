@@ -53,6 +53,14 @@ export interface AdminAppointment {
   monthly_client_id?: string;
   owner_address?: string;
   pet_breed?: string;
+  extra_services?: {
+    pernoite: boolean;
+    banho_tosa: boolean;
+    so_banho: boolean;
+    adestrador: boolean;
+    despesa_medica: boolean;
+    dias_extras: number;
+  };
 }
 
 export interface PetMovelAppointment extends AdminAppointment {
@@ -87,6 +95,14 @@ export interface MonthlyClient {
   is_active: boolean;
   payment_status: 'Pendente' | 'Pago';
   condominium?: string;
+  extra_services?: {
+    pernoite: boolean;
+    banho_tosa: boolean;
+    so_banho: boolean;
+    adestrador: boolean;
+    despesa_medica: boolean;
+    dias_extras: number;
+  };
 }
 
 export interface DaycareRegistration {
@@ -117,6 +133,15 @@ export interface DaycareRegistration {
         other: string;
     };
     contracted_plan: '2x_week' | '3x_week' | '4x_week' | '5x_week' | null;
+    // Serviços extras
+    extra_services?: {
+        pernoite: boolean;
+        banho_tosa: boolean;
+        so_banho: boolean;
+        adestrador: boolean;
+        despesa_medica: boolean;
+        dia_extra: number; // quantidade de dias extras
+    };
     total_price?: number;
     payment_date: string;
     status: 'Pendente' | 'Aprovado' | 'Rejeitado';
@@ -180,4 +205,12 @@ export interface HotelRegistration {
     checked_in_at?: string;
     checked_out_at?: string;
     check_in_status?: 'pending' | 'checked_in' | 'checked_out';
+    extra_services?: {
+        pernoite: boolean;
+        banho_tosa: boolean;
+        so_banho: boolean;
+        adestrador: boolean;
+        despesa_medica: boolean;
+        dia_extra: number;
+    };
 }
