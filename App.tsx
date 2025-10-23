@@ -1457,7 +1457,7 @@ const AdminAddAppointmentModal: React.FC<{
         ownerAddress: '' 
     });
     const [selectedService, setSelectedService] = useState<ServiceType | null>(null);
-    const [serviceStepView, setServiceStepView] = useState<'main' | 'bath_groom' | 'pet_movel' | 'pet_movel_condo'>('main');
+    const [serviceStepView, setServiceStepView] = useState<'main' | 'bath_groom' | 'pet_movel' | 'pet_movel_condo' | 'hotel_pet'>('main');
     const [selectedCondo, setSelectedCondo] = useState<string | null>(null);
     const [selectedWeight, setSelectedWeight] = useState<PetWeight | null>(null);
     const [selectedAddons, setSelectedAddons] = useState<Record<string, boolean>>({});
@@ -6335,7 +6335,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                              <button type="button" onClick={() => { console.log('Clicou em Hotel Pet'); setViewWithLog('hotelRegistration'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
                                 <span className="text-lg">{SERVICES[ServiceType.VISIT_HOTEL].label}</span>
                             </button>
-                            <button type="button" onClick={() => setServiceStepView('pet_movel_condo')} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
+                            <button type="button" onClick={() => { console.log('Clicou em Pet Móvel'); setServiceStepView('pet_movel_condo'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
                                 <span className="text-lg">Pet Móvel</span>
                             </button>
                         </div>
@@ -7755,6 +7755,7 @@ const App: React.FC = () => {
         console.log('Mudando view de', view, 'para', newView);
         setView(newView);
     };
+    
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loadingAuth, setLoadingAuth] = useState(true);
     const [showDaycareStatistics, setShowDaycareStatistics] = useState(false);
