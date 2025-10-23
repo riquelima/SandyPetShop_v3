@@ -55,12 +55,12 @@ export interface AdminAppointment {
   pet_breed?: string;
   condominium?: string;
   extra_services?: {
-    pernoite: boolean;
-    banho_tosa: boolean;
-    so_banho: boolean;
-    adestrador: boolean;
-    despesa_medica: boolean;
-    dias_extras: number;
+    pernoite: { enabled: boolean; value: number };
+    banho_tosa: { enabled: boolean; value: number };
+    so_banho: { enabled: boolean; value: number };
+    adestrador: { enabled: boolean; value: number };
+    despesa_medica: { enabled: boolean; value: number };
+    dias_extras: { quantity: number; value: number };
   };
 }
 
@@ -97,12 +97,12 @@ export interface MonthlyClient {
   payment_status: 'Pendente' | 'Pago';
   condominium?: string;
   extra_services?: {
-    pernoite: boolean;
-    banho_tosa: boolean;
-    so_banho: boolean;
-    adestrador: boolean;
-    despesa_medica: boolean;
-    dias_extras: number;
+    pernoite: { enabled: boolean; value: number };
+    banho_tosa: { enabled: boolean; value: number };
+    so_banho: { enabled: boolean; value: number };
+    adestrador: { enabled: boolean; value: number };
+    despesa_medica: { enabled: boolean; value: number };
+    dias_extras: { quantity: number; value: number };
   };
 }
 
@@ -136,12 +136,12 @@ export interface DaycareRegistration {
     contracted_plan: '2x_week' | '3x_week' | '4x_week' | '5x_week' | null;
     // Serviços extras
     extra_services?: {
-        pernoite: boolean;
-        banho_tosa: boolean;
-        so_banho: boolean;
-        adestrador: boolean;
-        despesa_medica: boolean;
-        dia_extra: number; // quantidade de dias extras
+        pernoite: { enabled: boolean; value: number };
+        banho_tosa: { enabled: boolean; value: number };
+        so_banho: { enabled: boolean; value: number };
+        adestrador: { enabled: boolean; value: number };
+        despesa_medica: { enabled: boolean; value: number };
+        dias_extras: { quantity: number; value: number };
     };
     total_price?: number;
     payment_date: string;
@@ -207,11 +207,11 @@ export interface HotelRegistration {
     checked_out_at?: string;
     check_in_status?: 'pending' | 'checked_in' | 'checked_out';
     extra_services?: {
-        pernoite: boolean;
-        banho_tosa: boolean;
-        so_banho: boolean;
-        adestrador: boolean;
-        despesa_medica: boolean;
-        dia_extra: number;
+        pernoite: { enabled: boolean; value: number };
+        banho_tosa: { enabled: boolean; value: number };
+        so_banho: { enabled: boolean; value: number };
+        adestrador: { enabled: boolean; value: number };
+        despesa_medica: { enabled: boolean; value: number };
+        dias_extras: { quantity: number; value: number };
     };
 }
