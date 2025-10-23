@@ -737,6 +737,169 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
     );
 };
 
+interface StatisticsData {
+    daily: {
+        count: number;
+        revenue: number;
+        services: { [key: string]: number };
+    };
+    weekly: {
+        count: number;
+        revenue: number;
+        services: { [key: string]: number };
+    };
+    monthly: {
+        count: number;
+        revenue: number;
+        services: { [key: string]: number };
+    };
+}
+
+const StatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({ isOpen, onClose }) => {
+    const [statistics, setStatistics] = useState<StatisticsData | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    const fetchStatistics = useCallback(async () => {
+        setLoading(true);
+        try {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay());
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+            // Buscar agendamentos concluídos
+            const { data: appointments, error } = await supabase
+                .from('appointments')
+                .select('*')
+                .eq('status', 'CONCLUÍDO')
+                .order('appointment_time', { ascending: false });
+
+            if (error) {
+                console.error('Erro ao buscar estatísticas:', error);
+                return;
+            }
+
+            const stats: StatisticsData = {
+                daily: { count: 0, revenue: 0, services: {} },
+                weekly: { count: 0, revenue: 0, services: {} },
+                monthly: { count: 0, revenue: 0, services: {} }
+            };
+
+            appointments?.forEach(appointment => {
+                const appointmentDate = new Date(appointment.appointment_time);
+                const price = appointment.price || 0;
+                const service = appointment.service || 'Não especificado';
+
+                // Estatísticas diárias
+                if (appointmentDate >= today) {
+                    stats.daily.count++;
+                    stats.daily.revenue += price;
+                    stats.daily.services[service] = (stats.daily.services[service] || 0) + 1;
+                }
+
+                // Estatísticas semanais
+                if (appointmentDate >= weekStart) {
+                    stats.weekly.count++;
+                    stats.weekly.revenue += price;
+                    stats.weekly.services[service] = (stats.weekly.services[service] || 0) + 1;
+                }
+
+                // Estatísticas mensais
+                if (appointmentDate >= monthStart) {
+                    stats.monthly.count++;
+                    stats.monthly.revenue += price;
+                    stats.monthly.services[service] = (stats.monthly.services[service] || 0) + 1;
+                }
+            });
+
+            setStatistics(stats);
+        } catch (error) {
+            console.error('Erro ao calcular estatísticas:', error);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (isOpen) {
+            fetchStatistics();
+        }
+    }, [isOpen, fetchStatistics]);
+
+    if (!isOpen) return null;
+
+    const StatCard: React.FC<{ title: string; data: { count: number; revenue: number; services: { [key: string]: number } } }> = ({ title, data }) => (
+        <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+            <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">{title}</h3>
+            <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                        <p className="text-sm text-gray-600">Total de Serviços</p>
+                        <p className="text-2xl font-bold text-blue-600">{data.count}</p>
+                    </div>
+                    <div className="bg-green-50 p-4 rounded-lg">
+                        <p className="text-sm text-gray-600">Receita Total</p>
+                        <p className="text-2xl font-bold text-green-600">R$ {data.revenue.toFixed(2).replace('.', ',')}</p>
+                    </div>
+                </div>
+                {Object.keys(data.services).length > 0 && (
+                    <div>
+                        <h4 className="font-semibold text-gray-700 mb-2">Serviços Realizados:</h4>
+                        <div className="space-y-2">
+                            {Object.entries(data.services).map(([service, count]) => (
+                                <div key={service} className="flex justify-between items-center bg-gray-50 p-2 rounded">
+                                    <span className="text-gray-700">{service}</span>
+                                    <span className="font-semibold text-gray-900">{count}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fadeIn">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b border-gray-200 p-6 rounded-t-2xl">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-3xl font-bold text-gray-800">📊 Estatísticas de Serviços</h2>
+                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl font-bold">×</button>
+                    </div>
+                </div>
+                
+                <div className="p-6">
+                    {loading ? (
+                        <div className="flex justify-center py-16">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+                        </div>
+                    ) : statistics ? (
+                        <div className="space-y-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <StatCard title="📅 Hoje" data={statistics.daily} />
+                                <StatCard title="📊 Esta Semana" data={statistics.weekly} />
+                                <StatCard title="📈 Este Mês" data={statistics.monthly} />
+                            </div>
+                            
+                            {(statistics.daily.count === 0 && statistics.weekly.count === 0 && statistics.monthly.count === 0) && (
+                                <div className="text-center py-12 bg-gray-50 rounded-lg">
+                                    <p className="text-gray-500 text-lg">Nenhum serviço concluído encontrado para exibir estatísticas.</p>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="text-center py-12">
+                            <p className="text-gray-500 text-lg">Erro ao carregar estatísticas.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: () => void; onAppointmentUpdated: (updatedAppointment: AdminAppointment) => void; }> = ({ appointment, onClose, onAppointmentUpdated }) => {
     const [formData, setFormData] = useState<Omit<AdminAppointment, 'id' | 'addons' | 'appointment_time'>>(appointment);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -769,6 +932,11 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
             price: Number(price),
             status,
             appointment_time: newAppointmentTime.toISOString(),
+            // Preservar campos opcionais importantes se existirem
+            ...(appointment.monthly_client_id && { monthly_client_id: appointment.monthly_client_id }),
+            ...(appointment.owner_address && { owner_address: appointment.owner_address }),
+            ...(appointment.pet_breed && { pet_breed: appointment.pet_breed }),
+            ...(appointment.extra_services && { extra_services: appointment.extra_services }),
         };
 
         const { data, error } = await supabase
@@ -1854,6 +2022,7 @@ const AppointmentsView: React.FC<{ key?: number }> = ({ key }) => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isAppointmentExtraServicesModalOpen, setIsAppointmentExtraServicesModalOpen] = useState(false);
     const [appointmentForExtraServices, setAppointmentForExtraServices] = useState<AdminAppointment | null>(null);
+    const [isStatisticsModalOpen, setIsStatisticsModalOpen] = useState(false);
 
     const fetchAppointments = useCallback(async () => {
         setLoading(true);
@@ -2015,6 +2184,7 @@ const AppointmentsView: React.FC<{ key?: number }> = ({ key }) => {
             {isAppointmentExtraServicesModalOpen && appointmentForExtraServices && <AddAppointmentExtraServicesModal appointment={appointmentForExtraServices} onClose={handleCloseExtraServicesModal} onSuccess={handleExtraServicesSuccess} />}
             {isAddModalOpen && <AdminAddAppointmentModal isOpen={isAddModalOpen} onClose={handleCloseAddModal} onAppointmentCreated={handleAppointmentCreated} />}
             {appointmentToDelete && <ConfirmationModal isOpen={!!appointmentToDelete} onClose={() => setAppointmentToDelete(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o agendamento para ${appointmentToDelete.pet_name}?`} confirmText="Excluir" variant="danger" isLoading={deletingAppointmentId === appointmentToDelete.id} />}
+            <StatisticsModal isOpen={isStatisticsModalOpen} onClose={() => setIsStatisticsModalOpen(false)} />
 
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
                 <div className="relative flex-grow">
@@ -2023,6 +2193,9 @@ const AppointmentsView: React.FC<{ key?: number }> = ({ key }) => {
                 </div>
                 <button onClick={handleOpenAddModal} className="flex-shrink-0 flex items-center justify-center gap-3 bg-green-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-green-700 transition-colors shadow-lg border-2 border-green-500" style={{minWidth: '200px'}}>
                     <UserPlusIcon /> Adicionar Agendamento
+                </button>
+                <button onClick={() => setIsStatisticsModalOpen(true)} className="flex-shrink-0 flex items-center justify-center gap-3 bg-blue-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-lg border-2 border-blue-500" style={{minWidth: '160px'}}>
+                    📊 Estatísticas
                 </button>
                 <button onClick={() => setAdminView(adminView === 'daily' ? 'all' : 'daily')} className="flex-shrink-0 flex items-center justify-center gap-3 bg-pink-100 text-pink-800 font-semibold py-3 px-5 rounded-lg hover:bg-pink-200 transition-colors">
                     {adminView === 'daily' ? <><ListIcon /> Ver Todos</> : <><CalendarIcon /> Ver Calendário</>}
@@ -2093,6 +2266,10 @@ const EditPetMovelAppointmentModal: React.FC<{
             owner_address,
             condominium,
             appointment_time: newAppointmentTime.toISOString(),
+            // Preservar campos opcionais importantes se existirem
+            ...(appointment.monthly_client_id && { monthly_client_id: appointment.monthly_client_id }),
+            ...(appointment.pet_breed && { pet_breed: appointment.pet_breed }),
+            ...(appointment.extra_services && { extra_services: appointment.extra_services }),
         };
 
         const { data, error } = await supabase
@@ -3740,7 +3917,7 @@ const MonthlyClientCard: React.FC<{
     
     const getRecurrenceText = (client: MonthlyClient) => {
         if (client.recurrence_type === 'weekly') return 'Semanal';
-        if (client.recurrence_type === 'biweekly') return 'Quinzenal';
+        if (client.recurrence_type === 'bi-weekly') return 'Quinzenal';
         if (client.recurrence_type === 'monthly') return 'Mensal';
         return 'Não definido';
     };
