@@ -768,17 +768,27 @@ const StatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({ 
             weekStart.setDate(today.getDate() - today.getDay());
             const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-            // Buscar agendamentos concluídos
-            const { data: appointments, error } = await supabase
-                .from('appointments')
-                .select('*')
-                .eq('status', 'CONCLUÍDO')
-                .order('appointment_time', { ascending: false });
+            // Buscar agendamentos concluídos de ambas as tabelas
+            const [regularResult, petMovelResult] = await Promise.all([
+                supabase
+                    .from('appointments')
+                    .select('*')
+                    .eq('status', 'CONCLUÍDO')
+                    .order('appointment_time', { ascending: false }),
+                supabase
+                    .from('pet_movel_appointments')
+                    .select('*')
+                    .eq('status', 'CONCLUÍDO')
+                    .order('appointment_time', { ascending: false })
+            ]);
 
-            if (error) {
-                console.error('Erro ao buscar estatísticas:', error);
+            if (regularResult.error || petMovelResult.error) {
+                console.error('Erro ao buscar estatísticas:', regularResult.error || petMovelResult.error);
                 return;
             }
+
+            // Combinar agendamentos de ambas as tabelas
+            const appointments = [...(regularResult.data || []), ...(petMovelResult.data || [])];
 
             const stats: StatisticsData = {
                 daily: { count: 0, revenue: 0, services: {} },
