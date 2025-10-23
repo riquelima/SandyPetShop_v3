@@ -944,16 +944,18 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
             .from('appointments')
             .update(updatePayload)
             .eq('id', appointment.id)
-            .select()
-            .single();
+            .select();
 
         if (error) {
             alert(`Falha ao atualizar o agendamento: ${error.message || 'Erro desconhecido'}`);
             console.error('Erro detalhado:', error);
             console.error('Payload enviado:', updatePayload);
             setIsSubmitting(false);
+        } else if (data && data.length > 0) {
+            onAppointmentUpdated(data[0] as AdminAppointment);
         } else {
-            onAppointmentUpdated(data as AdminAppointment);
+            alert('Nenhum registro foi atualizado.');
+            setIsSubmitting(false);
         }
     };
 
