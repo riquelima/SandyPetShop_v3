@@ -79,6 +79,62 @@ const formatDateToISO = (dateString: string | null): string => {
     return datePart;
 };
 
+const formatCurrency = (value: string | number): string => {
+    // Se o valor é um número, converte para string
+    let stringValue = typeof value === 'number' ? value.toString() : value;
+    
+    // Se é um valor numérico direto (como 50.00), formata diretamente
+    if (typeof value === 'number') {
+        return value.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        });
+    }
+    
+    // Remove tudo que não é dígito
+    const numericValue = stringValue.replace(/\D/g, '');
+    
+    // Se não há valor, retorna vazio
+    if (!numericValue) return '';
+    
+    // Converte para número e divide por 100 para ter centavos
+    const number = parseInt(numericValue) / 100;
+    
+    // Formata como moeda brasileira
+    return number.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    });
+};
+
+const parseCurrencyToNumber = (value: string): number => {
+    // Remove símbolos de moeda e espaços, substitui vírgula por ponto
+    const numericString = value
+        .replace(/[R$\s]/g, '')
+        .replace(/\./g, '')
+        .replace(',', '.');
+    
+    const number = parseFloat(numericString);
+    return isNaN(number) ? 0 : number;
+};
+
+const formatCurrencyInput = (value: string): string => {
+    // Remove tudo que não é dígito
+    const numericValue = value.replace(/\D/g, '');
+    
+    // Se não há valor, retorna vazio
+    if (!numericValue) return '';
+    
+    // Converte para número e divide por 100 para ter centavos
+    const number = parseInt(numericValue) / 100;
+    
+    // Formata sem o símbolo R$, apenas com vírgula e pontos
+    return number.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+};
+
 // Função para calcular o valor total dos serviços extras
 const calculateExtraServicesTotal = (extraServices: any): number => {
     let total = 0;
@@ -694,6 +750,14 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                 appointment_time: app.appointment_time,
                 monthly_client_id: newClient.id,
                 condominium: formData.condominium,
+                extra_services: {
+                    pernoite: { enabled: false, quantity: 0 },
+                    banho_tosa: { enabled: false, value: 0 },
+                    so_banho: { enabled: false, value: 0 },
+                    adestrador: { enabled: false, value: 0 },
+                    despesa_medica: { enabled: false, value: 0 },
+                    dias_extras: { enabled: false, quantity: 0 }
+                }
             }));
 
             if (supabasePayloads.length > 0) {
@@ -1041,6 +1105,232 @@ const StatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({ 
                             {(statistics.daily.count === 0 && statistics.weekly.count === 0 && statistics.monthly.count === 0) && (
                                 <div className="text-center py-12 bg-gray-50 rounded-lg">
                                     <p className="text-gray-500 text-lg">Nenhum serviço concluído encontrado para exibir estatísticas.</p>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="text-center py-12">
+                            <p className="text-gray-500 text-lg">Erro ao carregar estatísticas.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Componente de Estatísticas para Mensalistas
+const MonthlyClientsStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({ isOpen, onClose }) => {
+    const [statistics, setStatistics] = useState<any>(null);
+    const [loading, setLoading] = useState(false);
+    const [selectedMonth, setSelectedMonth] = useState(() => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    });
+
+    const fetchMonthlyClientsStatistics = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [year, month] = selectedMonth.split('-').map(Number);
+            const monthStart = new Date(year, month - 1, 1);
+            const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
+
+            // Buscar todos os mensalistas
+            const { data: monthlyClients, error: clientsError } = await supabase
+                .from('monthly_clients')
+                .select('*')
+                .eq('is_active', true);
+
+            if (clientsError) {
+                console.error('Erro ao buscar mensalistas:', clientsError);
+                return;
+            }
+
+            // Buscar agendamentos dos mensalistas no mês selecionado
+            const { data: appointments, error: appointmentsError } = await supabase
+                .from('pet_movel_appointments')
+                .select('*')
+                .gte('appointment_time', monthStart.toISOString())
+                .lte('appointment_time', monthEnd.toISOString())
+                .not('monthly_client_id', 'is', null);
+
+            if (appointmentsError) {
+                console.error('Erro ao buscar agendamentos:', appointmentsError);
+                return;
+            }
+
+            // Calcular estatísticas
+            const totalClients = monthlyClients?.length || 0;
+            const totalAppointments = appointments?.length || 0;
+            const completedAppointments = appointments?.filter(apt => apt.status === 'CONCLUÍDO').length || 0;
+            const pendingAppointments = appointments?.filter(apt => apt.status === 'AGENDADO').length || 0;
+            
+            // Calcular receita realizada (agendamentos concluídos)
+            const realizedRevenue = appointments
+                ?.filter(apt => apt.status === 'CONCLUÍDO')
+                .reduce((sum, apt) => sum + (apt.price || 0), 0) || 0;
+
+            // Calcular receita estimada total do mês (todos os mensalistas ativos)
+            const estimatedRevenue = monthlyClients?.reduce((sum, client) => {
+                const clientPrice = (client as any).price || 0;
+                
+                // Calcular quantos agendamentos o cliente deveria ter no mês
+                let expectedAppointments = 0;
+                if (client.recurrence_type === 'weekly') {
+                    expectedAppointments = 4; // 4 semanas por mês
+                } else if (client.recurrence_type === 'bi-weekly') {
+                    expectedAppointments = 2; // 2 vezes por mês
+                } else if (client.recurrence_type === 'monthly') {
+                    expectedAppointments = 1; // 1 vez por mês
+                }
+                
+                return sum + (clientPrice * expectedAppointments);
+            }, 0) || 0;
+
+            // Agrupar por condomínio
+            const condominiumStats: { [key: string]: { clients: number; appointments: number; revenue: number } } = {};
+            monthlyClients?.forEach(client => {
+                const condo = client.condominium || 'Não especificado';
+                if (!condominiumStats[condo]) {
+                    condominiumStats[condo] = { clients: 0, appointments: 0, revenue: 0 };
+                }
+                condominiumStats[condo].clients++;
+                
+                // Contar agendamentos deste cliente
+                const clientAppointments = appointments?.filter(apt => apt.monthly_client_id === client.id) || [];
+                condominiumStats[condo].appointments += clientAppointments.length;
+                condominiumStats[condo].revenue += clientAppointments
+                    .filter(apt => apt.status === 'CONCLUÍDO')
+                    .reduce((sum, apt) => sum + (apt.price || 0), 0);
+            });
+
+            // Agrupar por status de pagamento
+            const paymentStats: { [key: string]: number } = {};
+            monthlyClients?.forEach(client => {
+                const status = (client as any).payment_status || 'Pendente';
+                paymentStats[status] = (paymentStats[status] || 0) + 1;
+            });
+
+            setStatistics({
+                totalClients,
+                totalAppointments,
+                completedAppointments,
+                pendingAppointments,
+                realizedRevenue,
+                estimatedRevenue,
+                condominiumStats,
+                paymentStats,
+                selectedMonth: `${month}/${year}`
+            });
+        } catch (error) {
+            console.error('Erro ao calcular estatísticas dos mensalistas:', error);
+        } finally {
+            setLoading(false);
+        }
+    }, [selectedMonth]);
+
+    useEffect(() => {
+        if (isOpen) {
+            fetchMonthlyClientsStatistics();
+        }
+    }, [isOpen, fetchMonthlyClientsStatistics]);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4 animate-fadeIn">
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-6xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b border-gray-200 p-4 sm:p-6 rounded-t-xl sm:rounded-t-2xl">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800">📊 Estatísticas dos Mensalistas</h2>
+                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-xl sm:text-2xl font-bold min-w-[44px] min-h-[44px] flex items-center justify-center">×</button>
+                    </div>
+                    
+                    {/* Seletor de Mês */}
+                    <div className="mt-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Selecionar Mês:</label>
+                        <input
+                            type="month"
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        />
+                    </div>
+                </div>
+                
+                <div className="p-4 sm:p-6">
+                    {loading ? (
+                        <div className="flex justify-center py-12 sm:py-16">
+                            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-green-500"></div>
+                        </div>
+                    ) : statistics ? (
+                        <div className="space-y-6 sm:space-y-8">
+                            {/* Cards de Resumo */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                    <h3 className="text-sm font-medium text-blue-600 mb-1">Total de Mensalistas</h3>
+                                    <p className="text-2xl font-bold text-blue-700">{statistics.totalClients}</p>
+                                </div>
+                                
+                                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                                    <h3 className="text-sm font-medium text-purple-600 mb-1">Agendamentos ({statistics.selectedMonth})</h3>
+                                    <p className="text-2xl font-bold text-purple-700">{statistics.totalAppointments}</p>
+                                    <p className="text-xs text-purple-600">
+                                        {statistics.completedAppointments} concluídos, {statistics.pendingAppointments} pendentes
+                                    </p>
+                                </div>
+                                
+                                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                                    <h3 className="text-sm font-medium text-green-600 mb-1">Receita Realizada</h3>
+                                    <p className="text-2xl font-bold text-green-700">
+                                        R$ {statistics.realizedRevenue.toFixed(2).replace('.', ',')}
+                                    </p>
+                                </div>
+                                
+                                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                                    <h3 className="text-sm font-medium text-yellow-600 mb-1">Receita Estimada</h3>
+                                    <p className="text-2xl font-bold text-yellow-700">
+                                        R$ {statistics.estimatedRevenue.toFixed(2).replace('.', ',')}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Estatísticas por Condomínio */}
+                            {Object.keys(statistics.condominiumStats).length > 0 && (
+                                <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-gray-200">
+                                    <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">📍 Por Condomínio</h3>
+                                    <div className="space-y-3">
+                                        {Object.entries(statistics.condominiumStats).map(([condo, stats]: [string, any]) => (
+                                            <div key={condo} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+                                                <div>
+                                                    <p className="font-semibold text-gray-800">{condo}</p>
+                                                    <p className="text-sm text-gray-600">
+                                                        {stats.clients} mensalistas • {stats.appointments} agendamentos
+                                                    </p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="font-bold text-green-600">
+                                                        R$ {stats.revenue.toFixed(2).replace('.', ',')}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Status de Pagamento */}
+                            {Object.keys(statistics.paymentStats).length > 0 && (
+                                <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-gray-200">
+                                    <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">💳 Status de Pagamento</h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        {Object.entries(statistics.paymentStats).map(([status, count]) => (
+                                            <div key={status} className="bg-gray-50 p-3 rounded-lg text-center">
+                                                <p className="text-sm text-gray-600">{status}</p>
+                                                <p className="text-xl font-bold text-gray-800">{count}</p>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -3982,6 +4272,14 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
                 price: price / appointmentsToCreate.length, status: 'AGENDADO',
                 appointment_time: app.appointment_time,
                 monthly_client_id: client.id,
+                extra_services: {
+                    pernoite: { enabled: false, quantity: 0 },
+                    banho_tosa: { enabled: false, value: 0 },
+                    so_banho: { enabled: false, value: 0 },
+                    adestrador: { enabled: false, value: 0 },
+                    despesa_medica: { enabled: false, value: 0 },
+                    dias_extras: { enabled: false, quantity: 0 }
+                }
             }));
 
             if (supabasePayloads.length > 0) {
@@ -4101,6 +4399,9 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
     // Estados para modal de serviços extras
     const [isMonthlyExtraServicesModalOpen, setIsMonthlyExtraServicesModalOpen] = useState(false);
     const [monthlyClientForExtraServices, setMonthlyClientForExtraServices] = useState<MonthlyClient | null>(null);
+    
+    // Estado para modal de estatísticas
+    const [showStatisticsModal, setShowStatisticsModal] = useState(false);
 
     const createTestData = async () => {
         console.log('Criando dados de teste...');
@@ -4387,6 +4688,17 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                         </svg>
                     </button>
                     
+                    {/* Botão de Estatísticas */}
+                    <button 
+                        onClick={() => setShowStatisticsModal(true)}
+                        className="bg-green-600 text-white font-semibold py-2.5 px-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
+                        title="Estatísticas"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                    </button>
+                    
                     <button onClick={onAddClient} className="bg-pink-600 text-white font-semibold py-2.5 px-3 rounded-lg hover:bg-pink-700 transition-colors flex items-center justify-center">
                         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -4562,6 +4874,12 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                     title="Serviços Extras - Cliente Mensalista"
                 />
             )}
+
+            {/* Modal de Estatísticas de Mensalistas */}
+            <MonthlyClientsStatisticsModal
+                isOpen={showStatisticsModal}
+                onClose={() => setShowStatisticsModal(false)}
+            />
         </>
     );
 };
@@ -5075,25 +5393,7 @@ const EditDaycareEnrollmentModal: React.FC<{
         setFormData(prev => ({ ...prev, [name]: checked }));
     };
 
-    // useEffect para calcular automaticamente o valor total incluindo serviços extras
-    useEffect(() => {
-        const basePrice = Number(formData.total_services_price) || 0;
-        const extraServicesTotal = calculateExtraServicesTotal(formData);
-        const totalWithExtras = basePrice + extraServicesTotal;
-        
-        // Só atualiza se o valor calculado for diferente do atual
-        if (formData.total_price !== totalWithExtras) {
-            setFormData(prev => ({ ...prev, total_price: totalWithExtras }));
-        }
-    }, [
-        formData.total_services_price,
-        formData.pernoite, formData.pernoite_quantity, formData.pernoite_price,
-        formData.banho_tosa, formData.banho_tosa_quantity, formData.banho_tosa_price,
-        formData.so_banho, formData.so_banho_quantity, formData.so_banho_price,
-        formData.adestrador, formData.adestrador_quantity, formData.adestrador_price,
-        formData.despesa_medica, formData.despesa_medica_quantity, formData.despesa_medica_price,
-        formData.dia_extra, formData.dia_extra_quantity, formData.dia_extra_price
-    ]);
+    // Cálculo automático removido - valor total agora é inserido manualmente
 
     const handleBelongingsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { value, checked } = e.target;
@@ -5501,6 +5801,23 @@ const EditDaycareEnrollmentModal: React.FC<{
                                 <option value="Rejeitado">Rejeitado</option>
                             </select>
                         </div>
+                        
+                        <div>
+                            <label htmlFor="total_price" className="block text-base font-semibold text-gray-700">Valor Total (R$)</label>
+                            <input
+                                type="text"
+                                id="total_price"
+                                name="total_price"
+                                value={formData.total_price ? formatCurrency(formData.total_price.toString()) : ''}
+                                onChange={(e) => {
+                                    const numericValue = parseCurrencyToNumber(e.target.value);
+                                    setFormData(prev => ({ ...prev, total_price: numericValue }));
+                                }}
+                                placeholder="Digite o valor total manualmente"
+                                className="mt-1 block w-full p-2 bg-white border rounded-md"
+                            />
+                            <p className="text-sm text-gray-500 mt-1">Insira o valor total manualmente em reais</p>
+                        </div>
                     </div>
                 </div>
                 <div className="p-6 bg-white mt-auto rounded-b-2xl flex justify-end gap-3">
@@ -5568,43 +5885,7 @@ const HotelRegistrationForm: React.FC<{
     }, [checkOutDate, checkOutHour]);
 
     // Cálculo automático do total de serviços
-    useEffect(() => {
-        let total = 0;
-        
-        // Serviços básicos (valores fixos para exemplo)
-        if (formData.service_bath) total += 50;
-        if (formData.service_transport) total += 30;
-        if (formData.service_daily_rate) total += 80;
-        if (formData.service_extra_hour) total += 20;
-        if (formData.service_vet) total += 100;
-        if (formData.service_training) total += 150;
-        
-        // Serviços extras
-        if (formData.extra_services?.pernoite) {
-            total += (formData.extra_services.pernoite_quantity || 0) * (formData.extra_services.pernoite_price || 0);
-        }
-        if (formData.extra_services?.banho_tosa) {
-            total += formData.extra_services.banho_tosa_price || 0;
-        }
-        if (formData.extra_services?.so_banho) {
-            total += formData.extra_services.so_banho_price || 0;
-        }
-        if (formData.extra_services?.adestrador) {
-            total += formData.extra_services.adestrador_price || 0;
-        }
-        if (formData.extra_services?.despesa_medica) {
-            total += formData.extra_services.despesa_medica_price || 0;
-        }
-        if (formData.extra_services?.dias_extras) {
-            total += (formData.extra_services.dias_extras_quantity || 0) * (formData.extra_services.dias_extras_price || 0);
-        }
-        
-        setFormData(prev => ({ ...prev, total_services_price: total }));
-    }, [
-        formData.service_bath, formData.service_transport, formData.service_daily_rate,
-        formData.service_extra_hour, formData.service_vet, formData.service_training,
-        formData.extra_services
-    ]);
+
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
@@ -5873,7 +6154,14 @@ const HotelRegistrationForm: React.FC<{
                         </div>
                         <div className="md:col-span-2 lg:col-span-1">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Total dos Serviços</label>
-                            <input type="number" name="total_services_price" value={formData.total_services_price} readOnly className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600" />
+                            <input 
+                                type="text" 
+                                name="total_services_price" 
+                                value={formData.total_services_price ? formatCurrency(formData.total_services_price.toString()) : ''} 
+                                onChange={(e) => setFormData(prev => ({...prev, total_services_price: parseCurrencyToNumber(e.target.value)}))}
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                                placeholder="R$ 0,00"
+                            />
                         </div>
                     </div>
                 </div>
@@ -6479,15 +6767,17 @@ const DaycareRegistrationForm: React.FC<{
                         <div>
                             <label htmlFor="total_price" className="block text-base font-semibold text-gray-700">Valor Total (R$)</label>
                             <input 
-                                type="number" 
+                                type="text" 
                                 id="total_price"
                                 name="total_price" 
-                                value={formData.total_price || ''} 
-                                readOnly
-                                placeholder="Calculado automaticamente"
-                                step="0.01"
-                                className="mt-1 block w-full px-5 py-4 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"/>
-                            <p className="text-sm text-gray-500 mt-1">Valor calculado automaticamente (Serviços + Extras)</p>
+                                value={formData.total_price ? formatCurrency(formData.total_price.toString()) : ''} 
+                                onChange={(e) => {
+                                    const numericValue = parseCurrencyToNumber(e.target.value);
+                                    setFormData(prev => ({ ...prev, total_price: numericValue }));
+                                }}
+                                placeholder="R$ 0,00"
+                                className="mt-1 block w-full px-5 py-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"/>
+                            <p className="text-sm text-gray-500 mt-1">Digite o valor total do serviço</p>
                         </div>
                         <div>
                             <DatePicker 
@@ -6817,7 +7107,15 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
       weight: isVisitService ? 'N/A' : (selectedWeight ? PET_WEIGHT_OPTIONS[selectedWeight] : 'N/A'),
       addons: isVisitService ? [] : ADDON_SERVICES.filter(addon => selectedAddons[addon.id]).map(addon => addon.label),
       price: totalPrice,
-      status: 'AGENDADO'
+      status: 'AGENDADO',
+      extra_services: {
+        pernoite: { enabled: false, quantity: 0 },
+        banho_tosa: { enabled: false, value: 0 },
+        so_banho: { enabled: false, value: 0 },
+        adestrador: { enabled: false, value: 0 },
+        despesa_medica: { enabled: false, value: 0 },
+        dias_extras: { enabled: false, quantity: 0 }
+      }
     };
     
     const supabasePayload = isPetMovelSubmit
@@ -7669,39 +7967,7 @@ const EditHotelRegistrationModal: React.FC<{
     const [formData, setFormData] = useState<HotelRegistration>({ ...registration });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Calcular automaticamente o valor total dos serviços
-    useEffect(() => {
-        let totalServicesPrice = 0;
 
-        // Preços base dos serviços (valores estimados - ajustar conforme necessário)
-        if (formData.service_bath) totalServicesPrice += 50; // Banho
-        if (formData.service_transport) totalServicesPrice += 30; // Transporte
-        if (formData.service_daily_rate) totalServicesPrice += 80; // Diária
-        if (formData.service_extra_hour) totalServicesPrice += 20; // Hora extra
-        if (formData.service_vet) totalServicesPrice += 100; // Veterinário
-        if (formData.service_training) totalServicesPrice += 120; // Adestramento
-
-        // Adicionar valores dos serviços extras se existirem
-        if (formData.extra_services) {
-            const extras = formData.extra_services;
-            if (extras.pernoite?.enabled) totalServicesPrice += extras.pernoite.value;
-            if (extras.banho_tosa?.enabled) totalServicesPrice += extras.banho_tosa.value;
-            if (extras.so_banho?.enabled) totalServicesPrice += extras.so_banho.value;
-            if (extras.adestrador?.enabled) totalServicesPrice += extras.adestrador.value;
-            if (extras.despesa_medica?.enabled) totalServicesPrice += extras.despesa_medica.value;
-            if (extras.dias_extras?.quantity > 0) totalServicesPrice += extras.dias_extras.quantity * extras.dias_extras.value;
-        }
-
-        setFormData(prev => ({ ...prev, total_services_price: totalServicesPrice }));
-    }, [
-        formData.service_bath,
-        formData.service_transport,
-        formData.service_daily_rate,
-        formData.service_extra_hour,
-        formData.service_vet,
-        formData.service_training,
-        formData.extra_services
-    ]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
@@ -8021,17 +8287,20 @@ const EditHotelRegistrationModal: React.FC<{
                             <div className="mt-4">
                                 <label className="block text-base font-semibold text-gray-700 mb-1">Valor Total dos Serviços (R$)</label>
                                 <input
-                                    type="number"
+                                    type="text"
                                     name="total_services_price"
-                                    value={formData.total_services_price}
-                                    readOnly
-                                    step="0.01"
-                                    min="0"
-                                    placeholder="Calculado automaticamente"
-                                    className="w-full md:w-1/3 px-5 py-4 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                                    value={formData.total_services_price ? formatCurrency(formData.total_services_price.toString()) : ''}
+                                    onChange={(e) => handleInputChange({
+                                        target: {
+                                            name: 'total_services_price',
+                                            value: parseCurrencyToNumber(e.target.value)
+                                        }
+                                    } as React.ChangeEvent<HTMLInputElement>)}
+                                    placeholder="0,00"
+                                    className="w-full md:w-1/3 px-5 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                 />
                                 <p className="text-sm text-gray-500 mt-1">
-                                    Valor calculado automaticamente com base nos serviços selecionados e serviços extras adicionados.
+                                    Digite o valor total dos serviços em reais.
                                 </p>
                             </div>
                         </div>

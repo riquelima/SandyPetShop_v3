@@ -124,6 +124,15 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
     setIsLoading(true);
     try {
       const tableName = getTableName();
+      
+      // Log para debug
+      console.log('Salvando serviços extras:', {
+        tableName,
+        dataId: data.id,
+        extraServices,
+        type
+      });
+
       const { data: updatedData, error } = await supabase
         .from(tableName)
         .update({ extra_services: extraServices })
@@ -131,17 +140,27 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro do Supabase:', error);
+        throw error;
+      }
+
+      console.log('Dados atualizados:', updatedData);
 
       // Calcular novo total se for mensalista
       if (type === 'monthly') {
         const extraServicesTotal = calculateTotal();
         const newTotal = (data.price || 0) + extraServicesTotal;
         
-        await supabase
+        const { error: priceUpdateError } = await supabase
           .from('monthly_clients')
           .update({ price: newTotal })
           .eq('id', data.id);
+          
+        if (priceUpdateError) {
+          console.error('Erro ao atualizar preço do mensalista:', priceUpdateError);
+          throw priceUpdateError;
+        }
           
         updatedData.price = newTotal;
       }
@@ -150,7 +169,16 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
       onClose();
     } catch (error) {
       console.error('Erro ao salvar serviços extras:', error);
-      alert('Erro ao salvar serviços extras. Tente novamente.');
+      
+      // Mostrar erro mais detalhado
+      let errorMessage = 'Erro ao salvar serviços extras. ';
+      if (error.message) {
+        errorMessage += `Detalhes: ${error.message}`;
+      } else {
+        errorMessage += 'Tente novamente.';
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsLoading(false);
     }
