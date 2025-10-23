@@ -53,6 +53,7 @@ export interface AdminAppointment {
   monthly_client_id?: string;
   owner_address?: string;
   pet_breed?: string;
+  condominium?: string;
   extra_services?: {
     pernoite: boolean;
     banho_tosa: boolean;

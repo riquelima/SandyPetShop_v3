@@ -936,6 +936,7 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
             ...(appointment.monthly_client_id && { monthly_client_id: appointment.monthly_client_id }),
             ...(appointment.owner_address && { owner_address: appointment.owner_address }),
             ...(appointment.pet_breed && { pet_breed: appointment.pet_breed }),
+            ...(appointment.condominium && { condominium: appointment.condominium }),
             ...(appointment.extra_services && { extra_services: appointment.extra_services }),
         };
 
@@ -947,8 +948,9 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
             .single();
 
         if (error) {
-            alert('Falha ao atualizar o agendamento.');
-            console.error(error);
+            alert(`Falha ao atualizar o agendamento: ${error.message || 'Erro desconhecido'}`);
+            console.error('Erro detalhado:', error);
+            console.error('Payload enviado:', updatePayload);
             setIsSubmitting(false);
         } else {
             onAppointmentUpdated(data as AdminAppointment);
@@ -1780,7 +1782,7 @@ const AppointmentCard: React.FC<{ appointment: AdminAppointment; onUpdateStatus:
                         </button>
                          <button 
                             onClick={() => onEdit(appointment)}
-                            disabled={isCompleted || isUpdating || isDeleting}
+                            disabled={isUpdating || isDeleting}
                             className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             aria-label="Editar agendamento"
                         >
