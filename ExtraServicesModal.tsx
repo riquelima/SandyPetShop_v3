@@ -77,7 +77,7 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
     }
   };
 
-  const handleValueChange = (service: keyof ExtraServicesData, value: number) => {
+  const handleValueChange = (service: keyof ExtraServicesData, value: string) => {
     setExtraServices(prev => ({
       ...prev,
       [service]: {
@@ -99,13 +99,13 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
 
   const calculateTotal = () => {
     let total = 0;
-    if (extraServices.pernoite.enabled) total += extraServices.pernoite.value;
-    if (extraServices.banho_tosa.enabled) total += extraServices.banho_tosa.value;
-    if (extraServices.so_banho.enabled) total += extraServices.so_banho.value;
-    if (extraServices.adestrador.enabled) total += extraServices.adestrador.value;
-    if (extraServices.despesa_medica.enabled) total += extraServices.despesa_medica.value;
+    if (extraServices.pernoite.enabled) total += parseFloat(extraServices.pernoite.value) || 0;
+    if (extraServices.banho_tosa.enabled) total += parseFloat(extraServices.banho_tosa.value) || 0;
+    if (extraServices.so_banho.enabled) total += parseFloat(extraServices.so_banho.value) || 0;
+    if (extraServices.adestrador.enabled) total += parseFloat(extraServices.adestrador.value) || 0;
+    if (extraServices.despesa_medica.enabled) total += parseFloat(extraServices.despesa_medica.value) || 0;
     if (extraServices.dias_extras.quantity > 0) {
-      total += extraServices.dias_extras.quantity * extraServices.dias_extras.value;
+      total += extraServices.dias_extras.quantity * (parseFloat(extraServices.dias_extras.value) || 0);
     }
     return total;
   };
@@ -219,7 +219,7 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
                   min="0"
                   step="0.01"
                   value={extraServices.pernoite.value}
-                  onChange={(e) => handleValueChange('pernoite', parseFloat(e.target.value) || 0)}
+                  onChange={(e) => handleValueChange('pernoite', e.target.value)}
                   className="w-24 px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-pink-500 focus:border-pink-500"
                   placeholder="0,00"
                 />
@@ -246,7 +246,7 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
                   min="0"
                   step="0.01"
                   value={extraServices.banho_tosa.value}
-                  onChange={(e) => handleValueChange('banho_tosa', parseFloat(e.target.value) || 0)}
+                  onChange={(e) => handleValueChange('banho_tosa', e.target.value)}
                   className="w-24 px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-pink-500 focus:border-pink-500"
                   placeholder="0,00"
                 />
@@ -273,7 +273,7 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
                   min="0"
                   step="0.01"
                   value={extraServices.so_banho.value}
-                  onChange={(e) => handleValueChange('so_banho', parseFloat(e.target.value) || 0)}
+                  onChange={(e) => handleValueChange('so_banho', e.target.value)}
                   className="w-24 px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-pink-500 focus:border-pink-500"
                   placeholder="0,00"
                 />
@@ -300,7 +300,7 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
                   min="0"
                   step="0.01"
                   value={extraServices.adestrador.value}
-                  onChange={(e) => handleValueChange('adestrador', parseFloat(e.target.value) || 0)}
+                  onChange={(e) => handleValueChange('adestrador', e.target.value)}
                   className="w-24 px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-pink-500 focus:border-pink-500"
                   placeholder="0,00"
                 />
@@ -327,7 +327,7 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
                   min="0"
                   step="0.01"
                   value={extraServices.despesa_medica.value}
-                  onChange={(e) => handleValueChange('despesa_medica', parseFloat(e.target.value) || 0)}
+                  onChange={(e) => handleValueChange('despesa_medica', e.target.value)}
                   className="w-24 px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-pink-500 focus:border-pink-500"
                   placeholder="0,00"
                 />
@@ -367,7 +367,7 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
                     min="0"
                     step="0.01"
                     value={extraServices.dias_extras.value}
-                    onChange={(e) => handleValueChange('dias_extras', parseFloat(e.target.value) || 0)}
+                    onChange={(e) => handleValueChange('dias_extras', e.target.value)}
                     className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-pink-500 focus:border-pink-500"
                     placeholder="0,00"
                   />

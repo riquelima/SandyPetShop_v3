@@ -1782,7 +1782,7 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: name === 'price' ? parseFloat(value) : value }));
+        setFormData(prev => ({ ...prev, [name]: value })); // Permite digitação livre para todos os campos
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -2841,7 +2841,7 @@ const DatePicker: React.FC<{
             </div>
             
             {isOpen && (
-                <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 min-w-[320px]">
+                <div className="absolute z-[9999] mt-2 bg-white border border-gray-200 rounded-lg shadow-xl p-4 min-w-[320px] max-w-[90vw] left-0 right-0 mx-auto">
                     <Calendar
                         selectedDate={selectedDate}
                         onDateChange={handleDateChange}
@@ -2873,7 +2873,7 @@ const DatePicker: React.FC<{
             
             {isOpen && (
                 <div 
-                    className="fixed inset-0 z-40" 
+                    className="fixed inset-0 z-[9998] bg-black bg-opacity-10" 
                     onClick={() => setIsOpen(false)}
                 />
             )}
@@ -3127,7 +3127,7 @@ const EditPetMovelAppointmentModal: React.FC<{
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: name === 'price' ? parseFloat(value) : value }));
+        setFormData(prev => ({ ...prev, [name]: value })); // Permite digitação livre para todos os campos
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -4164,7 +4164,7 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        if (name === 'price') setPrice(parseFloat(value) || 0);
+        if (name === 'price') setPrice(value); // Permite digitação livre do preço
         else setFormData(prev => ({ ...prev, [name]: name === 'whatsapp' ? formatWhatsapp(value) : value }));
     };
 
@@ -5421,6 +5421,7 @@ const EditDaycareEnrollmentModal: React.FC<{
 
             };
             delete (payload as any).created_at; // Do not send created_at on update
+            delete (payload as any).enrollment_date; // Do not send enrollment_date until column is added to database
             
             const { data, error } = await supabase.from('daycare_enrollments').update(payload).eq('id', enrollment.id).select().single();
             if (error) throw error;
@@ -5482,7 +5483,8 @@ const EditDaycareEnrollmentModal: React.FC<{
                         {renderRadioGroup('Plano', 'contracted_plan', [ {label: '2x Semana', value: '2x_week'}, {label: '3x Semana', value: '3x_week'}, {label: '4x Semana', value: '4x_week'}, {label: '5x Semana', value: '5x_week'}])}
                         
                         {/* Enrollment Date */}
-                        <div>
+                        {/* Data de Matrícula temporariamente removida até a coluna ser adicionada ao banco */}
+                        {/* <div>
                             <label className="block text-base font-semibold text-gray-700">Data de Matrícula</label>
                             <input 
                                 type="date" 
@@ -5491,7 +5493,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                 onChange={handleInputChange} 
                                 className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"
                             />
-                        </div>
+                        </div> */}
                         
                         {/* Extra Services */}
                         <div className="space-y-4">
@@ -5537,7 +5539,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                     value={formData.pernoite_price || 0}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
-                                                        pernoite_price: parseFloat(e.target.value) || 0
+                                                        pernoite_price: e.target.value
                                                     }))}
                                                     className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm"
                                                 />
@@ -5586,7 +5588,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                     value={formData.banho_tosa_price || 0}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
-                                                        banho_tosa_price: parseFloat(e.target.value) || 0
+                                                        banho_tosa_price: e.target.value
                                                     }))}
                                                     className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm"
                                                 />
@@ -5635,7 +5637,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                     value={formData.so_banho_price || 0}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
-                                                        so_banho_price: parseFloat(e.target.value) || 0
+                                                        so_banho_price: e.target.value
                                                     }))}
                                                     className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm"
                                                 />
@@ -5684,7 +5686,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                     value={formData.adestrador_price || 0}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
-                                                        adestrador_price: parseFloat(e.target.value) || 0
+                                                        adestrador_price: e.target.value
                                                     }))}
                                                     className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm"
                                                 />
@@ -5733,7 +5735,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                     value={formData.despesa_medica_price || 0}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
-                                                        despesa_medica_price: parseFloat(e.target.value) || 0
+                                                        despesa_medica_price: e.target.value
                                                     }))}
                                                     className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm"
                                                 />
@@ -5782,7 +5784,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                     value={formData.dia_extra_price || 0}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
-                                                        dia_extra_price: parseFloat(e.target.value) || 0
+                                                        dia_extra_price: e.target.value
                                                     }))}
                                                     className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm"
                                                 />
@@ -5857,6 +5859,7 @@ const HotelRegistrationForm: React.FC<{
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [isExtraServicesExpanded, setIsExtraServicesExpanded] = useState(false);
     const [step, setStep] = useState(1);
     const [checkInDate, setCheckInDate] = useState(new Date());
     const [checkOutDate, setCheckOutDate] = useState(new Date());
@@ -5893,7 +5896,8 @@ const HotelRegistrationForm: React.FC<{
             const checked = (e.target as HTMLInputElement).checked;
             setFormData(prev => ({ ...prev, [name]: checked }));
         } else if (type === 'number') {
-            setFormData(prev => ({ ...prev, [name]: parseFloat(value) || 0 }));
+            // Permite digitação livre para campos numéricos, sem conversão imediata
+            setFormData(prev => ({ ...prev, [name]: value }));
         } else {
             setFormData(prev => ({ ...prev, [name]: name === 'tutor_phone' ? formatWhatsapp(value) : value }));
         }
@@ -6105,17 +6109,17 @@ const HotelRegistrationForm: React.FC<{
                 <div className="bg-white p-6 rounded-lg shadow-md mb-6">
                     <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">📅 Datas e Horários</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
+                        <div className="relative">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Data de Check-in *</label>
-                            <input type="date" name="check_in_date" value={formData.check_in_date} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                            <input type="date" name="check_in_date" value={formData.check_in_date} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent relative z-10" required />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Horário de Check-in *</label>
                             <input type="time" name="check_in_time" value={formData.check_in_time} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
                         </div>
-                        <div>
+                        <div className="relative">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Data de Check-out *</label>
-                            <input type="date" name="check_out_date" value={formData.check_out_date} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                            <input type="date" name="check_out_date" value={formData.check_out_date} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent relative z-10" required />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Horário de Check-out *</label>
@@ -6126,44 +6130,67 @@ const HotelRegistrationForm: React.FC<{
 
                 {/* Seção 5: Serviços Adicionais */}
                 <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-                    <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">🛁 Serviços Adicionais</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div className="flex items-center space-x-3">
-                            <input type="checkbox" name="bath" checked={formData.extra_services.bath} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, bath: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
-                            <label className="text-sm font-medium text-gray-700">Banho (R$ 30,00)</label>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                            <input type="checkbox" name="transport" checked={formData.extra_services.transport} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, transport: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
-                            <label className="text-sm font-medium text-gray-700">Transporte (R$ 20,00)</label>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                            <input type="checkbox" name="vet" checked={formData.extra_services.vet} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, vet: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
-                            <label className="text-sm font-medium text-gray-700">Veterinário (R$ 80,00)</label>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                            <input type="checkbox" name="training" checked={formData.extra_services.training} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, training: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
-                            <label className="text-sm font-medium text-gray-700">Adestramento (R$ 50,00)</label>
-                        </div>
-                        <div className="md:col-span-2 lg:col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Diária (R$ 80,00/dia)</label>
-                            <input type="number" name="daily_rate" value={formData.extra_services.daily_rate} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, daily_rate: parseInt(e.target.value) || 0}}))} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" min="0" />
-                        </div>
-                        <div className="md:col-span-2 lg:col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Hora Extra (R$ 10,00/hora)</label>
-                            <input type="number" name="extra_hour" value={formData.extra_services.extra_hour} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, extra_hour: parseInt(e.target.value) || 0}}))} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" min="0" />
-                        </div>
-                        <div className="md:col-span-2 lg:col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Total dos Serviços</label>
-                            <input 
-                                type="text" 
-                                name="total_services_price" 
-                                value={formData.total_services_price ? formatCurrency(formData.total_services_price.toString()) : ''} 
-                                onChange={(e) => setFormData(prev => ({...prev, total_services_price: parseCurrencyToNumber(e.target.value)}))}
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                                placeholder="R$ 0,00"
-                            />
+                    <div 
+                        className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                        onClick={() => setIsExtraServicesExpanded(!isExtraServicesExpanded)}
+                    >
+                        <h3 className="text-xl font-bold text-gray-800">🛁 Serviços Adicionais</h3>
+                        <div className="flex items-center space-x-2">
+                            <span className="text-sm text-gray-600">
+                                {isExtraServicesExpanded ? 'Ocultar' : 'Mostrar'} opções
+                            </span>
+                            <svg 
+                                className={`w-5 h-5 text-gray-600 transition-transform duration-200 ${isExtraServicesExpanded ? 'rotate-180' : ''}`}
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
                         </div>
                     </div>
+                    
+                    {isExtraServicesExpanded && (
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="flex items-center space-x-3">
+                                    <input type="checkbox" name="bath" checked={formData.extra_services.bath} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, bath: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
+                                    <label className="text-sm font-medium text-gray-700">Banho (R$ 30,00)</label>
+                                </div>
+                                <div className="flex items-center space-x-3">
+                                    <input type="checkbox" name="transport" checked={formData.extra_services.transport} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, transport: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
+                                    <label className="text-sm font-medium text-gray-700">Transporte (R$ 20,00)</label>
+                                </div>
+                                <div className="flex items-center space-x-3">
+                                    <input type="checkbox" name="vet" checked={formData.extra_services.vet} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, vet: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
+                                    <label className="text-sm font-medium text-gray-700">Veterinário (R$ 80,00)</label>
+                                </div>
+                                <div className="flex items-center space-x-3">
+                                    <input type="checkbox" name="training" checked={formData.extra_services.training} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, training: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
+                                    <label className="text-sm font-medium text-gray-700">Adestramento (R$ 50,00)</label>
+                                </div>
+                                <div className="md:col-span-2 lg:col-span-1">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Diária (R$ 80,00/dia)</label>
+                                    <input type="number" name="daily_rate" value={formData.extra_services.daily_rate} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, daily_rate: e.target.value === '' ? 0 : parseInt(e.target.value)}}))} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" min="0" />
+                                </div>
+                                <div className="md:col-span-2 lg:col-span-1">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Hora Extra (R$ 10,00/hora)</label>
+                                    <input type="number" name="extra_hour" value={formData.extra_services.extra_hour} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, extra_hour: e.target.value === '' ? 0 : parseInt(e.target.value)}}))} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" min="0" />
+                                </div>
+                                <div className="md:col-span-2 lg:col-span-1">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Total dos Serviços</label>
+                                    <input 
+                                        type="text" 
+                                        name="total_services_price" 
+                                        value={formData.total_services_price ? formatCurrency(formData.total_services_price.toString()) : ''} 
+                                        onChange={(e) => setFormData(prev => ({...prev, total_services_price: parseCurrencyToNumber(e.target.value)}))}
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                                        placeholder="R$ 0,00"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Seção 6: Informações Finais */}
@@ -6277,8 +6304,9 @@ const DaycareRegistrationForm: React.FC<{
                 last_flea_remedy: formData.last_flea_remedy || null,
                 total_price: formData.total_price ? parseFloat(String(formData.total_price)) : null,
                 payment_date: formData.payment_date || null,
-                enrollment_date: formData.enrollment_date || null,
+                // enrollment_date: formData.enrollment_date || null, // Temporariamente removido até a coluna ser adicionada ao banco
             };
+            delete (payload as any).enrollment_date; // Ensure enrollment_date is not sent until column is added to database
             
             const { data, error } = await supabase.from('daycare_enrollments').insert(payload).select().single();
             if (error) throw error;
@@ -6327,7 +6355,7 @@ const DaycareRegistrationForm: React.FC<{
             <div className="p-6 border-b border-gray-200">
                 <h2 className="text-3xl font-bold text-gray-800">Formulário de Matrícula</h2>
             </div>
-            <div className="p-6 space-y-8 overflow-y-auto" style={{maxHeight: isAdmin ? '70vh' : '65vh' }}>
+            <div className="p-6 space-y-8 overflow-y-auto" style={{maxHeight: isAdmin ? '75vh' : '70vh' }}>
                 {/* Pet and Tutor Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                     <h3 className="md:col-span-2 text-lg font-semibold text-pink-700 border-b pb-2 mb-2">Dados do Pet</h3>
@@ -6442,7 +6470,7 @@ const DaycareRegistrationForm: React.FC<{
                                                 ...prev,
                                                 extra_services: {
                                                     ...prev.extra_services,
-                                                    pernoite_price: parseFloat(e.target.value) || 0
+                                                    pernoite_price: e.target.value
                                                 }
                                             }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
@@ -6500,7 +6528,7 @@ const DaycareRegistrationForm: React.FC<{
                                                 ...prev,
                                                 extra_services: {
                                                     ...prev.extra_services,
-                                                    banho_tosa_price: parseFloat(e.target.value) || 0
+                                                    banho_tosa_price: e.target.value
                                                 }
                                             }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
@@ -6558,7 +6586,7 @@ const DaycareRegistrationForm: React.FC<{
                                                 ...prev,
                                                 extra_services: {
                                                     ...prev.extra_services,
-                                                    so_banho_price: parseFloat(e.target.value) || 0
+                                                    so_banho_price: e.target.value
                                                 }
                                             }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
@@ -6616,7 +6644,7 @@ const DaycareRegistrationForm: React.FC<{
                                                 ...prev,
                                                 extra_services: {
                                                     ...prev.extra_services,
-                                                    adestrador_price: parseFloat(e.target.value) || 0
+                                                    adestrador_price: e.target.value
                                                 }
                                             }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
@@ -6674,7 +6702,7 @@ const DaycareRegistrationForm: React.FC<{
                                                 ...prev,
                                                 extra_services: {
                                                     ...prev.extra_services,
-                                                    despesa_medica_price: parseFloat(e.target.value) || 0
+                                                    despesa_medica_price: e.target.value
                                                 }
                                             }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
@@ -6731,7 +6759,7 @@ const DaycareRegistrationForm: React.FC<{
                                                 ...prev,
                                                 extra_services: {
                                                     ...prev.extra_services,
-                                                    dia_extra_price: parseFloat(e.target.value) || 0
+                                                    dia_extra_price: e.target.value
                                                 }
                                             }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
@@ -6743,8 +6771,8 @@ const DaycareRegistrationForm: React.FC<{
                     </div>
                 </div>
                 
-                {/* Enrollment Date */}
-                <div className="space-y-6 pt-6 border-t border-gray-200 mt-6">
+                {/* Data de Matrícula temporariamente removida até a coluna ser adicionada ao banco */}
+                {/* <div className="space-y-6 pt-6 border-t border-gray-200 mt-6">
                     <h3 className="text-lg font-semibold text-pink-700 border-b pb-2 mb-2">Data de Matrícula</h3>
                     <div className="grid grid-cols-1 gap-4">
                         <div>
@@ -6758,7 +6786,7 @@ const DaycareRegistrationForm: React.FC<{
                             />
                         </div>
                     </div>
-                </div>
+                </div> */}
 
                 {/* Payment Details */}
                 <div className="space-y-6 pt-6 border-t border-gray-200 mt-6">
