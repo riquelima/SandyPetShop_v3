@@ -94,8 +94,8 @@ const formatCurrency = (value: string | number): string => {
     // Remove tudo que não é dígito
     const numericValue = stringValue.replace(/\D/g, '');
     
-    // Se não há valor, retorna vazio
-    if (!numericValue) return '';
+    // Se não há valor, retorna R$ 0,00
+    if (!numericValue) return 'R$ 0,00';
     
     // Converte para número e divide por 100 para ter centavos
     const number = parseInt(numericValue) / 100;
@@ -122,8 +122,8 @@ const formatCurrencyInput = (value: string): string => {
     // Remove tudo que não é dígito
     const numericValue = value.replace(/\D/g, '');
     
-    // Se não há valor, retorna vazio
-    if (!numericValue) return '';
+    // Se não há valor, retorna 0,00
+    if (!numericValue) return '0,00';
     
     // Converte para número e divide por 100 para ter centavos
     const number = parseInt(numericValue) / 100;
@@ -5525,7 +5525,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                     value={formData.pernoite_quantity || 1}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
-                                                        pernoite_quantity: parseInt(e.target.value) || 1
+                                                        pernoite_quantity: e.target.value === '' ? 0 : parseInt(e.target.value)
                                                     }))}
                                                     className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
                                                 />
@@ -5574,7 +5574,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                     value={formData.banho_tosa_quantity || 1}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
-                                                        banho_tosa_quantity: parseInt(e.target.value) || 1
+                                                        banho_tosa_quantity: e.target.value === '' ? 0 : parseInt(e.target.value)
                                                     }))}
                                                     className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
                                                 />
@@ -5623,7 +5623,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                     value={formData.so_banho_quantity || 1}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
-                                                        so_banho_quantity: parseInt(e.target.value) || 1
+                                                        so_banho_quantity: e.target.value === '' ? 0 : parseInt(e.target.value)
                                                     }))}
                                                     className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
                                                 />
@@ -5672,7 +5672,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                     value={formData.adestrador_quantity || 1}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
-                                                        adestrador_quantity: parseInt(e.target.value) || 1
+                                                        adestrador_quantity: e.target.value === '' ? 0 : parseInt(e.target.value)
                                                     }))}
                                                     className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
                                                 />
@@ -5721,7 +5721,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                     value={formData.despesa_medica_quantity || 1}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
-                                                        despesa_medica_quantity: parseInt(e.target.value) || 1
+                                                        despesa_medica_quantity: e.target.value === '' ? 0 : parseInt(e.target.value)
                                                     }))}
                                                     className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
                                                 />
@@ -5770,7 +5770,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                     value={formData.dia_extra_quantity || 1}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
-                                                        dia_extra_quantity: parseInt(e.target.value) || 1
+                                                        dia_extra_quantity: e.target.value === '' ? 0 : parseInt(e.target.value)
                                                     }))}
                                                     className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
                                                 />
@@ -5807,15 +5807,17 @@ const EditDaycareEnrollmentModal: React.FC<{
                         <div>
                             <label htmlFor="total_price" className="block text-base font-semibold text-gray-700">Valor Total (R$)</label>
                             <input
-                                type="text"
+                                type="number"
                                 id="total_price"
                                 name="total_price"
-                                value={formData.total_price ? formatCurrency(formData.total_price.toString()) : ''}
+                                value={formData.total_price || ''}
                                 onChange={(e) => {
-                                    const numericValue = parseCurrencyToNumber(e.target.value);
+                                    const numericValue = e.target.value === '' ? 0 : parseFloat(e.target.value);
                                     setFormData(prev => ({ ...prev, total_price: numericValue }));
                                 }}
-                                placeholder="Digite o valor total manualmente"
+                                placeholder="0.00"
+                                step="0.01"
+                                min="0"
                                 className="mt-1 block w-full p-2 bg-white border rounded-md"
                             />
                             <p className="text-sm text-gray-500 mt-1">Insira o valor total manualmente em reais</p>
@@ -6180,12 +6182,14 @@ const HotelRegistrationForm: React.FC<{
                                 <div className="md:col-span-2 lg:col-span-1">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Total dos Serviços</label>
                                     <input 
-                                        type="text" 
+                                        type="number" 
                                         name="total_services_price" 
-                                        value={formData.total_services_price ? formatCurrency(formData.total_services_price.toString()) : ''} 
-                                        onChange={(e) => setFormData(prev => ({...prev, total_services_price: parseCurrencyToNumber(e.target.value)}))}
+                                        value={formData.total_services_price || ''} 
+                                        onChange={(e) => setFormData(prev => ({...prev, total_services_price: e.target.value === '' ? 0 : parseFloat(e.target.value)}))}
                                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                                        placeholder="R$ 0,00"
+                                        placeholder="0.00"
+                                        step="0.01"
+                                        min="0"
                                     />
                                 </div>
                             </div>
@@ -6453,7 +6457,7 @@ const DaycareRegistrationForm: React.FC<{
                                                 ...prev,
                                                 extra_services: {
                                                     ...prev.extra_services,
-                                                    pernoite_quantity: parseInt(e.target.value) || 1
+                                                    pernoite_quantity: e.target.value === '' ? 0 : parseInt(e.target.value)
                                                 }
                                             }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
@@ -6511,7 +6515,7 @@ const DaycareRegistrationForm: React.FC<{
                                                 ...prev,
                                                 extra_services: {
                                                     ...prev.extra_services,
-                                                    banho_tosa_quantity: parseInt(e.target.value) || 1
+                                                    banho_tosa_quantity: e.target.value === '' ? 0 : parseInt(e.target.value)
                                                 }
                                             }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
@@ -6569,7 +6573,7 @@ const DaycareRegistrationForm: React.FC<{
                                                 ...prev,
                                                 extra_services: {
                                                     ...prev.extra_services,
-                                                    so_banho_quantity: parseInt(e.target.value) || 1
+                                                    so_banho_quantity: e.target.value === '' ? 0 : parseInt(e.target.value)
                                                 }
                                             }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
@@ -6627,7 +6631,7 @@ const DaycareRegistrationForm: React.FC<{
                                                 ...prev,
                                                 extra_services: {
                                                     ...prev.extra_services,
-                                                    adestrador_quantity: parseInt(e.target.value) || 1
+                                                    adestrador_quantity: e.target.value === '' ? 0 : parseInt(e.target.value)
                                                 }
                                             }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
@@ -6685,7 +6689,7 @@ const DaycareRegistrationForm: React.FC<{
                                                 ...prev,
                                                 extra_services: {
                                                     ...prev.extra_services,
-                                                    despesa_medica_quantity: parseInt(e.target.value) || 1
+                                                    despesa_medica_quantity: e.target.value === '' ? 0 : parseInt(e.target.value)
                                                 }
                                             }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
@@ -6742,7 +6746,7 @@ const DaycareRegistrationForm: React.FC<{
                                                 ...prev,
                                                 extra_services: {
                                                     ...prev.extra_services,
-                                                    dia_extra: parseInt(e.target.value) || 1
+                                                    dia_extra: e.target.value === '' ? 0 : parseInt(e.target.value)
                                                 }
                                             }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
@@ -6795,15 +6799,17 @@ const DaycareRegistrationForm: React.FC<{
                         <div>
                             <label htmlFor="total_price" className="block text-base font-semibold text-gray-700">Valor Total (R$)</label>
                             <input 
-                                type="text" 
+                                type="number" 
                                 id="total_price"
                                 name="total_price" 
-                                value={formData.total_price ? formatCurrency(formData.total_price.toString()) : ''} 
+                                value={formData.total_price || ''} 
                                 onChange={(e) => {
-                                    const numericValue = parseCurrencyToNumber(e.target.value);
+                                    const numericValue = e.target.value === '' ? 0 : parseFloat(e.target.value);
                                     setFormData(prev => ({ ...prev, total_price: numericValue }));
                                 }}
-                                placeholder="R$ 0,00"
+                                placeholder="0.00"
+                                step="0.01"
+                                min="0"
                                 className="mt-1 block w-full px-5 py-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"/>
                             <p className="text-sm text-gray-500 mt-1">Digite o valor total do serviço</p>
                         </div>
@@ -8315,16 +8321,18 @@ const EditHotelRegistrationModal: React.FC<{
                             <div className="mt-4">
                                 <label className="block text-base font-semibold text-gray-700 mb-1">Valor Total dos Serviços (R$)</label>
                                 <input
-                                    type="text"
+                                    type="number"
                                     name="total_services_price"
-                                    value={formData.total_services_price ? formatCurrency(formData.total_services_price.toString()) : ''}
+                                    value={formData.total_services_price || ''}
                                     onChange={(e) => handleInputChange({
                                         target: {
                                             name: 'total_services_price',
-                                            value: parseCurrencyToNumber(e.target.value)
+                                            value: e.target.value === '' ? 0 : parseFloat(e.target.value)
                                         }
                                     } as React.ChangeEvent<HTMLInputElement>)}
-                                    placeholder="0,00"
+                                    placeholder="0.00"
+                                    step="0.01"
+                                    min="0"
                                     className="w-full md:w-1/3 px-5 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                 />
                                 <p className="text-sm text-gray-500 mt-1">

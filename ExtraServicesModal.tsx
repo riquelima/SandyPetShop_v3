@@ -82,7 +82,7 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
       ...prev,
       [service]: {
         ...prev[service],
-        value: value
+        value: value === '' ? 0 : parseFloat(value)
       }
     }));
   };
@@ -99,13 +99,13 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
 
   const calculateTotal = () => {
     let total = 0;
-    if (extraServices.pernoite.enabled) total += parseFloat(extraServices.pernoite.value) || 0;
-    if (extraServices.banho_tosa.enabled) total += parseFloat(extraServices.banho_tosa.value) || 0;
-    if (extraServices.so_banho.enabled) total += parseFloat(extraServices.so_banho.value) || 0;
-    if (extraServices.adestrador.enabled) total += parseFloat(extraServices.adestrador.value) || 0;
-    if (extraServices.despesa_medica.enabled) total += parseFloat(extraServices.despesa_medica.value) || 0;
+    if (extraServices.pernoite.enabled) total += Number(extraServices.pernoite.value) || 0;
+    if (extraServices.banho_tosa.enabled) total += Number(extraServices.banho_tosa.value) || 0;
+    if (extraServices.so_banho.enabled) total += Number(extraServices.so_banho.value) || 0;
+    if (extraServices.adestrador.enabled) total += Number(extraServices.adestrador.value) || 0;
+    if (extraServices.despesa_medica.enabled) total += Number(extraServices.despesa_medica.value) || 0;
     if (extraServices.dias_extras.quantity > 0) {
-      total += extraServices.dias_extras.quantity * (parseFloat(extraServices.dias_extras.value) || 0);
+      total += extraServices.dias_extras.quantity * (Number(extraServices.dias_extras.value) || 0);
     }
     return total;
   };
@@ -356,7 +356,7 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
                     type="number"
                     min="1"
                     value={extraServices.dias_extras.quantity}
-                    onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
+                    onChange={(e) => handleQuantityChange(e.target.value === '' ? 0 : parseInt(e.target.value))}
                     className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-pink-500 focus:border-pink-500"
                   />
                 </div>
