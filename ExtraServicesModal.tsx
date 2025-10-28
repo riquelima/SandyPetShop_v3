@@ -3,12 +3,12 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { supabase } from './supabaseClient';
 
 interface ExtraServicesData {
-  pernoite: { enabled: boolean; value: number };
-  banho_tosa: { enabled: boolean; value: number };
-  so_banho: { enabled: boolean; value: number };
-  adestrador: { enabled: boolean; value: number };
-  despesa_medica: { enabled: boolean; value: number };
-  dias_extras: { quantity: number; value: number };
+  pernoite: { enabled: boolean; value: string | number };
+  banho_tosa: { enabled: boolean; value: string | number };
+  so_banho: { enabled: boolean; value: string | number };
+  adestrador: { enabled: boolean; value: string | number };
+  despesa_medica: { enabled: boolean; value: string | number };
+  dias_extras: { enabled: boolean; quantity: string | number; value: string | number };
 }
 
 interface ExtraServicesModalProps {
@@ -31,27 +31,28 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
   const [extraServices, setExtraServices] = useState<ExtraServicesData>({
     pernoite: { 
       enabled: data.extra_services?.pernoite?.enabled || false, 
-      value: data.extra_services?.pernoite?.value || 0 
+      value: data.extra_services?.pernoite?.value || '' 
     },
     banho_tosa: { 
       enabled: data.extra_services?.banho_tosa?.enabled || false, 
-      value: data.extra_services?.banho_tosa?.value || 0 
+      value: data.extra_services?.banho_tosa?.value || '' 
     },
     so_banho: { 
       enabled: data.extra_services?.so_banho?.enabled || false, 
-      value: data.extra_services?.so_banho?.value || 0 
+      value: data.extra_services?.so_banho?.value || '' 
     },
     adestrador: { 
       enabled: data.extra_services?.adestrador?.enabled || false, 
-      value: data.extra_services?.adestrador?.value || 0 
+      value: data.extra_services?.adestrador?.value || '' 
     },
     despesa_medica: { 
       enabled: data.extra_services?.despesa_medica?.enabled || false, 
-      value: data.extra_services?.despesa_medica?.value || 0 
+      value: data.extra_services?.despesa_medica?.value || '' 
     },
     dias_extras: { 
-      quantity: data.extra_services?.dias_extras?.quantity || 0, 
-      value: data.extra_services?.dias_extras?.value || 0 
+      enabled: data.extra_services?.dias_extras?.enabled || false,
+      quantity: data.extra_services?.dias_extras?.quantity || '', 
+      value: data.extra_services?.dias_extras?.value || '' 
     }
   });
 
@@ -63,7 +64,9 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
         ...prev,
         dias_extras: {
           ...prev.dias_extras,
-          quantity: prev.dias_extras.quantity > 0 ? 0 : 1
+          enabled: !prev.dias_extras.enabled,
+          quantity: !prev.dias_extras.enabled ? '' : '',
+          value: !prev.dias_extras.enabled ? '' : prev.dias_extras.value
         }
       }));
     } else {
@@ -82,17 +85,17 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
       ...prev,
       [service]: {
         ...prev[service],
-        value: value === '' ? 0 : parseFloat(value)
+        value: value
       }
     }));
   };
 
-  const handleQuantityChange = (quantity: number) => {
+  const handleQuantityChange = (value: string) => {
     setExtraServices(prev => ({
       ...prev,
       dias_extras: {
         ...prev.dias_extras,
-        quantity: quantity
+        quantity: value
       }
     }));
   };
@@ -104,8 +107,8 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
     if (extraServices.so_banho.enabled) total += Number(extraServices.so_banho.value) || 0;
     if (extraServices.adestrador.enabled) total += Number(extraServices.adestrador.value) || 0;
     if (extraServices.despesa_medica.enabled) total += Number(extraServices.despesa_medica.value) || 0;
-    if (extraServices.dias_extras.quantity > 0) {
-      total += extraServices.dias_extras.quantity * (Number(extraServices.dias_extras.value) || 0);
+    if (extraServices.dias_extras.enabled && Number(extraServices.dias_extras.quantity) > 0) {
+      total += Number(extraServices.dias_extras.quantity) * (Number(extraServices.dias_extras.value) || 0);
     }
     return total;
   };
@@ -125,17 +128,46 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
     try {
       const tableName = getTableName();
       
+      // Converter strings para números antes de salvar
+      const extraServicesForSave = {
+        pernoite: { 
+          enabled: extraServices.pernoite.enabled, 
+          value: Number(extraServices.pernoite.value) || 0 
+        },
+        banho_tosa: { 
+          enabled: extraServices.banho_tosa.enabled, 
+          value: Number(extraServices.banho_tosa.value) || 0 
+        },
+        so_banho: { 
+          enabled: extraServices.so_banho.enabled, 
+          value: Number(extraServices.so_banho.value) || 0 
+        },
+        adestrador: { 
+          enabled: extraServices.adestrador.enabled, 
+          value: Number(extraServices.adestrador.value) || 0 
+        },
+        despesa_medica: { 
+          enabled: extraServices.despesa_medica.enabled, 
+          value: Number(extraServices.despesa_medica.value) || 0 
+        },
+        dias_extras: { 
+          enabled: extraServices.dias_extras.enabled,
+          quantity: Number(extraServices.dias_extras.quantity) || 0, 
+          value: Number(extraServices.dias_extras.value) || 0 
+        }
+      };
+      
       // Log para debug
       console.log('Salvando serviços extras:', {
         tableName,
         dataId: data.id,
-        extraServices,
+        extraServices: extraServicesForSave,
         type
       });
 
       const { data: updatedData, error } = await supabase
         .from(tableName)
-        .update({ extra_services: extraServices })
+        .update({ extra_services: extraServicesForSave })
         .eq('id', data.id)
         .select()
         .single();
@@ -341,14 +373,14 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
               <div className="flex items-center space-x-3">
                 <input
                   type="checkbox"
-                  checked={extraServices.dias_extras.quantity > 0}
+                  checked={extraServices.dias_extras.enabled}
                   onChange={() => handleServiceToggle('dias_extras')}
                   className="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded"
                 />
                 <label className="text-sm font-medium text-gray-700">Dias Extras</label>
               </div>
             </div>
-            {extraServices.dias_extras.quantity > 0 && (
+            {extraServices.dias_extras.enabled && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">Quantidade de dias</label>
@@ -356,7 +388,7 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
                     type="number"
                     min="1"
                     value={extraServices.dias_extras.quantity}
-                    onChange={(e) => handleQuantityChange(e.target.value === '' ? 0 : parseInt(e.target.value))}
+                    onChange={(e) => handleQuantityChange(e.target.value)}
                     className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-pink-500 focus:border-pink-500"
                   />
                 </div>

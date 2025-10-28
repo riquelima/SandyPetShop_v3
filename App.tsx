@@ -4402,6 +4402,9 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
     
     // Estado para modal de estatísticas
     const [showStatisticsModal, setShowStatisticsModal] = useState(false);
+    
+    // Estado para dados de creche
+    const [daycareEnrollments, setDaycareEnrollments] = useState<DaycareRegistration[]>([]);
 
     const createTestData = async () => {
         console.log('Criando dados de teste...');
@@ -4473,10 +4476,28 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
         setLoading(false);
     }, []);
 
+    const fetchDaycareEnrollments = useCallback(async () => {
+        const { data, error } = await supabase.from('daycare_enrollments').select('*').eq('status', 'Aprovado');
+        if (error) {
+            console.error('Error fetching daycare enrollments:', error);
+        } else {
+            setDaycareEnrollments(data as DaycareRegistration[]);
+        }
+    }, []);
+
     useEffect(() => {
         fetchMonthlyClients();
-    }, []);
+        fetchDaycareEnrollments();
+    }, [fetchMonthlyClients, fetchDaycareEnrollments]);
     
+    // Função para verificar se um cliente mensalista também é cliente de creche
+    const isClientInDaycare = useCallback((monthlyClient: MonthlyClient): boolean => {
+        return daycareEnrollments.some(enrollment => 
+            enrollment.pet_name.toLowerCase() === monthlyClient.pet_name.toLowerCase() &&
+            enrollment.tutor_name.toLowerCase() === monthlyClient.owner_name.toLowerCase()
+        );
+    }, [daycareEnrollments]);
+
     const handleUpdateSuccess = () => { fetchMonthlyClients(); onDataChanged(); setEditingClient(null); };
 
     const handleConfirmDelete = async () => {
@@ -4791,6 +4812,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                                     onDelete={() => setDeletingClient(client)}
                                     onAddExtraServices={() => handleAddExtraServices(client)}
                                     onTogglePaymentStatus={(e) => handleTogglePaymentStatus(client, e)}
+                                    isClientInDaycare={isClientInDaycare(client)}
                                 />
                             ))}
                         </div>
@@ -4888,12 +4910,13 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
 // Monthly Client Card Component
 const MonthlyClientCard: React.FC<{
     client: MonthlyClient;
-    onClick: (client: MonthlyClient) => void;
+    onClick?: (client: MonthlyClient) => void;
     onEdit: (client: MonthlyClient) => void;
     onDelete: (client: MonthlyClient) => void;
     onAddExtraServices: (client: MonthlyClient) => void;
     onTogglePaymentStatus: (client: MonthlyClient, e: React.MouseEvent) => void;
-}> = ({ client, onClick, onEdit, onDelete, onAddExtraServices, onTogglePaymentStatus }) => {
+    isClientInDaycare?: boolean;
+}> = ({ client, onClick, onEdit, onDelete, onAddExtraServices, onTogglePaymentStatus, isClientInDaycare = false }) => {
     
     const getRecurrenceText = (client: MonthlyClient) => {
         if (client.recurrence_type === 'weekly') return 'Semanal';
@@ -4950,8 +4973,15 @@ const MonthlyClientCard: React.FC<{
                                 <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
                             </svg>
                         </div>
-                        <div>
-                            <h3 className="text-xl font-bold truncate">{client.pet_name}</h3>
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-xl font-bold truncate">{client.pet_name}</h3>
+                                {isClientInDaycare && (
+                                    <span className="px-2 py-1 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full">
+                                        🏠 Creche
+                                    </span>
+                                )}
+                            </div>
                             <p className="text-pink-100 text-sm truncate">{client.owner_name}</p>
                         </div>
                     </div>
@@ -5557,8 +5587,8 @@ const EditDaycareEnrollmentModal: React.FC<{
                                             onChange={(e) => setFormData(prev => ({
                                                 ...prev,
                                                 banho_tosa: e.target.checked,
-                                                banho_tosa_quantity: e.target.checked ? (prev.banho_tosa_quantity || 1) : undefined,
-                                                banho_tosa_price: e.target.checked ? (prev.banho_tosa_price || 0) : undefined
+                                                banho_tosa_quantity: e.target.checked ? (prev.banho_tosa_quantity || '') : undefined,
+                                                banho_tosa_price: e.target.checked ? (prev.banho_tosa_price || '') : undefined
                                             }))}
                                             className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
                                         />
@@ -5571,10 +5601,10 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                 <input 
                                                     type="number" 
                                                     min="1"
-                                                    value={formData.banho_tosa_quantity || 1}
+                                                    value={formData.banho_tosa_quantity || ''}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
-                                                        banho_tosa_quantity: e.target.value === '' ? 0 : parseInt(e.target.value)
+                                                        banho_tosa_quantity: e.target.value
                                                     }))}
                                                     className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
                                                 />
@@ -5585,7 +5615,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                     type="number" 
                                                     min="0"
                                                     step="0.01"
-                                                    value={formData.banho_tosa_price || 0}
+                                                    value={formData.banho_tosa_price || ''}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
                                                         banho_tosa_price: e.target.value
@@ -5606,8 +5636,8 @@ const EditDaycareEnrollmentModal: React.FC<{
                                             onChange={(e) => setFormData(prev => ({
                                                 ...prev,
                                                 so_banho: e.target.checked,
-                                                so_banho_quantity: e.target.checked ? (prev.so_banho_quantity || 1) : undefined,
-                                                so_banho_price: e.target.checked ? (prev.so_banho_price || 0) : undefined
+                                                so_banho_quantity: e.target.checked ? (prev.so_banho_quantity || '') : undefined,
+                                                so_banho_price: e.target.checked ? (prev.so_banho_price || '') : undefined
                                             }))}
                                             className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
                                         />
@@ -5620,10 +5650,10 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                 <input 
                                                     type="number" 
                                                     min="1"
-                                                    value={formData.so_banho_quantity || 1}
+                                                    value={formData.so_banho_quantity || ''}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
-                                                        so_banho_quantity: e.target.value === '' ? 0 : parseInt(e.target.value)
+                                                        so_banho_quantity: e.target.value
                                                     }))}
                                                     className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
                                                 />
@@ -5634,7 +5664,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                     type="number" 
                                                     min="0"
                                                     step="0.01"
-                                                    value={formData.so_banho_price || 0}
+                                                    value={formData.so_banho_price || ''}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
                                                         so_banho_price: e.target.value
@@ -5655,8 +5685,8 @@ const EditDaycareEnrollmentModal: React.FC<{
                                             onChange={(e) => setFormData(prev => ({
                                                 ...prev,
                                                 adestrador: e.target.checked,
-                                                adestrador_quantity: e.target.checked ? (prev.adestrador_quantity || 1) : undefined,
-                                                adestrador_price: e.target.checked ? (prev.adestrador_price || 0) : undefined
+                                                adestrador_quantity: e.target.checked ? (prev.adestrador_quantity || '') : undefined,
+                                                adestrador_price: e.target.checked ? (prev.adestrador_price || '') : undefined
                                             }))}
                                             className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
                                         />
@@ -5669,10 +5699,10 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                 <input 
                                                     type="number" 
                                                     min="1"
-                                                    value={formData.adestrador_quantity || 1}
+                                                    value={formData.adestrador_quantity || ''}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
-                                                        adestrador_quantity: e.target.value === '' ? 0 : parseInt(e.target.value)
+                                                        adestrador_quantity: e.target.value
                                                     }))}
                                                     className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
                                                 />
@@ -5683,7 +5713,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                     type="number" 
                                                     min="0"
                                                     step="0.01"
-                                                    value={formData.adestrador_price || 0}
+                                                    value={formData.adestrador_price || ''}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
                                                         adestrador_price: e.target.value
@@ -5704,8 +5734,8 @@ const EditDaycareEnrollmentModal: React.FC<{
                                             onChange={(e) => setFormData(prev => ({
                                                 ...prev,
                                                 despesa_medica: e.target.checked,
-                                                despesa_medica_quantity: e.target.checked ? (prev.despesa_medica_quantity || 1) : undefined,
-                                                despesa_medica_price: e.target.checked ? (prev.despesa_medica_price || 0) : undefined
+                                                despesa_medica_quantity: e.target.checked ? (prev.despesa_medica_quantity || '') : undefined,
+                                                despesa_medica_price: e.target.checked ? (prev.despesa_medica_price || '') : undefined
                                             }))}
                                             className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
                                         />
@@ -5718,10 +5748,10 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                 <input 
                                                     type="number" 
                                                     min="1"
-                                                    value={formData.despesa_medica_quantity || 1}
+                                                    value={formData.despesa_medica_quantity || ''}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
-                                                        despesa_medica_quantity: e.target.value === '' ? 0 : parseInt(e.target.value)
+                                                        despesa_medica_quantity: e.target.value
                                                     }))}
                                                     className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
                                                 />
@@ -5732,7 +5762,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                     type="number" 
                                                     min="0"
                                                     step="0.01"
-                                                    value={formData.despesa_medica_price || 0}
+                                                    value={formData.despesa_medica_price || ''}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
                                                         despesa_medica_price: e.target.value
@@ -5753,8 +5783,8 @@ const EditDaycareEnrollmentModal: React.FC<{
                                             onChange={(e) => setFormData(prev => ({
                                                 ...prev,
                                                 dia_extra: e.target.checked,
-                                                dia_extra_quantity: e.target.checked ? (prev.dia_extra_quantity || 1) : undefined,
-                                                dia_extra_price: e.target.checked ? (prev.dia_extra_price || 0) : undefined
+                                                dia_extra_quantity: e.target.checked ? (prev.dia_extra_quantity || '') : undefined,
+                                dia_extra_price: e.target.checked ? (prev.dia_extra_price || '') : undefined
                                             }))}
                                             className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" 
                                         />
@@ -5767,10 +5797,10 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                 <input 
                                                     type="number" 
                                                     min="1"
-                                                    value={formData.dia_extra_quantity || 1}
+                                                    value={formData.dia_extra_quantity || ''}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
-                                                        dia_extra_quantity: e.target.value === '' ? 0 : parseInt(e.target.value)
+                                                        dia_extra_quantity: e.target.value
                                                     }))}
                                                     className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm"
                                                 />
@@ -5781,7 +5811,7 @@ const EditDaycareEnrollmentModal: React.FC<{
                                                     type="number" 
                                                     min="0"
                                                     step="0.01"
-                                                    value={formData.dia_extra_price || 0}
+                                                    value={formData.dia_extra_price || ''}
                                                     onChange={(e) => setFormData(prev => ({
                                                         ...prev,
                                                         dia_extra_price: e.target.value
