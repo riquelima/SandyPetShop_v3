@@ -2894,7 +2894,7 @@ const AppointmentsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => 
 
     useEffect(() => {
         fetchAppointments();
-    }, [key]);
+    }, [refreshKey]);
 
     // FIX: Changed `newStatus` type from `string` to the specific union type to match `AdminAppointment['status']`.
     const handleUpdateStatus = async (id: string, newStatus: 'AGENDADO' | 'CONCLUÍDO') => {
@@ -3283,7 +3283,7 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
 
     useEffect(() => {
         fetchMonthlyClients();
-    }, [key]);
+    }, [refreshKey]);
 
     const fetchClientAppointments = useCallback(async (clientId: string) => {
         setLoadingAppointments(true);
@@ -4031,7 +4031,7 @@ const ClientsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
 
     useEffect(() => {
         fetchClients();
-    }, [fetchClients, key]);
+    }, [fetchClients, refreshKey]);
 
     const handleAddClient = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -7554,7 +7554,7 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
 
     useEffect(() => {
         fetchRegistrations();
-    }, [fetchRegistrations, key]);
+    }, [fetchRegistrations, refreshKey]);
 
     const handleToggleCheckIn = async (registration: HotelRegistration) => {
         if (!registration.id) return;
@@ -8380,7 +8380,7 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
 
     useEffect(() => {
         fetchEnrollments();
-    }, [fetchEnrollments, key]);
+    }, [fetchEnrollments, refreshKey]);
     
     const handleUpdateStatus = async (id: string, status: 'Pendente' | 'Aprovado' | 'Rejeitado') => {
         setIsUpdatingStatus(true);
