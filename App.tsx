@@ -1865,7 +1865,7 @@ const AdminAddAppointmentModal: React.FC<{
         ownerAddress: '' 
     });
     const [selectedService, setSelectedService] = useState<ServiceType | null>(null);
-    const [serviceStepView, setServiceStepView] = useState<'main' | 'bath_groom' | 'pet_movel' | 'pet_movel_condo' | 'hotel_pet'>('main');
+    const [serviceStepView, setServiceStepView] = useState<'main' | 'bath_groom' | 'pet_movel' | 'pet_movel_condo' | 'hotel_pet' | 'daycare_options' | 'hotel_options'>('main');
     const [selectedCondo, setSelectedCondo] = useState<string | null>(null);
     const [selectedWeight, setSelectedWeight] = useState<PetWeight | null>(null);
     const [selectedAddons, setSelectedAddons] = useState<Record<string, boolean>>({});
@@ -2050,7 +2050,7 @@ const AdminAddAppointmentModal: React.FC<{
         const appointmentTime = toSaoPauloUTC(year, month, day, selectedTime);
 
         const isPetMovelSubmit = !!selectedCondo;
-        // FIXED: Always save to 'appointments' table regardless of service type
+        // All appointments go to the same table
         const targetTable = 'appointments';
         
         const basePayload = {
@@ -2572,9 +2572,16 @@ const AppointmentCard: React.FC<{ appointment: AdminAppointment; onUpdateStatus:
                 </div>
                 
                 <div className="mt-4 border-t border-gray-200 pt-4">
-                    <div className="flex items-center text-base text-gray-700">
-                        <TagIcon />
-                        <span className="font-semibold mr-2">Serviço:</span> {service}
+                    <div className="flex items-center justify-between text-base text-gray-700">
+                        <div className="flex items-center">
+                            <TagIcon />
+                            <span className="font-semibold mr-2">Serviço:</span> {service}
+                        </div>
+                        {(service === 'Creche Pet' || service === 'Hotel Pet') && (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                🏠 Visita
+                            </span>
+                        )}
                     </div>
                     {addons && addons.length > 0 && 
                         <div className="text-xs text-gray-500 mt-1 ml-6">
@@ -2830,7 +2837,7 @@ const DatePicker: React.FC<{
 
 // --- ADMIN DASHBOARD VIEWS ---
 
-const AppointmentsView: React.FC<{ key?: number }> = ({ key }) => {
+const AppointmentsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
     const [appointments, setAppointments] = useState<AdminAppointment[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -3211,7 +3218,7 @@ const PetMovelAppointmentDetailsModal: React.FC<{
     );
 };
 
-const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
+const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
     const [monthlyClients, setMonthlyClients] = useState<MonthlyClient[]>([]);
     const [loading, setLoading] = useState(true);
     const [expandedCondos, setExpandedCondos] = useState<string[]>([]);
@@ -3705,6 +3712,11 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
                                                     {appointment.status === 'confirmed' ? 'Confirmado' :
                                                      appointment.status === 'pending' ? 'Pendente' : 'Cancelado'}
                                                 </span>
+                                                {(appointment.service === 'Creche Pet' || appointment.service === 'Hotel Pet') && (
+                                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                        🏠 Visita
+                                                    </span>
+                                                )}
                                             </div>
                                             
                                             <div className="space-y-1 text-sm text-gray-600">
@@ -3809,12 +3821,19 @@ const PetMovelView: React.FC<{ key?: number }> = ({ key }) => {
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                                        appointment.status === 'CONCLUÍDO' 
-                                                            ? 'bg-green-100 text-green-800' 
-                                                            : 'bg-blue-100 text-blue-800'
-                                                    }`}>
-                                                        {appointment.status}
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                                            appointment.status === 'CONCLUÍDO' 
+                                                                ? 'bg-green-100 text-green-800' 
+                                                                : 'bg-blue-100 text-blue-800'
+                                                        }`}>
+                                                            {appointment.status}
+                                                        </div>
+                                                        {(appointment.service === 'Creche Pet' || appointment.service === 'Hotel Pet') && (
+                                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                    🏠 Visita
+                                                </span>
+                                            )}
                                                     </div>
                                                 </div>
                                                 
@@ -3992,7 +4011,7 @@ const EditClientModal: React.FC<{ client: Client; onClose: () => void; onClientU
 };
 
 
-const ClientsView: React.FC<{ key?: number }> = ({ key }) => {
+const ClientsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
     const [clients, setClients] = useState<Client[]>([]);
     const [loading, setLoading] = useState(true);
     const [name, setName] = useState('');
@@ -7230,10 +7249,10 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                              <button type="button" onClick={() => { setServiceStepView('bath_groom'); setSelectedService(null); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
                                 <span className="text-lg">Banho & Tosa</span>
                             </button>
-                            <button type="button" onClick={() => { console.log('Clicou em Creche Pet'); setView('daycareRegistration'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
+                            <button type="button" onClick={() => { console.log('Clicou em Creche Pet'); setServiceStepView('daycare_options'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
                                 <span className="text-lg">{SERVICES[ServiceType.VISIT_DAYCARE].label}</span>
                             </button>
-                             <button type="button" onClick={() => { console.log('Clicou em Hotel Pet'); setView('hotelRegistration'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
+                             <button type="button" onClick={() => { console.log('Clicou em Hotel Pet'); setServiceStepView('hotel_options'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
                                 <span className="text-lg">{SERVICES[ServiceType.VISIT_HOTEL].label}</span>
                             </button>
                             <button type="button" onClick={() => { console.log('Clicou em Pet Móvel'); setServiceStepView('pet_movel_condo'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[56px] sm:min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
@@ -7310,6 +7329,46 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                         <button type="button" onClick={() => { console.log('Clicou em Preencher Formulário de Hotel Pet'); setView('hotelRegistration'); }} className="w-full bg-pink-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-pink-700 transition-colors">
                             Preencher Formulário de Hotel Pet
                         </button>
+                        <button type="button" onClick={() => setServiceStepView('main')} className="text-sm text-pink-600 hover:underline">← Voltar</button>
+                    </div>
+                )}
+
+                {serviceStepView === 'daycare_options' && (
+                    <div className="space-y-6">
+                        <div className="bg-pink-50 p-6 sm:p-5 rounded-lg mb-4">
+                            <h3 className="text-lg font-semibold text-gray-800">Creche Pet - Selecione uma opção</h3>
+                            <p className="text-base text-gray-600 mt-1">Escolha entre agendar uma visita ou fazer a matrícula</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <button type="button" onClick={() => { console.log('Clicou em Visita - Creche Pet'); setSelectedService(ServiceType.VISIT_DAYCARE); setView('appointment'); }} className="p-6 rounded-xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[80px] bg-white hover:bg-pink-50 border-gray-200">
+                                <span className="text-lg">🏠 Visita</span>
+                                <span className="text-sm text-gray-600 mt-1">Agendar visita à creche</span>
+                            </button>
+                            <button type="button" onClick={() => { console.log('Clicou em Matrícula - Creche Pet'); setView('daycareRegistration'); }} className="p-6 rounded-xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[80px] bg-white hover:bg-pink-50 border-gray-200">
+                                <span className="text-lg">📝 Matrícula</span>
+                                <span className="text-sm text-gray-600 mt-1">Fazer matrícula na creche</span>
+                            </button>
+                        </div>
+                        <button type="button" onClick={() => setServiceStepView('main')} className="text-sm text-pink-600 hover:underline">← Voltar</button>
+                    </div>
+                )}
+
+                {serviceStepView === 'hotel_options' && (
+                    <div className="space-y-6">
+                        <div className="bg-pink-50 p-6 sm:p-5 rounded-lg mb-4">
+                            <h3 className="text-lg font-semibold text-gray-800">Hotel Pet - Selecione uma opção</h3>
+                            <p className="text-base text-gray-600 mt-1">Escolha entre agendar uma visita ou fazer a matrícula</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <button type="button" onClick={() => { console.log('Clicou em Visita - Hotel Pet'); setSelectedService(ServiceType.VISIT_HOTEL); setView('appointment'); }} className="p-6 rounded-xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[80px] bg-white hover:bg-pink-50 border-gray-200">
+                                <span className="text-lg">🏨 Visita</span>
+                                <span className="text-sm text-gray-600 mt-1">Agendar visita ao hotel</span>
+                            </button>
+                            <button type="button" onClick={() => { console.log('Clicou em Matrícula - Hotel Pet'); setView('hotelRegistration'); }} className="p-6 rounded-xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[80px] bg-white hover:bg-pink-50 border-gray-200">
+                                <span className="text-lg">📝 Matrícula</span>
+                                <span className="text-sm text-gray-600 mt-1">Fazer matrícula no hotel</span>
+                            </button>
+                        </div>
                         <button type="button" onClick={() => setServiceStepView('main')} className="text-sm text-pink-600 hover:underline">← Voltar</button>
                     </div>
                 )}
@@ -7468,7 +7527,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
 };
 
 // Hotel View Component for managing hotel registrations
-const HotelView: React.FC<{ key?: number; setShowHotelStatistics?: (show: boolean) => void }> = ({ key, setShowHotelStatistics }) => {
+const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show: boolean) => void }> = ({ refreshKey, setShowHotelStatistics }) => {
     const [registrations, setRegistrations] = useState<HotelRegistration[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedRegistration, setSelectedRegistration] = useState<HotelRegistration | null>(null);
@@ -8290,7 +8349,7 @@ const EditHotelRegistrationModal: React.FC<{
 };
 
 // FIX: Add the missing DaycareView component to manage daycare enrollments.
-const DaycareView: React.FC<{ key?: number; setShowDaycareStatistics?: (show: boolean) => void }> = ({ key, setShowDaycareStatistics }) => {
+const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (show: boolean) => void }> = ({ refreshKey, setShowDaycareStatistics }) => {
     const [enrollments, setEnrollments] = useState<DaycareRegistration[]>([]);
     const [petsInDaycareNow, setPetsInDaycareNow] = useState<DaycareRegistration[]>([]);
     const [loading, setLoading] = useState(true);
@@ -8579,14 +8638,14 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     // Renderiza a view ativa baseada no estado activeView
     const renderActiveView = () => {
         switch (activeView) {
-            case 'appointments': return <AppointmentsView key={dataKey} />;
-            case 'petMovel': return <PetMovelView key={dataKey} />;
-            case 'daycare': return <DaycareView key={dataKey} setShowDaycareStatistics={setShowDaycareStatistics} />;
-            case 'hotel': return <HotelView key={dataKey} setShowHotelStatistics={setShowHotelStatistics} />;
-            case 'clients': return <ClientsView key={dataKey} />;
+            case 'appointments': return <AppointmentsView key={dataKey} refreshKey={dataKey} />;
+            case 'petMovel': return <PetMovelView key={dataKey} refreshKey={dataKey} />;
+            case 'daycare': return <DaycareView key={dataKey} refreshKey={dataKey} setShowDaycareStatistics={setShowDaycareStatistics} />;
+            case 'hotel': return <HotelView key={dataKey} refreshKey={dataKey} setShowHotelStatistics={setShowHotelStatistics} />;
+            case 'clients': return <ClientsView key={dataKey} refreshKey={dataKey} />;
             case 'monthlyClients': return <MonthlyClientsView onAddClient={handleAddMonthlyClient} onDataChanged={handleDataChanged} />;
             case 'addMonthlyClient': return <AddMonthlyClientView onBack={() => setActiveView('monthlyClients')} onSuccess={() => { handleDataChanged(); setActiveView('monthlyClients'); }}/>;
-            default: return <AppointmentsView key={dataKey} />;
+            default: return <AppointmentsView key={dataKey} refreshKey={dataKey} />;
         }
     };
 
