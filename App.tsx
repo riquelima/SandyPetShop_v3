@@ -698,27 +698,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                 appointmentsToCreate.push({ appointment_time: appointmentTime.toISOString() });
             }
 
-            // Check if the service is Pet Móvel type - Pet Móvel services don't have capacity restrictions
-            const isPetMovelService = Object.entries(serviceQuantities).some(([serviceType, quantity]) => {
-                return Number(quantity) > 0 && [
-                    ServiceType.PET_MOBILE_BATH,
-                    ServiceType.PET_MOBILE_BATH_AND_GROOMING,
-                    ServiceType.PET_MOBILE_GROOMING_ONLY
-                ].includes(serviceType as ServiceType);
-            }) || serviceString.includes('Pet Móvel');
-            
-
-
-            // Only check for conflicts if it's NOT a Pet Móvel service
-            if (!isPetMovelService) {
-                const conflicts = appointmentsToCreate.filter(appt => (hourlyOccupation[appt.appointment_time] || 0) >= MAX_CAPACITY_PER_SLOT);
-
-                if (conflicts.length > 0) {
-                    const conflictMessage = `Não foi possível criar os agendamentos pois os seguintes horários já estão cheios:\n\n- ${conflicts.map(c => new Date(c.appointment_time).toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'})).join('\n- ')}`;
-                    setAlertInfo({ title: 'Conflito de Agendamento', message: conflictMessage, variant: 'error' });
-                    return;
-                }
-            }
+            // No conflict checking - all appointments are allowed
 
             const { data: existingClient, error: checkError } = await supabase.from('clients').select('id').eq('phone', formData.whatsapp).limit(1).single();
             if (checkError && checkError.code !== 'PGRST116') throw new Error(`Erro ao verificar cliente: ${checkError.message}`);
@@ -1978,20 +1958,9 @@ const AdminAddAppointmentModal: React.FC<{
         if (step === 3) {
             if (serviceStepView === 'bath_groom') {
                 setAllowedDays([1, 2]); // Monday and Tuesday
-            } else if (serviceStepView === 'pet_movel' && selectedCondo) {
-                switch (selectedCondo) {
-                    case 'Vitta Parque':
-                        setAllowedDays([3]); // Wednesday
-                        break;
-                    case 'Maxhaus':
-                        setAllowedDays([4]); // Thursday
-                        break;
-                    case 'Paseo':
-                        setAllowedDays([5]); // Friday
-                        break;
-                    default:
-                        setAllowedDays(undefined);
-                }
+            } else if (serviceStepView === 'pet_movel') {
+                // Pet Móvel is now available on all days - no restrictions
+                setAllowedDays(undefined);
             } else {
                 setAllowedDays(undefined);
             }
@@ -2105,29 +2074,7 @@ const AdminAddAppointmentModal: React.FC<{
         };
 
         try {
-            // Check for appointment conflicts (now applies to all services since all are saved in appointments table)
-            const { data: existingAppointments, error: conflictError } = await supabase
-                .from('appointments')
-                .select('appointment_time, pet_name, owner_name')
-                .eq('appointment_time', appointmentTime.toISOString())
-                .eq('status', 'AGENDADO');
-
-            if (conflictError) {
-                console.error('Erro ao verificar conflitos:', conflictError);
-            } else if (existingAppointments && existingAppointments.length >= MAX_CAPACITY_PER_SLOT) {
-                throw new Error(`Este horário já está lotado! Máximo de ${MAX_CAPACITY_PER_SLOT} agendamentos simultâneos permitidos.`);
-            }
-
-            // Check if the same pet already has an appointment at the same time
-            const duplicateAppointment = existingAppointments?.find(apt => 
-                apt.pet_name.toLowerCase() === formData.petName.toLowerCase() && 
-                apt.owner_name.toLowerCase() === formData.ownerName.toLowerCase()
-            );
-
-            if (duplicateAppointment) {
-                throw new Error(`O pet ${formData.petName} já possui um agendamento neste horário!`);
-            }
-
+            // No conflict checking - all appointments are allowed
             const { data: newDbAppointment, error: supabaseError } = await supabase.from(targetTable).insert([supabasePayload]).select().single();
             if (supabaseError) throw supabaseError;
 
@@ -6902,41 +6849,11 @@ const TimeSlotPicker: React.FC<{
         }
         const duration = SERVICES[selectedService].duration;
 
-        // Determine capacity and filter appointments based on service type
-        const capacity = isPetMovel ? 1 : MAX_CAPACITY_PER_SLOT;
-        const dayAppointments = appointments.filter(app => 
-            isSameSaoPauloDay(app.appointmentTime, selectedDate) && 
-            (isPetMovel ? app.service.startsWith('PET_MOBILE') : !app.service.startsWith('PET_MOBILE'))
-        );
-
-        // Initialize availability map
-        const availability = new Map<number, number>();
-        workingHours.forEach(hour => availability.set(hour, capacity));
-
-        // Decrement availability based on existing appointments
-        dayAppointments.forEach(app => {
-            const { hour: startHour } = getSaoPauloTimeParts(app.appointmentTime);
-            // Ensure service exists in SERVICES constant to prevent crash
-            const appDuration = app.service && SERVICES[app.service] ? SERVICES[app.service].duration : 1; 
-            for (let h = startHour; h < startHour + Math.ceil(appDuration); h++) {
-                if (availability.has(h)) {
-                    availability.set(h, availability.get(h)! - 1);
-                }
-            }
-        });
-
-        // Check availability considering capacity and lunch hour
+        // All time slots are always available (no capacity or appointment restrictions)
         const finalAvailability = new Map<number, boolean>();
         workingHours.forEach(hour => {
-            // Block lunch hour (13h)
-            if (hour === LUNCH_HOUR) {
-                finalAvailability.set(hour, false);
-                return;
-            }
-            
-            // Check if slot has available capacity
-            const availableCapacity = availability.get(hour) || 0;
-            finalAvailability.set(hour, availableCapacity > 0);
+            // All hours are always available
+            finalAvailability.set(hour, true);
         });
 
         return finalAvailability;
@@ -7049,21 +6966,9 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
       if (serviceStepView === 'bath_groom') {
         // Regular Bath & Grooming is only on Mondays and Tuesdays
         setAllowedDays([1, 2]);
-      } else if (serviceStepView === 'pet_movel' && selectedCondo) {
-        // Pet Móvel availability depends on the selected condominium
-        switch (selectedCondo) {
-          case 'Vitta Parque':
-            setAllowedDays([3]); // Wednesday
-            break;
-          case 'Maxhaus':
-            setAllowedDays([4]); // Thursday
-            break;
-          case 'Paseo':
-            setAllowedDays([5]); // Friday
-            break;
-          default:
-            setAllowedDays(undefined); // No restrictions if condo is not specified
-        }
+      } else if (serviceStepView === 'pet_movel') {
+        // Pet Móvel is now available on all days - no restrictions
+        setAllowedDays(undefined);
       } else {
         // No specific restrictions for other services, default will apply (e.g., disable weekends)
         setAllowedDays(undefined);
@@ -7187,30 +7092,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
         : { ...basePayload, owner_address: formData.ownerAddress };
 
     try {
-        // Verificar conflitos de agendamento apenas para serviços regulares (não Pet Móvel)
-        if (!isPetMovelSubmit) {
-            const { data: existingAppointments, error: conflictError } = await supabase
-                .from('appointments')
-                .select('appointment_time, pet_name, owner_name')
-                .eq('appointment_time', appointmentTime.toISOString())
-                .eq('status', 'AGENDADO');
-
-            if (conflictError) {
-                console.error('Erro ao verificar conflitos:', conflictError);
-            } else if (existingAppointments && existingAppointments.length >= MAX_CAPACITY_PER_SLOT) {
-                throw new Error(`Este horário já está lotado! Máximo de ${MAX_CAPACITY_PER_SLOT} agendamentos simultâneos permitidos.`);
-            }
-
-            // Verificar se o mesmo pet já tem agendamento no mesmo horário
-            const duplicateAppointment = existingAppointments?.find(apt => 
-                apt.pet_name.toLowerCase() === formData.petName.toLowerCase() && 
-                apt.owner_name.toLowerCase() === formData.ownerName.toLowerCase()
-            );
-
-            if (duplicateAppointment) {
-                throw new Error(`O pet ${formData.petName} já possui um agendamento neste horário!`);
-            }
-        }
+        // No conflict checking - all appointments are allowed
 
         const { data: newDbAppointment, error: supabaseError } = await supabase.from(targetTable).insert([supabasePayload]).select().single();
         if (supabaseError) throw supabaseError;
