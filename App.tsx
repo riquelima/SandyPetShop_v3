@@ -1870,7 +1870,20 @@ const AdminAddAppointmentModal: React.FC<{
     const [selectedWeight, setSelectedWeight] = useState<PetWeight | null>(null);
     const [selectedAddons, setSelectedAddons] = useState<Record<string, boolean>>({});
     const [totalPrice, setTotalPrice] = useState(0);
-    const [selectedDate, setSelectedDate] = useState(new Date());
+    // Initialize selectedDate with a smart default (today or tomorrow based on current time)
+    const getInitialDate = () => {
+        const now = new Date();
+        const currentHour = now.getHours();
+        // If it's after 6 PM, start with tomorrow, otherwise start with today
+        if (currentHour >= 18) {
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            return tomorrow;
+        }
+        return now;
+    };
+
+    const [selectedDate, setSelectedDate] = useState(getInitialDate());
     const [selectedTime, setSelectedTime] = useState<number | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [allowedDays, setAllowedDays] = useState<number[] | undefined>(undefined);
@@ -1894,7 +1907,7 @@ const AdminAddAppointmentModal: React.FC<{
             setSelectedWeight(null);
             setSelectedAddons({});
             setTotalPrice(0);
-            setSelectedDate(new Date());
+            setSelectedDate(getInitialDate()); // Use smart initial date
             setSelectedTime(null);
             setIsSubmitting(false);
             setAllowedDays(undefined);
