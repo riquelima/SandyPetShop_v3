@@ -294,6 +294,8 @@ const SuccessAlertIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className
 
 // FIX: Added the missing CalendarIcon component.
 const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" /></svg>;
+const LockClosedIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>;
+const LockOpenIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>;
 
 // --- NEW ADMIN MENU ICONS ---
 const BathTosaIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/13702/13702805.png" alt="Banho & Tosa Icon" className="h-7 w-7" />;
@@ -8643,7 +8645,11 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
 };
 
 // FIX: Destructure the 'onLogout' prop to make it available within the component. This resolves 'Cannot find name' errors.
-const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
+const AdminDashboard: React.FC<{ 
+    onLogout: () => void;
+    isScheduleOpen: boolean;
+    setIsScheduleOpen: (open: boolean) => void;
+}> = ({ onLogout, isScheduleOpen, setIsScheduleOpen }) => {
     const [activeView, setActiveView] = useState('appointments');
     const [dataKey, setDataKey] = useState(Date.now()); // Used to force re-fetches
     const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -8707,7 +8713,18 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                                  <span className="text-pink-600 text-sm font-semibold hidden lg:block">Painel Administrativo</span>
                              </div>
                         </div>
-                        <div className="hidden md:block">
+                        <div className="hidden md:flex items-center gap-3">
+                            <button 
+                                onClick={() => setIsScheduleOpen(!isScheduleOpen)}
+                                className={`flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm hover:shadow ${
+                                    isScheduleOpen 
+                                        ? 'text-green-700 bg-green-50 hover:bg-green-100' 
+                                        : 'text-red-700 bg-red-50 hover:bg-red-100'
+                                }`}
+                            >
+                                {isScheduleOpen ? <LockOpenIcon /> : <LockClosedIcon />}
+                                {isScheduleOpen ? 'Fechar Agenda' : 'Abrir Agenda'}
+                            </button>
                             <button onClick={onLogout} className="flex items-center gap-3 text-base font-semibold text-gray-600 hover:text-pink-600 bg-gray-50 hover:bg-pink-50 px-5 py-3 rounded-xl transition-all shadow-sm hover:shadow">
                                 <LogoutIcon/> Sair
                             </button>
@@ -8735,7 +8752,18 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                         md:sticky md:top-24 md:h-auto md:bg-transparent md:p-0 md:z-0
                     `}>
                         <NavMenu />
-                        <div className="mt-6 md:hidden">
+                        <div className="mt-6 md:hidden space-y-3">
+                            <button 
+                                onClick={() => setIsScheduleOpen(!isScheduleOpen)}
+                                className={`w-full flex items-center gap-3 text-sm font-semibold px-3 py-2 rounded-lg transition-all ${
+                                    isScheduleOpen 
+                                        ? 'text-green-700 bg-green-50 hover:bg-green-100' 
+                                        : 'text-red-700 bg-red-50 hover:bg-red-100'
+                                }`}
+                            >
+                                {isScheduleOpen ? <LockOpenIcon /> : <LockClosedIcon />}
+                                {isScheduleOpen ? 'Fechar Agenda' : 'Abrir Agenda'}
+                            </button>
                             <button onClick={onLogout} className="w-full flex items-center gap-4 text-base font-semibold text-gray-600 hover:text-pink-600 transition-colors p-2 rounded-lg hover:bg-gray-100">
                                 <LogoutIcon/> Sair
                             </button>
@@ -8762,6 +8790,75 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     );
 };
 
+// Componente para exibir quando a agenda está fechada
+const ScheduleClosedPage: React.FC<{ setView: (view: string) => void }> = ({ setView }) => {
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-100 flex items-center justify-center px-4 relative">
+            {/* Botão de login discreto - canto superior direito */}
+            <button
+                onClick={() => setView('login')}
+                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200 opacity-50 hover:opacity-100"
+                title="Acesso Administrativo"
+            >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+            </button>
+
+            <div className="max-w-md w-full text-center">
+                <div className="bg-white rounded-2xl shadow-xl p-8 border border-pink-100">
+                    {/* Logo */}
+                    <div className="mb-6">
+                        <img 
+                            src="https://i.imgur.com/M3Gt3OA.png" 
+                            alt="Sandy's Pet Shop" 
+                            className="h-20 w-20 mx-auto drop-shadow-lg"
+                        />
+                    </div>
+                    
+                    {/* Título */}
+                    <h1 className="font-brand text-3xl text-pink-800 mb-2">
+                        Sandy's Pet Shop
+                    </h1>
+                    
+                    {/* Ícone de agenda fechada */}
+                    <div className="mb-6">
+                        <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
+                            <LockClosedIcon />
+                        </div>
+                    </div>
+                    
+                    {/* Mensagem principal */}
+                    <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                        Agenda Temporariamente Fechada
+                    </h2>
+                    
+                    {/* Mensagem educada */}
+                    <p className="text-gray-600 leading-relaxed mb-6">
+                        Olá! Nossa agenda está temporariamente fechada para novos agendamentos. 
+                        Estamos organizando nossos serviços para melhor atendê-los.
+                    </p>
+                    
+                    <p className="text-gray-600 leading-relaxed mb-8">
+                        Por favor, tente novamente em alguns instantes ou entre em contato 
+                        conosco através dos nossos canais de atendimento.
+                    </p>
+                    
+                    {/* Informações de contato */}
+                    <div className="bg-pink-50 rounded-lg p-4 border border-pink-200">
+                        <p className="text-sm text-pink-800 font-medium mb-2">
+                            💬 Entre em contato conosco:
+                        </p>
+                        <p className="text-sm text-pink-700">
+                            WhatsApp, Instagram ou telefone
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const App: React.FC = () => {
     const [view, setView] = useState<'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration'>('scheduler');
     
@@ -8773,6 +8870,7 @@ const App: React.FC = () => {
     
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loadingAuth, setLoadingAuth] = useState(true);
+    const [isScheduleOpen, setIsScheduleOpen] = useState(true); // Estado para controlar se a agenda está aberta
 
     useEffect(() => {
         let isMounted = true;
@@ -8857,7 +8955,11 @@ const App: React.FC = () => {
     if (isAuthenticated) {
         return (
             <>
-                <AdminDashboard onLogout={handleLogout} />
+                <AdminDashboard 
+                    onLogout={handleLogout} 
+                    isScheduleOpen={isScheduleOpen}
+                    setIsScheduleOpen={setIsScheduleOpen}
+                />
             </>
         );
     }
@@ -8872,6 +8974,11 @@ const App: React.FC = () => {
 
     if (view === 'hotelRegistration') {
         return <HotelRegistrationForm setView={setViewWithLog} />;
+    }
+
+    // Se a agenda estiver fechada, exibe a página de agenda fechada
+    if (!isScheduleOpen) {
+        return <ScheduleClosedPage setView={setViewWithLog} />;
     }
 
     return <Scheduler setView={setViewWithLog} />;
