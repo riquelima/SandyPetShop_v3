@@ -7444,18 +7444,32 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
           {step === 3 && (
             <div className="space-y-6">
               <h2 className="text-3xl font-bold text-gray-800">Selecione Data e Hora</h2>
-              {!([ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_BATH_AND_GROOMING, ServiceType.PET_MOBILE_GROOMING_ONLY].includes(selectedService)) && (
-                <div>
-                  <h3 className="text-md font-semibold text-gray-700 mb-2 text-center">Data</h3>
-                  <Calendar 
-                    selectedDate={selectedDate} 
-                    onDateChange={setSelectedDate} 
-                    disablePast 
-                    disableWeekends={!allowedDays}
-                    allowedDays={allowedDays}
-                  />
-                </div>
-              )}
+              <div>
+                <h3 className="text-md font-semibold text-gray-700 mb-2 text-center">Data</h3>
+                <Calendar 
+                  selectedDate={selectedDate} 
+                  onDateChange={setSelectedDate} 
+                  disablePast 
+                  disableWeekends={!allowedDays}
+                  allowedDays={(() => {
+                    // Para serviços Pet Móvel, definir dias permitidos baseado no condomínio
+                    if ([ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_BATH_AND_GROOMING, ServiceType.PET_MOBILE_GROOMING_ONLY].includes(selectedService)) {
+                      switch (selectedCondo) {
+                        case 'Vitta Parque':
+                          return [3]; // Quarta-feira (0=domingo, 1=segunda, 2=terça, 3=quarta, 4=quinta, 5=sexta, 6=sábado)
+                        case 'Maxhaus':
+                          return [4]; // Quinta-feira
+                        case 'Paseo':
+                          return [5]; // Sexta-feira
+                        default:
+                          return []; // Nenhum dia permitido se condomínio não selecionado
+                      }
+                    }
+                    // Para outros serviços, usar allowedDays normal
+                    return allowedDays;
+                  })()}
+                />
+              </div>
               <div>
                 <h3 className="text-md font-semibold text-gray-700 mb-4 text-center">Horários Disponíveis</h3>
                 <TimeSlotPicker
