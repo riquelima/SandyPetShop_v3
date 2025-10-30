@@ -8870,7 +8870,17 @@ const App: React.FC = () => {
     
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loadingAuth, setLoadingAuth] = useState(true);
-    const [isScheduleOpen, setIsScheduleOpen] = useState(true); // Estado para controlar se a agenda está aberta
+    
+    // Estado para controlar se a agenda está aberta - com persistência no localStorage
+    const [isScheduleOpen, setIsScheduleOpen] = useState(() => {
+        try {
+            const saved = localStorage.getItem('sandyPetShop_scheduleOpen');
+            return saved !== null ? JSON.parse(saved) : true;
+        } catch (error) {
+            console.warn('Erro ao ler estado da agenda do localStorage:', error);
+            return true;
+        }
+    });
 
     useEffect(() => {
         let isMounted = true;
@@ -8937,6 +8947,15 @@ const App: React.FC = () => {
             }
         };
     }, []);
+
+    // useEffect para persistir o estado da agenda no localStorage
+    useEffect(() => {
+        try {
+            localStorage.setItem('sandyPetShop_scheduleOpen', JSON.stringify(isScheduleOpen));
+        } catch (error) {
+            console.warn('Erro ao salvar estado da agenda no localStorage:', error);
+        }
+    }, [isScheduleOpen]);
 
     if (loadingAuth) {
         return <div className="min-h-screen flex items-center justify-center bg-gray-100"><LoadingSpinner /></div>;
