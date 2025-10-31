@@ -5860,7 +5860,7 @@ const HotelRegistrationForm: React.FC<{
         service_bath: null, service_transport: null, service_daily_rate: null, service_extra_hour: null,
         service_vet: null, service_training: null, total_services_price: 0, additional_info: '',
         professional_name: '', registration_date: new Date().toISOString().split('T')[0],
-        tutor_check_in_signature: '', tutor_check_out_signature: '', declaration_accepted: false, status: 'Ativo',
+        tutor_check_in_signature: '', tutor_check_out_signature: '', responsible_signature: '', declaration_accepted: false, status: 'Ativo',
         extra_services: {
             pernoite: false, pernoite_quantity: 0, pernoite_price: 0,
             banho_tosa: false, banho_tosa_price: 0,
