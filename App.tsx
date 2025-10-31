@@ -710,44 +710,66 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
             }
             
             const { data: newClient, error: clientError } = await supabase.from('monthly_clients').insert({
-                pet_name: formData.petName, pet_breed: formData.petBreed, owner_name: formData.ownerName, owner_address: formData.ownerAddress,
-                whatsapp: formData.whatsapp, service: serviceString, weight: PET_WEIGHT_OPTIONS[selectedWeight!], price: finalPrice,
-                recurrence_type: recurrence.type, recurrence_day: recurrenceDay, recurrence_time: recurrenceTime, payment_due_date: paymentDueDate, is_active: true,
-                payment_status: 'Pendente', condominium: formData.condominium,
+                pet_name: formData.petName, 
+                pet_breed: formData.petBreed, 
+                owner_name: formData.ownerName, 
+                owner_address: formData.ownerAddress,
+                whatsapp: formData.whatsapp, 
+                service: serviceString, 
+                weight: PET_WEIGHT_OPTIONS[selectedWeight!], 
+                price: finalPrice,
+                recurrence_type: recurrence.type,
+                recurrence_day: recurrenceDay,
+                recurrence_time: recurrenceTime,
+                is_active: true,
+                payment_status: 'Pendente',
+                condominium: formData.condominium
             }).select().single();
 
             if (clientError || !newClient) throw new Error(clientError?.message || "Falha ao criar o cadastro do mensalista.");
 
             const supabasePayloads = appointmentsToCreate.map(app => ({
-                pet_name: formData.petName,
-                pet_breed: formData.petBreed,
                 owner_name: formData.ownerName,
-                owner_address: formData.ownerAddress,
-                whatsapp: formData.whatsapp,
+                pet_name: formData.petName,
                 service: serviceString,
-                weight: PET_WEIGHT_OPTIONS[selectedWeight!],
-                addons: addonLabels,
-                price: appointmentsToCreate.length > 0 ? finalPrice / appointmentsToCreate.length : finalPrice,
-                status: 'AGENDADO',
                 appointment_time: app.appointment_time,
-                monthly_client_id: newClient.id,
+                status: 'AGENDADO',
+                price: appointmentsToCreate.length > 0 ? finalPrice / appointmentsToCreate.length : finalPrice,
+                whatsapp: formData.whatsapp,
+                pet_breed: formData.petBreed,
+                owner_address: formData.ownerAddress,
+                weight: PET_WEIGHT_OPTIONS[selectedWeight!],
                 condominium: formData.condominium,
-                extra_services: {
-                    pernoite: { enabled: false, quantity: 0 },
-                    banho_tosa: { enabled: false, value: 0 },
-                    so_banho: { enabled: false, value: 0 },
-                    adestrador: { enabled: false, value: 0 },
-                    despesa_medica: { enabled: false, value: 0 },
-                    dias_extras: { enabled: false, quantity: 0 }
-                }
+                monthly_client_id: newClient.id
             }));
+
+            // Check if any of the selected services is a Pet Móvel service
+            const isPetMovelService = Object.keys(serviceQuantities).some(serviceKey => 
+                Number(serviceQuantities[serviceKey]) > 0 && 
+                [ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_BATH_AND_GROOMING, ServiceType.PET_MOBILE_GROOMING_ONLY].includes(serviceKey as ServiceType)
+            );
 
             if (supabasePayloads.length > 0) {
                 if (isPetMovelService) {
-                    // For Pet Móvel services, insert into BOTH tables with the same payload
+                    // For Pet Móvel services, create specific payloads for pet_movel_appointments
+                    const petMovelPayloads = appointmentsToCreate.map(app => ({
+                        client_name: formData.ownerName,
+                        pet_name: formData.petName,
+                        service: serviceString,
+                        appointment_time: app.appointment_time,
+                        status: 'AGENDADO',
+                        price: appointmentsToCreate.length > 0 ? finalPrice / appointmentsToCreate.length : finalPrice,
+                        phone: formData.whatsapp,
+                        notes: `Pet: ${formData.petName}, Raça: ${formData.petBreed}, Peso: ${PET_WEIGHT_OPTIONS[selectedWeight!]}, Endereço: ${formData.ownerAddress}`,
+                        address: formData.ownerAddress,
+                        condo: formData.condominium,
+                        monthly_client_id: newClient.id
+                    }));
+                    
+                    // Insert into BOTH tables with appropriate payloads
                     const [appointmentsResult, petMovelResult] = await Promise.all([
                         supabase.from('appointments').insert(supabasePayloads),
-                        supabase.from('pet_movel_appointments').insert(supabasePayloads)
+                        supabase.from('pet_movel_appointments').insert(petMovelPayloads)
                     ]);
                     
                     if (appointmentsResult.error || petMovelResult.error) {
@@ -4249,8 +4271,8 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
                 owner_address: formData.ownerAddress,
                 service: SERVICES[selectedService!].label,
                 weight: PET_WEIGHT_OPTIONS[selectedWeight!],
-                addons: [],
-                price: price / appointmentsToCreate.length, status: 'AGENDADO',
+                price: price / appointmentsToCreate.length,
+                status: 'AGENDADO',
                 appointment_time: app.appointment_time,
                 monthly_client_id: client.id,
                 extra_services: {
