@@ -5470,17 +5470,17 @@ const EditDaycareEnrollmentModal: React.FC<{
                     {/* Pet and Tutor Info */}
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                         <h3 className="md:col-span-2 text-lg font-semibold text-pink-700 border-b pb-2 mb-2">Dados do Pet</h3>
-                        <div><label className="block text-base font-semibold text-gray-700">Nome</label><input type="text" name="pet_name" value={formData.pet_name} onChange={handleInputChange} required className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
-                        <div><label className="block text-base font-semibold text-gray-700">Raça</label><input type="text" name="pet_breed" value={formData.pet_breed} onChange={handleInputChange} required className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
-                        <div><label className="block text-base font-semibold text-gray-700">Idade</label><input type="text" name="pet_age" value={formData.pet_age} onChange={handleInputChange} required className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
-                        <div><label className="block text-base font-semibold text-gray-700">Sexo</label><input type="text" name="pet_sex" value={formData.pet_sex} onChange={handleInputChange} required className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
+                        <div><label className="block text-base font-semibold text-gray-700">Nome</label><input type="text" name="pet_name" value={formData.pet_name} onChange={handleInputChange} className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
+                        <div><label className="block text-base font-semibold text-gray-700">Raça</label><input type="text" name="pet_breed" value={formData.pet_breed} onChange={handleInputChange} className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
+                        <div><label className="block text-base font-semibold text-gray-700">Idade</label><input type="text" name="pet_age" value={formData.pet_age} onChange={handleInputChange} className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
+                        <div><label className="block text-base font-semibold text-gray-700">Sexo</label><input type="text" name="pet_sex" value={formData.pet_sex} onChange={handleInputChange} className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
                         {renderRadioGroup('Castrado (a)', 'is_neutered', [{label: 'Sim', value: true}, {label: 'Não', value: false}])}
                         <h3 className="md:col-span-2 text-lg font-semibold text-pink-700 border-b pb-2 mb-2 mt-4">Dados do Tutor</h3>
-                        <div><label className="block text-base font-semibold text-gray-700">Tutor</label><input type="text" name="tutor_name" value={formData.tutor_name} onChange={handleInputChange} required className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
-                        <div><label className="block text-base font-semibold text-gray-700">RG</label><input type="text" name="tutor_rg" value={formData.tutor_rg} onChange={handleInputChange} required className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
-                        <div className="md:col-span-2"><label className="block text-base font-semibold text-gray-700">Endereço</label><input type="text" name="address" value={formData.address} onChange={handleInputChange} required className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
-                        <div><label className="block text-base font-semibold text-gray-700">Telefone</label><input type="tel" name="contact_phone" value={formData.contact_phone} onChange={handleInputChange} required className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
-                        <div><label className="block text-base font-semibold text-gray-700">Emergência</label><input type="text" name="emergency_contact_name" value={formData.emergency_contact_name} onChange={handleInputChange} required className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
+                        <div><label className="block text-base font-semibold text-gray-700">Tutor</label><input type="text" name="tutor_name" value={formData.tutor_name} onChange={handleInputChange} className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
+                        <div><label className="block text-base font-semibold text-gray-700">RG</label><input type="text" name="tutor_rg" value={formData.tutor_rg} onChange={handleInputChange} className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
+                        <div className="md:col-span-2"><label className="block text-base font-semibold text-gray-700">Endereço</label><input type="text" name="address" value={formData.address} onChange={handleInputChange} className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
+                        <div><label className="block text-base font-semibold text-gray-700">Telefone</label><input type="tel" name="contact_phone" value={formData.contact_phone} onChange={handleInputChange} className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
+                        <div><label className="block text-base font-semibold text-gray-700">Emergência</label><input type="text" name="emergency_contact_name" value={formData.emergency_contact_name} onChange={handleInputChange} className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
                         <div className="md:col-span-2"><label className="block text-base font-semibold text-gray-700">Telefone Vet.</label><input type="text" name="vet_phone" value={formData.vet_phone} onChange={handleInputChange} className="mt-1 block w-full p-2 bg-gray-50 border rounded-md"/></div>
                     </div>
                      {/* Health & Plan */}
@@ -5852,13 +5852,13 @@ const HotelRegistrationForm: React.FC<{
         pet_name: '', pet_sex: null, pet_breed: '', is_neutered: null, pet_age: '',
         tutor_name: '', tutor_rg: '', tutor_address: '', tutor_phone: '', tutor_email: '', tutor_social_media: '',
         vet_phone: '', emergency_contact_name: '', emergency_contact_phone: '', emergency_contact_relation: '',
-        has_rg_document: false, has_residence_proof: false, has_vaccination_card: false, has_vet_certificate: false,
-        has_flea_tick_remedy: false, flea_tick_remedy_date: '', photo_authorization: false, retrieve_at_checkout: false,
-        preexisting_disease: '', allergies: '', behavior: '', fears_traumas: '', wounds_marks: '',
-        food_brand: '', food_quantity: '', feeding_frequency: '', accepts_treats: '', special_food_care: '',
+        has_rg_document: null, has_residence_proof: null, has_vaccination_card: null, has_vet_certificate: null,
+        has_flea_tick_remedy: null, flea_tick_remedy_date: '', photo_authorization: null, retrieve_at_checkout: null,
+        preexisting_disease: null, allergies: null, behavior: null, fears_traumas: null, wounds_marks: null,
+        food_brand: null, food_quantity: null, feeding_frequency: null, food_observations: null, accepts_treats: null, special_food_care: null,
         check_in_date: '', check_in_time: '', check_out_date: '', check_out_time: '',
-        service_bath: false, service_transport: false, service_daily_rate: false, service_extra_hour: false,
-        service_vet: false, service_training: false, total_services_price: 0, additional_info: '',
+        service_bath: null, service_transport: null, service_daily_rate: null, service_extra_hour: null,
+        service_vet: null, service_training: null, total_services_price: 0, additional_info: '',
         professional_name: '', registration_date: new Date().toISOString().split('T')[0],
         tutor_check_in_signature: '', tutor_check_out_signature: '', declaration_accepted: false, status: 'Ativo',
         extra_services: {
@@ -5928,8 +5928,10 @@ const HotelRegistrationForm: React.FC<{
         }
         setIsSubmitting(true);
         try {
+            // Criar payload excluindo food_observations temporariamente para contornar problema de cache do schema
+            const { food_observations, ...payloadWithoutFoodObs } = formData;
             const payload = {
-                ...formData,
+                ...payloadWithoutFoodObs,
                 flea_tick_remedy_date: formData.flea_tick_remedy_date || null,
                 check_in_date: formData.check_in_date || null,
                 check_in_time: formData.check_in_time || null,
@@ -6015,29 +6017,16 @@ const HotelRegistrationForm: React.FC<{
                             <input type="text" name="pet_name" value={formData.pet_name} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Espécie *</label>
-                            <select name="species" value={formData.species} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
-                                <option value="">Selecione a espécie</option>
-                                <option value="Cão">Cão</option>
-                                <option value="Gato">Gato</option>
-                                <option value="Outro">Outro</option>
-                            </select>
-                        </div>
-                        <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Raça</label>
-                            <input type="text" name="breed" value={formData.breed} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                            <input type="text" name="pet_breed" value={formData.pet_breed} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Idade</label>
-                            <input type="text" name="age" value={formData.age} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Peso (kg)</label>
-                            <input type="number" name="weight" value={formData.weight} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" step="0.1" />
+                            <input type="text" name="pet_age" value={formData.pet_age} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Sexo</label>
-                            <select name="gender" value={formData.gender} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <select name="pet_sex" value={formData.pet_sex} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                                 <option value="">Selecione o sexo</option>
                                 <option value="Macho">Macho</option>
                                 <option value="Fêmea">Fêmea</option>
@@ -6068,19 +6057,11 @@ const HotelRegistrationForm: React.FC<{
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Telefone do Veterinário</label>
-                            <input type="tel" name="vet_phone" value={formData.vet_phone} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Medicamentos em Uso</label>
-                            <textarea name="medications" value={formData.medications} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} />
+                            <input type="tel" name="vet_phone" value={formData.vet_phone || ''} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                         </div>
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Alergias</label>
-                            <textarea name="allergies" value={formData.allergies} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Observações Médicas</label>
-                            <textarea name="medical_observations" value={formData.medical_observations} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} />
+                            <textarea name="allergies" value={formData.allergies || ''} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} />
                         </div>
                     </div>
                 </div>
@@ -6090,16 +6071,16 @@ const HotelRegistrationForm: React.FC<{
                     <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">🍽️ Alimentação</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Ração</label>
-                            <input type="text" name="food_type" value={formData.food_type} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Marca da Ração</label>
+                            <input type="text" name="food_brand" value={formData.food_brand || ''} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Quantidade por Refeição</label>
-                            <input type="text" name="food_amount" value={formData.food_amount} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                            <input type="text" name="food_quantity" value={formData.food_quantity || ''} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Frequência de Alimentação</label>
-                            <select name="feeding_frequency" value={formData.feeding_frequency} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <select name="feeding_frequency" value={formData.feeding_frequency || ''} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                                 <option value="">Selecione a frequência</option>
                                 <option value="1x ao dia">1x ao dia</option>
                                 <option value="2x ao dia">2x ao dia</option>
@@ -6107,13 +6088,10 @@ const HotelRegistrationForm: React.FC<{
                                 <option value="Livre demanda">Livre demanda</option>
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Horários de Alimentação</label>
-                            <input type="text" name="feeding_times" value={formData.feeding_times} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Ex: 8h, 12h, 18h" />
-                        </div>
+
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Observações sobre Alimentação</label>
-                            <textarea name="food_observations" value={formData.food_observations} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} />
+                            <textarea name="food_observations" value={formData.food_observations || ''} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} />
                         </div>
                     </div>
                 </div>
@@ -6167,27 +6145,27 @@ const HotelRegistrationForm: React.FC<{
                         <div className="mt-4 pt-4 border-t border-gray-200">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div className="flex items-center space-x-3">
-                                    <input type="checkbox" name="bath" checked={formData.extra_services.bath} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, bath: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
-                                    <label className="text-sm font-medium text-gray-700">Banho (R$ 30,00)</label>
+                                    <input type="checkbox" name="bath" checked={formData.extra_services?.bath || false} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, bath: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
+                                    <label className="text-sm font-medium text-gray-700">Banho</label>
                                 </div>
                                 <div className="flex items-center space-x-3">
-                                    <input type="checkbox" name="transport" checked={formData.extra_services.transport} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, transport: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
-                                    <label className="text-sm font-medium text-gray-700">Transporte (R$ 20,00)</label>
+                                    <input type="checkbox" name="transport" checked={formData.extra_services?.transport || false} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, transport: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
+                                    <label className="text-sm font-medium text-gray-700">Transporte</label>
                                 </div>
                                 <div className="flex items-center space-x-3">
-                                    <input type="checkbox" name="vet" checked={formData.extra_services.vet} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, vet: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
-                                    <label className="text-sm font-medium text-gray-700">Veterinário (R$ 80,00)</label>
+                                    <input type="checkbox" name="vet" checked={formData.extra_services?.vet || false} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, vet: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
+                                    <label className="text-sm font-medium text-gray-700">Veterinário</label>
                                 </div>
                                 <div className="flex items-center space-x-3">
-                                    <input type="checkbox" name="training" checked={formData.extra_services.training} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, training: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
-                                    <label className="text-sm font-medium text-gray-700">Adestramento (R$ 50,00)</label>
+                                    <input type="checkbox" name="training" checked={formData.extra_services?.training || false} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, training: e.target.checked}}))} className="w-5 h-5 text-blue-600" />
+                                    <label className="text-sm font-medium text-gray-700">Adestramento</label>
                                 </div>
                                 <div className="md:col-span-2 lg:col-span-1">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Diária (R$ 80,00/dia)</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Diária (quantidade de dias)</label>
                                     <input type="number" name="daily_rate" value={formData.extra_services.daily_rate} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, daily_rate: e.target.value === '' ? 0 : parseInt(e.target.value)}}))} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" min="0" />
                                 </div>
                                 <div className="md:col-span-2 lg:col-span-1">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Hora Extra (R$ 10,00/hora)</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Hora Extra (quantidade de horas)</label>
                                     <input type="number" name="extra_hour" value={formData.extra_services.extra_hour} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, extra_hour: e.target.value === '' ? 0 : parseInt(e.target.value)}}))} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" min="0" />
                                 </div>
                                 <div className="md:col-span-2 lg:col-span-1">
@@ -6227,13 +6205,13 @@ const HotelRegistrationForm: React.FC<{
 
                         <div className="space-y-3">
                             <div className="flex items-start space-x-3">
-                                <input type="checkbox" name="declaration_accepted" checked={formData.declaration_accepted} onChange={(e) => setFormData(prev => ({...prev, declaration_accepted: e.target.checked}))} className="w-5 h-5 text-blue-600 mt-1" required />
+                                <input type="checkbox" name="declaration_accepted" checked={formData.declaration_accepted || false} onChange={(e) => setFormData(prev => ({...prev, declaration_accepted: e.target.checked}))} className="w-5 h-5 text-blue-600 mt-1" required />
                                 <label className="text-sm text-gray-700">
                                     Declaro que todas as informações fornecidas são verdadeiras e autorizo o hotel pet a cuidar do meu animal de acordo com as instruções fornecidas. *
                                 </label>
                             </div>
                             <div className="flex items-start space-x-3">
-                                <input type="checkbox" name="photo_authorization" checked={formData.photo_authorization} onChange={(e) => setFormData(prev => ({...prev, photo_authorization: e.target.checked}))} className="w-5 h-5 text-blue-600 mt-1" />
+                                <input type="checkbox" name="photo_authorization" checked={formData.photo_authorization || false} onChange={(e) => setFormData(prev => ({...prev, photo_authorization: e.target.checked}))} className="w-5 h-5 text-blue-600 mt-1" />
                                 <label className="text-sm text-gray-700">
                                     Autorizo o uso de fotos do meu pet para divulgação nas redes sociais do estabelecimento.
                                 </label>
@@ -8187,7 +8165,7 @@ const EditHotelRegistrationModal: React.FC<{
                                     <label className="block text-base font-semibold text-gray-700 mb-1">Doenças Pré-existentes</label>
                                     <textarea
                                         name="preexisting_disease"
-                                        value={formData.preexisting_disease}
+                                        value={formData.preexisting_disease || ''}
                                         onChange={handleInputChange}
                                         rows={2}
                                         className="w-full px-5 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
@@ -8197,7 +8175,7 @@ const EditHotelRegistrationModal: React.FC<{
                                     <label className="block text-base font-semibold text-gray-700 mb-1">Alergias</label>
                                     <textarea
                                         name="allergies"
-                                        value={formData.allergies}
+                                        value={formData.allergies || ''}
                                         onChange={handleInputChange}
                                         rows={2}
                                         className="w-full px-5 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
@@ -8207,7 +8185,7 @@ const EditHotelRegistrationModal: React.FC<{
                                     <label className="block text-base font-semibold text-gray-700 mb-1">Comportamento</label>
                                     <textarea
                                         name="behavior"
-                                        value={formData.behavior}
+                                        value={formData.behavior || ''}
                                         onChange={handleInputChange}
                                         rows={2}
                                         className="w-full px-5 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
@@ -8217,7 +8195,7 @@ const EditHotelRegistrationModal: React.FC<{
                                     <label className="block text-base font-semibold text-gray-700 mb-1">Medos ou Traumas</label>
                                     <textarea
                                         name="fears_traumas"
-                                        value={formData.fears_traumas}
+                                        value={formData.fears_traumas || ''}
                                         onChange={handleInputChange}
                                         rows={2}
                                         className="w-full px-5 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
