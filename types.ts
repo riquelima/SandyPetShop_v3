@@ -214,7 +214,7 @@ export interface HotelRegistration {
     registration_date: string;
     tutor_check_in_signature: string | null;
     tutor_check_out_signature: string | null;
-    responsible_signature: string | null;
+    tutor_signature: string | null;
     declaration_accepted: boolean;
     status: 'Ativo' | 'Concluído' | 'Cancelado';
     checked_in_at?: string;

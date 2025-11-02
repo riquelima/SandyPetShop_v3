@@ -5882,7 +5882,7 @@ const HotelRegistrationForm: React.FC<{
         service_bath: null, service_transport: null, service_daily_rate: null, service_extra_hour: null,
         service_vet: null, service_training: null, total_services_price: 0, additional_info: '',
         professional_name: '', registration_date: new Date().toISOString().split('T')[0],
-        tutor_check_in_signature: '', tutor_check_out_signature: '', responsible_signature: '', declaration_accepted: false, status: 'Ativo',
+        tutor_check_in_signature: '', tutor_check_out_signature: '', tutor_signature: '', declaration_accepted: false, status: 'Ativo',
         extra_services: {
             pernoite: false, pernoite_quantity: 0, pernoite_price: 0,
             banho_tosa: false, banho_tosa_price: 0,
@@ -5950,16 +5950,71 @@ const HotelRegistrationForm: React.FC<{
         }
         setIsSubmitting(true);
         try {
-            // Criar payload excluindo food_observations temporariamente para contornar problema de cache do schema
-            const { food_observations, ...payloadWithoutFoodObs } = formData;
+            // Criar payload limpo removendo campos undefined e adicionando campos obrigatórios
             const payload = {
-                ...payloadWithoutFoodObs,
+                pet_name: formData.pet_name || '',
+                pet_sex: formData.pet_sex,
+                pet_breed: formData.pet_breed || '',
+                is_neutered: formData.is_neutered,
+                pet_age: formData.pet_age || '',
+                tutor_name: formData.tutor_name || '',
+                tutor_rg: formData.tutor_rg || '',
+                tutor_address: formData.tutor_address || '',
+                tutor_phone: formData.tutor_phone || '',
+                tutor_email: formData.tutor_email || '',
+                tutor_social_media: formData.tutor_social_media || '',
+                vet_phone: formData.vet_phone || '',
+                emergency_contact_name: formData.emergency_contact_name || '',
+                emergency_contact_phone: formData.emergency_contact_phone || '',
+                emergency_contact_relation: formData.emergency_contact_relation || '',
+                has_rg_document: formData.has_rg_document,
+                has_residence_proof: formData.has_residence_proof,
+                has_vaccination_card: formData.has_vaccination_card,
+                has_vet_certificate: formData.has_vet_certificate,
+                has_flea_tick_remedy: formData.has_flea_tick_remedy,
                 flea_tick_remedy_date: formData.flea_tick_remedy_date || null,
+                photo_authorization: formData.photo_authorization,
+                retrieve_at_checkout: formData.retrieve_at_checkout,
+                preexisting_disease: formData.preexisting_disease,
+                allergies: formData.allergies,
+                behavior: formData.behavior,
+                fears_traumas: formData.fears_traumas,
+                wounds_marks: formData.wounds_marks,
+                food_brand: formData.food_brand,
+                food_quantity: formData.food_quantity,
+                feeding_frequency: formData.feeding_frequency,
+                food_observations: formData.food_observations,
+                accepts_treats: formData.accepts_treats,
+                special_food_care: formData.special_food_care,
                 check_in_date: formData.check_in_date || null,
                 check_in_time: formData.check_in_time || null,
                 check_out_date: formData.check_out_date || null,
                 check_out_time: formData.check_out_time || null,
+                service_bath: formData.service_bath,
+                service_transport: formData.service_transport,
+                service_daily_rate: formData.service_daily_rate,
+                service_extra_hour: formData.service_extra_hour,
+                service_vet: formData.service_vet,
+                service_training: formData.service_training,
+                total_services_price: formData.total_services_price || 0,
+                additional_info: formData.additional_info || '',
+                professional_name: formData.professional_name || '',
+                registration_date: formData.registration_date || new Date().toISOString().split('T')[0],
+                tutor_check_in_signature: formData.tutor_check_in_signature || '',
+                tutor_check_out_signature: formData.tutor_check_out_signature || '',
+                tutor_signature: formData.tutor_signature || '',
+                declaration_accepted: formData.declaration_accepted || false,
+                status: formData.status || 'Ativo',
+                extra_services: formData.extra_services || {},
+                // Campos que existem na tabela mas podem estar faltando
+                check_in_status: 'pending',
+                checked_in_at: null,
+                checked_out_at: null,
+                responsible_signature: formData.tutor_signature || '', // Usar tutor_signature como fallback
+                veterinarian: formData.vet_phone || '' // Usar vet_phone como fallback
             };
+            
+            console.log('Payload completo:', payload);
             
             const { error } = await supabase.from('hotel_registrations').insert(payload);
             if (error) throw error;
@@ -6244,10 +6299,6 @@ const HotelRegistrationForm: React.FC<{
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Assinatura do Tutor *</label>
                                 <input type="text" name="tutor_signature" value={formData.tutor_signature} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Digite seu nome completo" required />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Assinatura do Responsável</label>
-                                <input type="text" name="responsible_signature" value={formData.responsible_signature} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Funcionário responsável" />
                             </div>
                         </div>
                     </div>
