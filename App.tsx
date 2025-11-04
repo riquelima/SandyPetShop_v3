@@ -2141,7 +2141,9 @@ const AdminAddAppointmentModal: React.FC<{
             
             // Send webhook notification
             try {
-                const webhookUrl = 'https://n8n.intelektus.tech/webhook/servicoAgendado';
+                const webhookUrl = (targetTable === 'pet_movel_appointments')
+                    ? 'https://n8n.intelektus.tech/webhook/petMovelAgendado'
+                    : 'https://n8n.intelektus.tech/webhook/servicoAgendado';
                 const response = await fetch(webhookUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2149,7 +2151,7 @@ const AdminAddAppointmentModal: React.FC<{
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Webhook (servicoAgendado) failed with status ${response.status}`);
+                    throw new Error(`Webhook (${webhookUrl.includes('petMovelAgendado') ? 'petMovelAgendado' : 'servicoAgendado'}) failed with status ${response.status}`);
                 }
             } catch (webhookError) {
                 console.error('Error sending new appointment webhook:', webhookError);
@@ -7206,7 +7208,9 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
         }
         
         try {
-            const webhookUrl = 'https://n8n.intelektus.tech/webhook/servicoAgendado';
+            const webhookUrl = isPetMovelSubmit
+                ? 'https://n8n.intelektus.tech/webhook/petMovelAgendado'
+                : 'https://n8n.intelektus.tech/webhook/servicoAgendado';
             const response = await fetch(webhookUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -7214,7 +7218,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
             });
 
             if (!response.ok) {
-                throw new Error(`Webhook (servicoAgendado) failed with status ${response.status}`);
+                throw new Error(`Webhook (${webhookUrl.includes('petMovelAgendado') ? 'petMovelAgendado' : 'servicoAgendado'}) failed with status ${response.status}`);
             }
         } catch (webhookError) {
             console.error('Error sending new appointment webhook:', webhookError);
