@@ -5,6 +5,7 @@ import { Appointment, ServiceType, PetWeight, AdminAppointment, Client, MonthlyC
 import { SERVICES, WORKING_HOURS, MAX_CAPACITY_PER_SLOT, LUNCH_HOUR, PET_WEIGHT_OPTIONS, SERVICE_PRICES, ADDON_SERVICES, VISIT_WORKING_HOURS, DAYCARE_PLAN_PRICES, DAYCARE_EXTRA_SERVICES_PRICES, HOTEL_BASE_PRICE, HOTEL_EXTRA_SERVICES_PRICES } from './constants';
 import { supabase } from './supabaseClient';
 import ExtraServicesModal from './ExtraServicesModal';
+import ActionChooserModal from './src/ActionChooserModal';
 
 
 // --- TIMEZONE-AWARE HELPER FUNCTIONS (UTC-3 / SÃO PAULO) ---
@@ -286,6 +287,7 @@ const LoadingSpinner = () => <div className="animate-spin rounded-full h-12 w-12
 const ListIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" /></svg>;
 const UserPlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 11a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1v-1z" /></svg>;
 const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>;
+const ObservationIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 11-2 0V4H6v12a1 1 0 11-2 0V4zm4 12a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>;
 const DeleteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg>;
 const MenuIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>;
 const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
@@ -438,6 +440,10 @@ const AdminLogin: React.FC<{ onLoginSuccess: () => void }> = ({ onLoginSuccess }
         </div>
     );
 };
+
+
+
+
 
 const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void; }> = ({ onBack, onSuccess }) => {
     const [step, setStep] = useState(1);
@@ -1878,7 +1884,7 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
 const AdminAddAppointmentModal: React.FC<{ 
     isOpen: boolean; 
     onClose: () => void; 
-    onAppointmentCreated: () => void; 
+    onAppointmentCreated: (created: AdminAppointment) => void; 
 }> = ({ isOpen, onClose, onAppointmentCreated }) => {
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({ 
@@ -2141,7 +2147,8 @@ const AdminAddAppointmentModal: React.FC<{
             
             // Send webhook notification
             try {
-                const webhookUrl = (targetTable === 'pet_movel_appointments')
+                // Choose webhook based on whether this is a Pet Móvel submission
+                const webhookUrl = isPetMovelSubmit
                     ? 'https://n8n.intelektus.tech/webhook/petMovelAgendado'
                     : 'https://n8n.intelektus.tech/webhook/servicoAgendado';
                 const response = await fetch(webhookUrl, {
@@ -2157,8 +2164,25 @@ const AdminAddAppointmentModal: React.FC<{
                 console.error('Error sending new appointment webhook:', webhookError);
             }
 
-            // Success - close modal and refresh appointments
-            onAppointmentCreated();
+            // Build AdminAppointment from inserted record and notify parent
+            const createdAdminAppointment: AdminAppointment = {
+                id: newDbAppointment.id,
+                appointment_time: newDbAppointment.appointment_time,
+                pet_name: newDbAppointment.pet_name,
+                owner_name: newDbAppointment.owner_name,
+                service: newDbAppointment.service,
+                status: newDbAppointment.status,
+                price: Number(newDbAppointment.price || 0),
+                addons: Array.isArray(newDbAppointment.addons) ? newDbAppointment.addons : [],
+                whatsapp: newDbAppointment.whatsapp,
+                weight: newDbAppointment.weight,
+                monthly_client_id: newDbAppointment.monthly_client_id,
+                owner_address: newDbAppointment.owner_address,
+                pet_breed: newDbAppointment.pet_breed,
+                condominium: newDbAppointment.condominium,
+                extra_services: newDbAppointment.extra_services,
+            };
+            onAppointmentCreated(createdAdminAppointment);
             onClose();
         } catch (error: any) {
             console.error("Error submitting appointment:", error);
@@ -2575,8 +2599,17 @@ const AdminAddAppointmentModal: React.FC<{
 
 
 {/* FIX: Changed the `status` prop type from `string` to the specific union type to match the `AdminAppointment` interface. */}
-const AppointmentCard: React.FC<{ appointment: AdminAppointment; onUpdateStatus: (id: string, status: 'AGENDADO' | 'CONCLUÍDO') => void; isUpdating: boolean; onEdit: (appointment: AdminAppointment) => void; onDelete: (appointment: AdminAppointment) => void; isDeleting: boolean; onAddExtraServices: (appointment: AdminAppointment) => void; }> = ({ appointment, onUpdateStatus, isUpdating, onEdit, onDelete, isDeleting, onAddExtraServices }) => {
-    const { id, appointment_time, pet_name, owner_name, service, status, price, addons, whatsapp, monthly_client_id } = appointment;
+const AppointmentCard: React.FC<{ 
+    appointment: AdminAppointment; 
+    onUpdateStatus: (id: string, status: 'AGENDADO' | 'CONCLUÍDO') => void; 
+    isUpdating: boolean; 
+    onEdit: (appointment: AdminAppointment) => void; 
+    onDelete: (appointment: AdminAppointment) => void; 
+    isDeleting: boolean; 
+    onOpenActionMenu: (appointment: AdminAppointment, event: React.MouseEvent) => void;
+    onDeleteObservation: (appointment: AdminAppointment) => void;
+}> = ({ appointment, onUpdateStatus, isUpdating, onEdit, onDelete, isDeleting, onOpenActionMenu, onDeleteObservation }) => {
+    const { id, appointment_time, pet_name, owner_name, service, status, price, addons, whatsapp, monthly_client_id, observation } = appointment;
     const isCompleted = status === 'CONCLUÍDO';
     
     const statusStyles: Record<string, string> = {
@@ -2637,10 +2670,10 @@ const AppointmentCard: React.FC<{ appointment: AdminAppointment; onUpdateStatus:
                     <p className="text-2xl font-bold text-gray-800">R$ {(price ?? 0).toFixed(2).replace('.', ',')}</p>
                     <div className="flex items-center gap-2">
                         <button 
-                            onClick={() => onAddExtraServices(appointment)}
-                            disabled={isCompleted || isUpdating || isDeleting}
+                            onClick={(e) => onOpenActionMenu(appointment, e)}
+                            disabled={isUpdating || isDeleting}
                             className="p-2 rounded-full text-blue-500 hover:bg-blue-100 hover:text-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            aria-label="Adicionar serviços extras"
+                            aria-label="Mais ações"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -2654,6 +2687,7 @@ const AppointmentCard: React.FC<{ appointment: AdminAppointment; onUpdateStatus:
                         >
                             <EditIcon />
                         </button>
+
                         <button 
                             onClick={() => onDelete(appointment)}
                             disabled={isUpdating || isDeleting}
@@ -2674,6 +2708,23 @@ const AppointmentCard: React.FC<{ appointment: AdminAppointment; onUpdateStatus:
                         </button>
                     </div>
                 </div>
+                {observation && (
+                    <div className="mt-4 pt-3 border-t border-gray-200">
+                        <div className="flex items-start gap-2 bg-gray-50 p-3 rounded-lg">
+                            <p className="text-sm text-gray-600 flex-1">
+                                <strong className="text-gray-800">Observação:</strong> {observation}
+                            </p>
+                            <button 
+                                onClick={() => onDeleteObservation(appointment)}
+                                disabled={isUpdating || isDeleting}
+                                className="p-2 rounded-full text-red-500 hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                aria-label="Excluir observação"
+                            >
+                                <DeleteIcon />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -2686,7 +2737,7 @@ const Calendar: React.FC<{
     disablePast?: boolean;
     disableWeekends?: boolean;
     allowedDays?: number[];
-  }> = ({ selectedDate, onDateChange, disablePast = false, disableWeekends = false, allowedDays }) => {
+  }> = ({ selectedDate, onDateChange, disablePast = false, disableWeekends = true, allowedDays }) => {
     const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
   
     useEffect(() => {
@@ -2775,7 +2826,7 @@ const DatePicker: React.FC<{
     required = false, 
     className = "", 
     disablePast = false,
-    disableWeekends = false,
+    disableWeekends = true,
     allowedDays
 }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -2876,8 +2927,16 @@ const DatePicker: React.FC<{
 
 // --- ADMIN DASHBOARD VIEWS ---
 
-const AppointmentsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
-    const [appointments, setAppointments] = useState<AdminAppointment[]>([]);
+interface AppointmentsViewProps {
+  refreshKey?: number;
+  onAddObservation: (appointment: AdminAppointment) => void;
+  appointments: AdminAppointment[];
+  setAppointments: React.Dispatch<React.SetStateAction<AdminAppointment[]>>;
+  onOpenActionMenu: (appointment: AdminAppointment, event: React.MouseEvent) => void;
+  onDeleteObservation: (appointment: AdminAppointment) => void;
+}
+
+const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddObservation, appointments, setAppointments, onOpenActionMenu, onDeleteObservation }) => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedAdminDate, setSelectedAdminDate] = useState(new Date());
@@ -2888,52 +2947,14 @@ const AppointmentsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => 
     const [appointmentToDelete, setAppointmentToDelete] = useState<AdminAppointment | null>(null);
     const [deletingAppointmentId, setDeletingAppointmentId] = useState<string | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [isAppointmentExtraServicesModalOpen, setIsAppointmentExtraServicesModalOpen] = useState(false);
-    const [appointmentForExtraServices, setAppointmentForExtraServices] = useState<AdminAppointment | null>(null);
     const [isStatisticsModalOpen, setIsStatisticsModalOpen] = useState(false);
 
-    const fetchAppointments = useCallback(async () => {
-        setLoading(true);
-        
-        try {
-            // Fetch from both tables to ensure all appointments are displayed
-            const [appointmentsResult, petMovelResult] = await Promise.all([
-                supabase.from('appointments').select('*').order('appointment_time', { ascending: false }),
-                supabase.from('pet_movel_appointments').select('*').order('appointment_time', { ascending: false })
-            ]);
-
-            if (appointmentsResult.error) {
-                console.error('Error fetching appointments:', appointmentsResult.error);
-            }
-            
-            if (petMovelResult.error) {
-                console.error('Error fetching pet_movel_appointments:', petMovelResult.error);
-            }
-
-            // Combine data from both tables
-            const appointmentsData = appointmentsResult.data || [];
-            const petMovelData = petMovelResult.data || [];
-            
-            // Merge and remove duplicates (in case some appointments exist in both tables)
-            const allAppointments = [...appointmentsData, ...petMovelData];
-            const uniqueAppointments = allAppointments.filter((appointment, index, self) => 
-                index === self.findIndex(a => a.id === appointment.id)
-            );
-            
-            // Sort by appointment_time descending
-            uniqueAppointments.sort((a, b) => new Date(b.appointment_time).getTime() - new Date(a.appointment_time).getTime());
-            
-            setAppointments(uniqueAppointments as AdminAppointment[]);
-        } catch (error) {
-            console.error('Error fetching appointments:', error);
-        }
-        
-        setLoading(false);
-    }, []);
-
     useEffect(() => {
-        fetchAppointments();
-    }, [refreshKey]);
+        // A busca de agendamentos agora é feita no componente App
+        // e os dados são passados via props.
+        // Apenas definimos o loading como false aqui.
+        setLoading(false);
+    }, [refreshKey, appointments]);
 
     // FIX: Changed `newStatus` type from `string` to the specific union type to match `AdminAppointment['status']`.
     const handleUpdateStatus = async (id: string, newStatus: 'AGENDADO' | 'CONCLUÍDO') => {
@@ -2958,13 +2979,28 @@ const AppointmentsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => 
             const updatedAppointment = { ...appointmentToUpdate, status: newStatus };
             setAppointments(prev => prev.map(app => app.id === id ? updatedAppointment : app));
             if (newStatus === 'CONCLUÍDO') {
+                // Dispara webhook específico quando for uma visita (Creche ou Hotel)
+                const visitLabels = [
+                    SERVICES[ServiceType.VISIT_DAYCARE].label,
+                    SERVICES[ServiceType.VISIT_HOTEL].label,
+                ];
+                const isVisit = visitLabels.includes(appointmentToUpdate.service);
+                const url = isVisit
+                    ? 'https://n8n.intelektus.tech/webhook/visitaRealizada'
+                    : 'https://n8n.intelektus.tech/webhook/servicoConcluido';
                 try {
-                    await fetch('https://n8n.intelektus.tech/webhook/servicoConcluido', {
+                    await fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ ...updatedAppointment, message: 'Serviço Concluído' }),
+                        body: JSON.stringify({
+                            ...updatedAppointment,
+                            message: isVisit ? 'Visita Realizada' : 'Serviço Concluído',
+                            isVisit,
+                        }),
                     });
-                } catch (webhookError) { console.error('Error sending webhook:', webhookError); }
+                } catch (webhookError) {
+                    console.error('Error sending webhook:', webhookError);
+                }
             }
         }
         setUpdatingStatusId(null);
@@ -2976,24 +3012,12 @@ const AppointmentsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => 
         setAppointments(prev => prev.map(app => app.id === updatedAppointment.id ? updatedAppointment : app));
         handleCloseEditModal();
     };
-    const handleOpenExtraServicesModal = (appointment: AdminAppointment) => {
-        setAppointmentForExtraServices(appointment);
-        setIsAppointmentExtraServicesModalOpen(true);
-    };
-    const handleCloseExtraServicesModal = () => {
-        setAppointmentForExtraServices(null);
-        setIsAppointmentExtraServicesModalOpen(false);
-    };
-    const handleExtraServicesSuccess = (updatedAppointment: AdminAppointment) => {
-        setAppointments(prev => prev.map(app => app.id === updatedAppointment.id ? updatedAppointment : app));
-        handleCloseExtraServicesModal();
-    };
     const handleOpenAddModal = () => {
         setIsAddModalOpen(true);
     };
     const handleCloseAddModal = () => setIsAddModalOpen(false);
-    const handleAppointmentCreated = () => {
-        fetchAppointments();
+    const handleAppointmentCreated = (created: AdminAppointment) => {
+        setAppointments(prev => [created, ...prev]);
         handleCloseAddModal();
     };
     const handleRequestDelete = (appointment: AdminAppointment) => setAppointmentToDelete(appointment);
@@ -3044,21 +3068,11 @@ const AppointmentsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => 
         return { upcomingAppointments: upcoming, pastAppointments: past };
     }, [filteredAppointments, adminView]);
 
-    const renderAppointments = (apps: AdminAppointment[]) => apps.map(app => <AppointmentCard key={app.id} appointment={app} onUpdateStatus={handleUpdateStatus} isUpdating={updatingStatusId === app.id} onEdit={handleOpenEditModal} onDelete={handleRequestDelete} isDeleting={deletingAppointmentId === app.id} onAddExtraServices={handleOpenExtraServicesModal} />);
+    const renderAppointments = (apps: AdminAppointment[]) => apps.map(app => <AppointmentCard key={app.id} appointment={app} onUpdateStatus={handleUpdateStatus} isUpdating={updatingStatusId === app.id} onEdit={handleOpenEditModal} onDelete={handleRequestDelete} isDeleting={deletingAppointmentId === app.id} onOpenActionMenu={onOpenActionMenu} onDeleteObservation={onDeleteObservation} />);
 
     return (
         <>
             {isEditModalOpen && editingAppointment && <EditAppointmentModal appointment={editingAppointment} onClose={handleCloseEditModal} onAppointmentUpdated={handleAppointmentUpdated} />}
-            {isAppointmentExtraServicesModalOpen && appointmentForExtraServices && (
-                <ExtraServicesModal
-                    isOpen={isAppointmentExtraServicesModalOpen}
-                    onClose={handleCloseExtraServicesModal}
-                    onSuccess={handleExtraServicesSuccess}
-                    data={appointmentForExtraServices}
-                    type="appointment"
-                    title="Serviços Extras - Agendamento"
-                />
-            )}
             {isAddModalOpen && <AdminAddAppointmentModal isOpen={isAddModalOpen} onClose={handleCloseAddModal} onAppointmentCreated={handleAppointmentCreated} />}
             {appointmentToDelete && <ConfirmationModal isOpen={!!appointmentToDelete} onClose={() => setAppointmentToDelete(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o agendamento para ${appointmentToDelete.pet_name}?`} confirmText="Excluir" variant="danger" isLoading={deletingAppointmentId === appointmentToDelete.id} />}
             <StatisticsModal isOpen={isStatisticsModalOpen} onClose={() => setIsStatisticsModalOpen(false)} />
@@ -4343,15 +4357,12 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
                                 </div>
                                 <select name="time" onChange={handleRecurrenceChange} value={recurrence.time} className="w-full px-5 py-4 border rounded-lg mt-4 bg-white">{WORKING_HOURS.map(h => <option key={h} value={h}>{`${h}:00`}</option>)}</select>
                                 <div className="mt-4">
-                                    <label htmlFor="paymentDueDateEdit" className="font-semibold text-gray-700 text-sm">Data de Vencimento do Pagamento</label>
-                                    <input 
-                                        type="date" 
-                                        id="paymentDueDateEdit" 
-                                        name="paymentDueDate" 
+                                    <DatePicker 
                                         value={paymentDueDate} 
-                                        onChange={e => setPaymentDueDate(e.target.value)}
+                                        onChange={setPaymentDueDate}
+                                        label="Data de Vencimento do Pagamento"
                                         required
-                                        className="w-full px-5 py-4 border rounded-lg bg-white mt-1" 
+                                        className="w-full mt-1" 
                                     />
                                 </div>
                             </div>
@@ -4761,12 +4772,11 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                         
                         {/* Filtro por Data de Vencimento */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Data de Vencimento</label>
-                            <input
-                                type="date"
+                            <DatePicker
                                 value={filterDueDate}
-                                onChange={(e) => setFilterDueDate(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                onChange={setFilterDueDate}
+                                label="Data de Vencimento"
+                                className="w-full"
                             />
                         </div>
                         
@@ -7507,7 +7517,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                   selectedDate={selectedDate} 
                   onDateChange={setSelectedDate} 
                   disablePast 
-                  disableWeekends={!allowedDays}
+                  disableWeekends={true}
                   allowedDays={(() => {
                     // Para serviços Pet Móvel, definir dias permitidos baseado no condomínio
                     if ([ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_BATH_AND_GROOMING, ServiceType.PET_MOBILE_GROOMING_ONLY].includes(selectedService)) {
@@ -8704,7 +8714,12 @@ const AdminDashboard: React.FC<{
     onLogout: () => void;
     isScheduleOpen: boolean;
     setIsScheduleOpen: (open: boolean) => void;
-}> = ({ onLogout, isScheduleOpen, setIsScheduleOpen }) => {
+    onAddObservation: (appointment: AdminAppointment) => void;
+    appointments: AdminAppointment[];
+    setAppointments: React.Dispatch<React.SetStateAction<AdminAppointment[]>>;
+    onOpenActionMenu: (appointment: AdminAppointment, event: React.MouseEvent) => void;
+    onDeleteObservation: (appointment: AdminAppointment) => void;
+}> = ({ onLogout, isScheduleOpen, setIsScheduleOpen, onAddObservation, appointments, setAppointments, onOpenActionMenu, onDeleteObservation }) => {
     const [activeView, setActiveView] = useState('appointments');
     const [dataKey, setDataKey] = useState(Date.now()); // Used to force re-fetches
     const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -8726,14 +8741,14 @@ const AdminDashboard: React.FC<{
     // Renderiza a view ativa baseada no estado activeView
     const renderActiveView = () => {
         switch (activeView) {
-            case 'appointments': return <AppointmentsView key={dataKey} refreshKey={dataKey} />;
+                case 'appointments': return <AppointmentsView key={dataKey} refreshKey={dataKey} onAddObservation={onAddObservation} appointments={appointments} setAppointments={setAppointments} onOpenActionMenu={onOpenActionMenu} onDeleteObservation={onDeleteObservation} />;
             case 'petMovel': return <PetMovelView key={dataKey} refreshKey={dataKey} />;
             case 'daycare': return <DaycareView key={dataKey} refreshKey={dataKey} setShowDaycareStatistics={setShowDaycareStatistics} />;
             case 'hotel': return <HotelView key={dataKey} refreshKey={dataKey} setShowHotelStatistics={setShowHotelStatistics} />;
             case 'clients': return <ClientsView key={dataKey} refreshKey={dataKey} />;
             case 'monthlyClients': return <MonthlyClientsView onAddClient={handleAddMonthlyClient} onDataChanged={handleDataChanged} />;
             case 'addMonthlyClient': return <AddMonthlyClientView onBack={() => setActiveView('monthlyClients')} onSuccess={() => { handleDataChanged(); setActiveView('monthlyClients'); }}/>;
-            default: return <AppointmentsView key={dataKey} refreshKey={dataKey} />;
+                default: return <AppointmentsView key={dataKey} refreshKey={dataKey} onAddObservation={onAddObservation} appointments={appointments} setAppointments={setAppointments} onOpenActionMenu={onOpenActionMenu} onDeleteObservation={onDeleteObservation} />;
         }
     };
 
@@ -8915,6 +8930,91 @@ const ScheduleClosedPage: React.FC<{ setView: (view: string) => void }> = ({ set
 };
 
 const App: React.FC = () => {
+    const [isObservationModalOpen, setObservationModalOpen] = useState(false);
+    const [selectedAppointmentForObservation, setSelectedAppointmentForObservation] = useState<AdminAppointment | null>(null);
+    const [observationText, setObservationText] = useState('');
+    const [appointments, setAppointments] = useState<AdminAppointment[]>([]);
+
+    // Hooks de carregamento serão posicionados após a autenticação
+
+    const [actionMenu, setActionMenu] = useState<{
+        isOpen: boolean;
+        appointmentId: string | null;
+        position: { top: number; left: number };
+    }>({
+        isOpen: false,
+        appointmentId: null,
+        position: { top: 0, left: 0 },
+    });
+
+    const handleOpenActionMenu = (appointment: AdminAppointment, _event: React.MouseEvent) => {
+        setActionMenu({
+            isOpen: true,
+            appointmentId: appointment.id,
+            position: { top: 0, left: 0 }, // posição não utilizada no modal
+        });
+    };
+
+    const handleCloseActionMenu = () => {
+        setActionMenu({ isOpen: false, appointmentId: null, position: { top: 0, left: 0 } });
+    };
+
+    // Extra Services (Appointment) - Global modal handlers
+    const [isAppointmentExtraServicesModalOpen, setIsAppointmentExtraServicesModalOpen] = useState(false);
+    const [appointmentForExtraServices, setAppointmentForExtraServices] = useState<AdminAppointment | null>(null);
+
+    const handleOpenExtraServicesModal = (appointment: AdminAppointment) => {
+        setAppointmentForExtraServices(appointment);
+        setIsAppointmentExtraServicesModalOpen(true);
+    };
+
+    const handleCloseExtraServicesModal = () => {
+        setAppointmentForExtraServices(null);
+        setIsAppointmentExtraServicesModalOpen(false);
+    };
+
+    const handleAppointmentExtraServicesSuccess = (updatedAppointment: AdminAppointment) => {
+        setAppointments(prev => prev.map(app => app.id === updatedAppointment.id ? updatedAppointment : app));
+        handleCloseExtraServicesModal();
+    };
+
+    // Handlers for Observation Modal
+    const handleOpenObservationModal = (appointment: AdminAppointment) => {
+        setSelectedAppointmentForObservation(appointment);
+        setObservationText(appointment.observation || '');
+        setObservationModalOpen(true);
+        handleCloseActionMenu(); 
+    };
+
+    
+
+    const handleCloseObservationModal = () => {
+        setObservationModalOpen(false);
+        setSelectedAppointmentForObservation(null);
+    };
+
+    const handleSaveObservation = async (observation: string) => {
+        if (!selectedAppointmentForObservation) return;
+
+        const { data, error } = await supabase
+            .from('appointments')
+            .update({ observation: observation })
+            .eq('id', selectedAppointmentForObservation.id)
+            .select();
+
+        if (error) {
+            console.error('Error updating observation:', error);
+        } else if (data) {
+            setAppointments(prev =>
+                prev.map(appt =>
+                    appt.id === selectedAppointmentForObservation.id
+                        ? { ...appt, observation: observation }
+                        : appt
+                )
+            );
+            handleCloseObservationModal();
+        }
+    };
     const [view, setView] = useState<'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration'>('scheduler');
     
     // Debug: Log mudanças de view
@@ -9012,6 +9112,63 @@ const App: React.FC = () => {
         }
     }, [isScheduleOpen]);
 
+    // Ao autenticar, carregar agendamentos de Banho & Tosa, Pet Móvel e Mensalistas
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        let cancelled = false;
+
+        const loadAllAdminAppointments = async () => {
+            try {
+                const { data: bathAppointments, error: bathError } = await supabase
+                    .from('appointments')
+                    .select('*');
+                if (bathError) console.warn('Erro ao buscar appointments (Banho & Tosa):', bathError);
+
+                const { data: petMovelAppointments, error: petMovelError } = await supabase
+                    .from('pet_movel_appointments')
+                    .select('*');
+                if (petMovelError) console.warn('Erro ao buscar pet_movel_appointments:', petMovelError);
+
+                const normalize = (arr: any[] | null | undefined): AdminAppointment[] => {
+                    if (!arr) return [];
+                    return arr.map((rec: any) => ({
+                        id: rec.id,
+                        appointment_time: rec.appointment_time,
+                        pet_name: rec.pet_name,
+                        pet_breed: rec.pet_breed ?? undefined,
+                        owner_name: rec.owner_name,
+                        owner_address: rec.owner_address ?? undefined,
+                        whatsapp: rec.whatsapp,
+                        service: rec.service,
+                        weight: rec.weight,
+                        addons: rec.addons ?? [],
+                        price: rec.price ?? 0,
+                        status: rec.status,
+                        monthly_client_id: rec.monthly_client_id ?? undefined,
+                        condominium: rec.condominium ?? undefined,
+                        extra_services: rec.extra_services ?? undefined,
+                        observation: rec.observation ?? undefined,
+                    }));
+                };
+
+                const combined = [
+                    ...normalize(bathAppointments),
+                    ...normalize(petMovelAppointments),
+                ].sort((a, b) => new Date(a.appointment_time).getTime() - new Date(b.appointment_time).getTime());
+
+                if (!cancelled) setAppointments(combined);
+            } catch (err) {
+                console.warn('Falha ao carregar agendamentos:', err);
+            }
+        };
+
+        loadAllAdminAppointments();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isAuthenticated]);
+
     if (loadingAuth) {
         return <div className="min-h-screen flex items-center justify-center bg-gray-100"><LoadingSpinner /></div>;
     }
@@ -9033,7 +9190,62 @@ const App: React.FC = () => {
                     onLogout={handleLogout} 
                     isScheduleOpen={isScheduleOpen}
                     setIsScheduleOpen={setIsScheduleOpen}
+                    onAddObservation={handleOpenObservationModal}
+                    appointments={appointments}
+                    setAppointments={setAppointments}
+                    handleOpenExtraServicesModal={handleOpenExtraServicesModal}
+                    onOpenActionMenu={handleOpenActionMenu}
+                    onDeleteObservation={async (appointment: AdminAppointment) => {
+                        try {
+                            const [appointmentsResult, petMovelResult] = await Promise.all([
+                                supabase.from('appointments').update({ observation: null }).eq('id', appointment.id),
+                                supabase.from('pet_movel_appointments').update({ observation: null }).eq('id', appointment.id)
+                            ]);
+                            const hasError = appointmentsResult.error && petMovelResult.error;
+                            if (hasError) {
+                                console.error('Erro ao remover observação em appointments:', appointmentsResult.error);
+                                console.error('Erro ao remover observação em pet_movel_appointments:', petMovelResult.error);
+                                alert('Falha ao remover a observação.');
+                            } else {
+                                setAppointments(prev => prev.map(app => app.id === appointment.id ? { ...app, observation: undefined } : app));
+                            }
+                        } catch (err) {
+                            console.error('Erro inesperado ao remover observação:', err);
+                            alert('Erro inesperado ao remover a observação.');
+                        }
+                    }}
                 />
+
+                {isObservationModalOpen && selectedAppointmentForObservation && (
+                    <ObservationModal
+                        isOpen={isObservationModalOpen}
+                        onClose={handleCloseObservationModal}
+                        onSave={handleSaveObservation}
+                        initialObservation={selectedAppointmentForObservation.observation || ''}
+                    />
+                )}
+                <ActionChooserModal 
+                    isOpen={actionMenu.isOpen}
+                    onClose={handleCloseActionMenu}
+                    onAddObservation={() => {
+                        const appt = appointments.find(a => a.id === actionMenu.appointmentId);
+                        if (appt) handleOpenObservationModal(appt);
+                    }}
+                    onAddExtraServices={() => {
+                        const appt = appointments.find(a => a.id === actionMenu.appointmentId);
+                        if (appt) handleOpenExtraServicesModal(appt);
+                    }}
+                />
+                {isAppointmentExtraServicesModalOpen && appointmentForExtraServices && (
+                    <ExtraServicesModal
+                        isOpen={isAppointmentExtraServicesModalOpen}
+                        onClose={handleCloseExtraServicesModal}
+                        onSuccess={handleAppointmentExtraServicesSuccess}
+                        data={appointmentForExtraServices}
+                        type="appointment"
+                        title="Serviços Extras - Agendamento"
+                    />
+                )}
             </>
         );
     }
@@ -9050,12 +9262,58 @@ const App: React.FC = () => {
         return <HotelRegistrationForm setView={setViewWithLog} />;
     }
 
-    // Se a agenda estiver fechada, exibe a página de agenda fechada
     if (!isScheduleOpen) {
         return <ScheduleClosedPage setView={setViewWithLog} />;
     }
 
     return <Scheduler setView={setViewWithLog} />;
+};
+
+// Observation Modal Component
+const ObservationModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (observation: string) => void;
+    initialObservation: string;
+}> = ({ isOpen, onClose, onSave, initialObservation }) => {
+    const [observation, setObservation] = useState(initialObservation);
+
+    useEffect(() => {
+        setObservation(initialObservation);
+    }, [initialObservation]);
+
+    if (!isOpen) return null;
+
+    const handleSave = () => {
+        onSave(observation);
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fadeIn">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md animate-scaleIn">
+                <div className="p-6 border-b">
+                    <h2 className="text-2xl font-bold text-gray-800">Adicionar/Editar Observação</h2>
+                </div>
+                <div className="p-6">
+                    <textarea
+                        value={observation}
+                        onChange={(e) => setObservation(e.target.value)}
+                        className="w-full h-40 p-3 border rounded-lg focus:ring-2 focus:ring-pink-500"
+                        placeholder="Digite a observação aqui..."
+                    />
+                </div>
+                <div className="p-4 bg-gray-50 flex justify-end gap-3 rounded-b-2xl">
+                    <button onClick={onClose} className="px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">
+                        Cancelar
+                    </button>
+                    <button onClick={handleSave} className="px-6 py-2.5 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors">
+                        Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 export default App;

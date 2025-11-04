@@ -50,6 +50,7 @@ export interface AdminAppointment {
   addons: string[];
   whatsapp: string;
   weight: string;
+  observation?: string;
   monthly_client_id?: string;
   owner_address?: string;
   pet_breed?: string;
