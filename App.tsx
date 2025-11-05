@@ -2612,6 +2612,31 @@ const AppointmentCard: React.FC<{
     const { id, appointment_time, pet_name, owner_name, service, status, price, addons, whatsapp, monthly_client_id, observation } = appointment;
     const isCompleted = status === 'CONCLUÍDO';
     
+    // Calcular total de serviços extras do agendamento (soma ao preço exibido)
+    const es: any = (appointment as any).extra_services || null;
+    const extrasTotal: number = (() => {
+        if (!es) return 0;
+        let total = 0;
+        if (es.pernoite?.enabled) total += Number(es.pernoite.value || 0);
+        if (es.banho_tosa?.enabled) total += Number(es.banho_tosa.value || 0);
+        if (es.so_banho?.enabled) total += Number(es.so_banho.value || 0);
+        if (es.adestrador?.enabled) total += Number(es.adestrador.value || 0);
+        if (es.despesa_medica?.enabled) total += Number(es.despesa_medica.value || 0);
+        if (es.dias_extras?.quantity > 0) total += Number(es.dias_extras.quantity) * Number(es.dias_extras.value || 0);
+        return total;
+    })();
+    const hasExtras: boolean = Boolean(
+        es && (
+            es.pernoite?.enabled ||
+            es.banho_tosa?.enabled ||
+            es.so_banho?.enabled ||
+            es.adestrador?.enabled ||
+            es.despesa_medica?.enabled ||
+            (es.dias_extras?.quantity > 0)
+        )
+    );
+    const displayPrice: number = Number(price || 0) + extrasTotal;
+    
     const statusStyles: Record<string, string> = {
         'AGENDADO': 'bg-blue-100 text-blue-800',
         'CONCLUÍDO': 'bg-green-100 text-green-800',
@@ -2667,7 +2692,11 @@ const AppointmentCard: React.FC<{
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
-                    <p className="text-2xl font-bold text-gray-800">R$ {(price ?? 0).toFixed(2).replace('.', ',')}</p>
+                    <p className="text-2xl font-bold text-gray-800">R$ {displayPrice.toFixed(2).replace('.', ',')}
+                        {hasExtras && (
+                            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700" title="Serviços extras adicionados">(i)</span>
+                        )}
+                    </p>
                     <div className="flex items-center gap-2">
                         <button 
                             onClick={(e) => onOpenActionMenu(appointment, e)}
@@ -4216,6 +4245,22 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
             return;
         }
 
+        // Também limpar agendamentos de Pet Móvel quando aplicável
+        const isPetMovelSelected = !!selectedService && [ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_BATH_AND_GROOMING, ServiceType.PET_MOBILE_GROOMING_ONLY].includes(selectedService as ServiceType);
+        const looksLikePetMovel = typeof client.service === 'string' && client.service.toLowerCase().includes('pet móvel');
+        if (isPetMovelSelected || looksLikePetMovel) {
+            const { error: deletePetMovelError } = await supabase
+                .from('pet_movel_appointments')
+                .delete()
+                .eq('monthly_client_id', client.id)
+                .gte('appointment_time', today);
+            if (deletePetMovelError) {
+                setAlertInfo({ title: 'Erro', message: "Erro ao limpar agendamentos de Pet Móvel antigos.", variant: 'error' });
+                setIsSubmitting(false);
+                return;
+            }
+        }
+
         const updatePayload = {
             pet_name: formData.petName,
             pet_breed: formData.petBreed,
@@ -4302,11 +4347,40 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
             }));
 
             if (supabasePayloads.length > 0) {
-                const { error: insertError } = await supabase.from('appointments').insert(supabasePayloads);
-                if (insertError) {
-                    setAlertInfo({ title: 'Erro Parcial', message: "Os dados do mensalista foram atualizados, mas houve um erro ao recriar os agendamentos futuros.", variant: 'error' });
+                if (isPetMovelSelected || looksLikePetMovel) {
+                    // Montar payloads para pet_movel_appointments com nomenclatura do módulo Pet Móvel
+                    const petMovelPayloads = appointmentsToCreate.map(app => ({
+                        client_name: formData.ownerName,
+                        pet_name: formData.petName,
+                        service: SERVICES[selectedService!].label,
+                        appointment_time: app.appointment_time,
+                        status: 'AGENDADO',
+                        price: price / appointmentsToCreate.length,
+                        phone: formData.whatsapp,
+                        notes: `Pet: ${formData.petName}, Raça: ${formData.petBreed}, Peso: ${PET_WEIGHT_OPTIONS[selectedWeight!]}, Endereço: ${formData.ownerAddress}`,
+                        address: formData.ownerAddress,
+                        condo: formData.condominium,
+                        monthly_client_id: client.id,
+                    }));
+
+                    const [appointmentsResult, petMovelResult] = await Promise.all([
+                        supabase.from('appointments').insert(supabasePayloads),
+                        supabase.from('pet_movel_appointments').insert(petMovelPayloads),
+                    ]);
+
+                    if (appointmentsResult.error || petMovelResult.error) {
+                        const errorMsg = appointmentsResult.error?.message || petMovelResult.error?.message || 'Erro desconhecido';
+                        setAlertInfo({ title: 'Erro Parcial', message: `Dados atualizados, mas falha ao recriar agendamentos: ${errorMsg}`, variant: 'error' });
+                    } else {
+                        setAlertInfo({ title: 'Sucesso!', message: "Mensalista atualizado e agendamentos (incluindo Pet Móvel) recriados com sucesso!", variant: 'success' });
+                    }
                 } else {
-                    setAlertInfo({ title: 'Sucesso!', message: "Mensalista atualizado e agendamentos futuros recriados com sucesso!", variant: 'success' });
+                    const { error: insertError } = await supabase.from('appointments').insert(supabasePayloads);
+                    if (insertError) {
+                        setAlertInfo({ title: 'Erro Parcial', message: "Os dados do mensalista foram atualizados, mas houve um erro ao recriar os agendamentos futuros.", variant: 'error' });
+                    } else {
+                        setAlertInfo({ title: 'Sucesso!', message: "Mensalista atualizado e agendamentos futuros recriados com sucesso!", variant: 'success' });
+                    }
                 }
             } else {
                 setAlertInfo({ title: 'Sucesso', message: "Dados do mensalista atualizados. Nenhum agendamento futuro foi criado com as novas regras.", variant: 'success' });
@@ -4973,6 +5047,16 @@ const MonthlyClientCard: React.FC<{
     };
 
     const totalInvoiceValue = calculateTotalInvoiceValue(client);
+    const hasMonthlyExtras: boolean = Boolean(
+        client.extra_services && (
+            client.extra_services.pernoite?.enabled ||
+            client.extra_services.banho_tosa?.enabled ||
+            client.extra_services.so_banho?.enabled ||
+            client.extra_services.adestrador?.enabled ||
+            client.extra_services.despesa_medica?.enabled ||
+            (client.extra_services.dias_extras?.quantity > 0)
+        )
+    );
 
     return (
         <div 
@@ -5002,7 +5086,11 @@ const MonthlyClientCard: React.FC<{
                     </div>
                     <div className="text-right">
                         <p className="text-xs text-pink-100">Valor Total</p>
-                        <p className="text-lg font-bold">R$ {totalInvoiceValue.toFixed(2).replace('.', ',')}</p>
+                        <p className="text-lg font-bold">R$ {totalInvoiceValue.toFixed(2).replace('.', ',')}
+                            {hasMonthlyExtras && (
+                                <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700" title="Serviços extras adicionados">(i)</span>
+                            )}
+                        </p>
                     </div>
                 </div>
             </div>
@@ -9136,18 +9224,19 @@ const App: React.FC = () => {
                         appointment_time: rec.appointment_time,
                         pet_name: rec.pet_name,
                         pet_breed: rec.pet_breed ?? undefined,
-                        owner_name: rec.owner_name,
-                        owner_address: rec.owner_address ?? undefined,
-                        whatsapp: rec.whatsapp,
+                        // Fallbacks para registros de Pet Móvel com nomenclatura diferente
+                        owner_name: rec.owner_name ?? rec.client_name ?? '',
+                        owner_address: rec.owner_address ?? rec.address ?? undefined,
+                        whatsapp: rec.whatsapp ?? rec.phone ?? '',
                         service: rec.service,
                         weight: rec.weight,
                         addons: rec.addons ?? [],
                         price: rec.price ?? 0,
                         status: rec.status,
                         monthly_client_id: rec.monthly_client_id ?? undefined,
-                        condominium: rec.condominium ?? undefined,
+                        condominium: rec.condominium ?? rec.condo ?? undefined,
                         extra_services: rec.extra_services ?? undefined,
-                        observation: rec.observation ?? undefined,
+                        observation: rec.observation ?? rec.notes ?? undefined,
                     }));
                 };
 
