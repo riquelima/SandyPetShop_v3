@@ -61,7 +61,8 @@ export const ADDON_SERVICES: AddonService[] = [
   { id: 'aparacao', label: 'Aparação Contorno', price: 35 },
   // Rule: Only available for pets over 5kg.
   { id: 'hidratacao', label: 'Hidratação', price: 25, excludesWeight: [PetWeight.UP_TO_5] },
-  { id: 'tosa_higienica', label: 'Tosa Higiênica', price: 15 },
+  // Ajuste: Tosa Higiênica não deve somar valor adicional (R$ 0)
+  { id: 'tosa_higienica', label: 'Tosa Higiênica', price: 0 },
   { id: 'botinhas', label: 'Botinhas', price: 25 },
   { id: 'desembolo', label: 'Desembolo', price: 25 }, 
   { id: 'patacure1', label: 'Patacure (1 cor)', price: 10 },
