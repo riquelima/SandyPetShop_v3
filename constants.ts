@@ -2,7 +2,7 @@ import { ServiceType, PetWeight, AddonService } from './types';
 
 export const SERVICES = {
   [ServiceType.BATH]: {
-    label: 'Só Banho',
+    label: 'Banho',
     duration: 1, // in hours
   },
   [ServiceType.BATH_AND_GROOMING]: {
@@ -22,7 +22,7 @@ export const SERVICES = {
     duration: 1, // in hours
   },
   [ServiceType.PET_MOBILE_BATH]: {
-    label: 'Só Banho (Pet Móvel)',
+    label: 'Banho (Pet Móvel)',
     duration: 1.5,
   },
   [ServiceType.PET_MOBILE_BATH_AND_GROOMING]: {

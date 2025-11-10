@@ -7533,9 +7533,6 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                              <button type="button" onClick={() => setSelectedService(ServiceType.BATH_AND_GROOMING)} className={`p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center h-full ${selectedService === ServiceType.BATH_AND_GROOMING ? 'bg-pink-600 text-white border-pink-600 shadow-lg' : 'bg-white hover:bg-pink-50 border-gray-200'}`}>
                                 <span className="text-lg">{SERVICES[ServiceType.BATH_AND_GROOMING].label}</span>
                             </button>
-                            <button type="button" onClick={() => setSelectedService(ServiceType.GROOMING_ONLY)} className={`p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center h-full ${selectedService === ServiceType.GROOMING_ONLY ? 'bg-pink-600 text-white border-pink-600 shadow-lg' : 'bg-white hover:bg-pink-50 border-gray-200'}`}>
-                                <span className="text-lg">{SERVICES[ServiceType.GROOMING_ONLY].label}</span>
-                            </button>
                         </div>
                         <button type="button" onClick={() => { setServiceStepView('main'); setSelectedService(null); }} className="text-sm text-pink-600 hover:underline">← Voltar</button>
                     </div>
@@ -7546,13 +7543,10 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                         <h3 className="text-md font-semibold text-gray-700 mb-2">1. Serviço Principal (Pet Móvel)</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <button type="button" onClick={() => setSelectedService(ServiceType.PET_MOBILE_BATH)} className={`p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center h-full ${selectedService === ServiceType.PET_MOBILE_BATH ? 'bg-pink-600 text-white border-pink-600 shadow-lg' : 'bg-white hover:bg-pink-50 border-gray-200'}`}>
-                                <span className="text-lg">Só Banho</span>
+                                <span className="text-lg">Banho</span>
                             </button>
                             <button type="button" onClick={() => setSelectedService(ServiceType.PET_MOBILE_BATH_AND_GROOMING)} className={`p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center h-full ${selectedService === ServiceType.PET_MOBILE_BATH_AND_GROOMING ? 'bg-pink-600 text-white border-pink-600 shadow-lg' : 'bg-white hover:bg-pink-50 border-gray-200'}`}>
                                 <span className="text-lg">Banho & Tosa</span>
-                            </button>
-                            <button type="button" onClick={() => setSelectedService(ServiceType.PET_MOBILE_GROOMING_ONLY)} className={`p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center h-full ${selectedService === ServiceType.PET_MOBILE_GROOMING_ONLY ? 'bg-pink-600 text-white border-pink-600 shadow-lg' : 'bg-white hover:bg-pink-50 border-gray-200'}`}>
-                                <span className="text-lg">Só Tosa</span>
                             </button>
                         </div>
                         <button type="button" onClick={() => { setServiceStepView('pet_movel_condo'); setSelectedService(null); }} className="text-sm text-pink-600 hover:underline">← Voltar</button>
