@@ -2674,7 +2674,7 @@ const AppointmentCard: React.FC<{
                             <TagIcon />
                             <span className="font-semibold mr-2">Serviço:</span> {service}
                         </div>
-                        {(service === 'Creche Pet' || service === 'Hotel Pet') && (
+                        {((service === 'Creche Pet' || service === 'Hotel Pet') && !monthly_client_id) && (
                             <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                 🏠 Visita
                             </span>
@@ -3009,11 +3009,12 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
             setAppointments(prev => prev.map(app => app.id === id ? updatedAppointment : app));
             if (newStatus === 'CONCLUÍDO') {
                 // Dispara webhook específico quando for uma visita (Creche ou Hotel)
-                const visitLabels = [
-                    SERVICES[ServiceType.VISIT_DAYCARE].label,
-                    SERVICES[ServiceType.VISIT_HOTEL].label,
-                ];
-                const isVisit = visitLabels.includes(appointmentToUpdate.service);
+            const visitLabels = [
+            SERVICES[ServiceType.VISIT_DAYCARE].label,
+            SERVICES[ServiceType.VISIT_HOTEL].label,
+            ];
+            // Só considera visita quando não for mensalista
+            const isVisit = visitLabels.includes(appointmentToUpdate.service) && !appointmentToUpdate.monthly_client_id;
                 const url = isVisit
                     ? 'https://n8n.intelektus.tech/webhook/visitaRealizada'
                     : 'https://n8n.intelektus.tech/webhook/servicoConcluido';
@@ -3794,7 +3795,7 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                                                     {appointment.status === 'confirmed' ? 'Confirmado' :
                                                      appointment.status === 'pending' ? 'Pendente' : 'Cancelado'}
                                                 </span>
-                                                {(appointment.service === 'Creche Pet' || appointment.service === 'Hotel Pet') && (
+                                                {((appointment.service === 'Creche Pet' || appointment.service === 'Hotel Pet') && !appointment.monthly_client_id) && (
                                                     <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                                         🏠 Visita
                                                     </span>
@@ -3911,7 +3912,7 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                                                         }`}>
                                                             {appointment.status}
                                                         </div>
-                                                        {(appointment.service === 'Creche Pet' || appointment.service === 'Hotel Pet') && (
+                                                        {((appointment.service === 'Creche Pet' || appointment.service === 'Hotel Pet') && !appointment.monthly_client_id) && (
                                                 <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                                     🏠 Visita
                                                 </span>
@@ -4212,8 +4213,13 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        if (name === 'price') setPrice(value); // Permite digitação livre do preço
-        else setFormData(prev => ({ ...prev, [name]: name === 'whatsapp' ? formatWhatsapp(value) : value }));
+        if (name === 'price') {
+            // Converter para número e evitar enviar string vazia que quebra numeric no banco
+            const numeric = Number(value);
+            setPrice(Number.isFinite(numeric) ? numeric : 0);
+        } else {
+            setFormData(prev => ({ ...prev, [name]: name === 'whatsapp' ? formatWhatsapp(value) : value }));
+        }
     };
 
 // FIX: Ensure recurrence day and time are stored as numbers to prevent comparison/arithmetic errors.
@@ -4261,6 +4267,11 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
             }
         }
 
+        // Fallbacks seguros para evitar violação de NOT NULL no banco
+        const safeRecurrenceDay = Number.isFinite(Number(recurrence.day)) ? parseInt(String(recurrence.day), 10) : client.recurrence_day;
+        const safeRecurrenceTime = Number.isFinite(Number(recurrence.time)) ? parseInt(String(recurrence.time), 10) : client.recurrence_time;
+        const safePrice = Number.isFinite(Number(price)) ? Number(price) : (client as any).price || 0;
+
         const updatePayload = {
             pet_name: formData.petName,
             pet_breed: formData.petBreed,
@@ -4270,10 +4281,10 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
             condominium: formData.condominium,
             service: selectedService ? SERVICES[selectedService].label : client.service,
             weight: selectedWeight ? PET_WEIGHT_OPTIONS[selectedWeight] : (client as any).weight,
-            price,
+            price: safePrice,
             recurrence_type: recurrence.type,
-            recurrence_day: parseInt(String(recurrence.day), 10),
-            recurrence_time: parseInt(String(recurrence.time), 10),
+            recurrence_day: safeRecurrenceDay,
+            recurrence_time: safeRecurrenceTime,
             payment_due_date: paymentDueDate,
             is_active: isActive,
             payment_status: paymentStatus,
@@ -4479,6 +4490,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
     const [alertInfo, setAlertInfo] = useState<{ title: string; message: string; variant: 'success' | 'error' } | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
+    const [showArchived, setShowArchived] = useState(false);
     
     // Estados para filtros
     const [showFilterPanel, setShowFilterPanel] = useState(false);
@@ -4495,6 +4507,9 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
     
     // Estado para dados de creche
     const [daycareEnrollments, setDaycareEnrollments] = useState<DaycareRegistration[]>([]);
+
+    const archivedCount = useMemo(() => monthlyClients.filter(c => c.payment_status === 'Pago').length, [monthlyClients]);
+    const pendingCount = useMemo(() => monthlyClients.filter(c => c.payment_status === 'Pendente').length, [monthlyClients]);
 
     const createTestData = async () => {
         console.log('Criando dados de teste...');
@@ -4649,7 +4664,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
         }
     };
 
-    // Filter and sort clients based on search term and filters
+    // Filter and sort clients based on search term, filters and archive toggle
     const filteredClients = useMemo(() => {
         let filtered = monthlyClients;
         
@@ -4681,6 +4696,9 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
             });
             console.log('Clientes após filtro:', filtered.length);
         }
+
+        // Filtro por arquivados/pedentes
+        filtered = filtered.filter(client => showArchived ? client.payment_status === 'Pago' : client.payment_status === 'Pendente');
         
         // Ordenação
         if (sortBy === 'pet-az') {
@@ -4693,7 +4711,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
         }
         
         return filtered;
-    }, [monthlyClients, searchTerm, filterCondominium, filterDueDate, sortBy]);
+    }, [monthlyClients, searchTerm, filterCondominium, filterDueDate, sortBy, showArchived]);
 
     const handleTogglePaymentStatus = async (client: MonthlyClient, e: React.MouseEvent) => {
         e.stopPropagation(); // Prevent the card's onClick from firing
@@ -4781,6 +4799,38 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                             </svg>
                             Lista
+                        </button>
+                    </div>
+
+                    {/* Toggle de Arquivados/Pendentes */}
+                    <div className="flex bg-gray-100 rounded-lg p-1">
+                        <button
+                            onClick={() => setShowArchived(false)}
+                            className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
+                                !showArchived
+                                ? 'bg-white text-blue-600 shadow-sm' 
+                                : 'text-gray-600 hover:text-gray-800'
+                            }`}
+                            title="Mostrar Pendentes"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
+                            </svg>
+                            Pendentes ({pendingCount})
+                        </button>
+                        <button
+                            onClick={() => setShowArchived(true)}
+                            className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
+                                showArchived
+                                ? 'bg-white text-green-600 shadow-sm' 
+                                : 'text-gray-600 hover:text-gray-800'
+                            }`}
+                            title="Mostrar Arquivados"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M6 10h12M8 13h8M10 16h4" />
+                            </svg>
+                            Arquivados ({archivedCount})
                         </button>
                     </div>
                     
@@ -4902,6 +4952,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                                     onAddExtraServices={() => handleAddExtraServices(client)}
                                     onTogglePaymentStatus={(e) => handleTogglePaymentStatus(client, e)}
                                     isClientInDaycare={isClientInDaycare(client)}
+                                
                                 />
                             ))}
                         </div>
@@ -5200,6 +5251,33 @@ const MonthlyClientCard: React.FC<{
                     Serviços Extras
                 </button>
                 <div className="flex gap-1">
+                    {/* Botão Arquivar/Desarquivar */}
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onTogglePaymentStatus(client, e); }}
+                        className={`px-3 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center gap-1 ${
+                            client.payment_status === 'Pendente' 
+                            ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
+                            : 'bg-green-100 text-green-700 hover:bg-green-200'
+                        }`}
+                        aria-label={client.payment_status === 'Pendente' ? 'Arquivar mensalista' : 'Desarquivar mensalista'}
+                        title={client.payment_status === 'Pendente' ? 'Arquivar mensalista (marca como Pago)' : 'Desarquivar mensalista (marca como Pendente)'}
+                    >
+                        {client.payment_status === 'Pendente' ? (
+                            <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0l-4 4H8l-4-4m16 0H4" />
+                                </svg>
+                                Arquivar
+                            </>
+                        ) : (
+                            <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16m-2 4H6m2 4h8" />
+                                </svg>
+                                Desarquivar
+                            </>
+                        )}
+                    </button>
                     <button 
                         onClick={(e) => { e.stopPropagation(); onEdit(client); }}
                         className="p-2 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors"
@@ -8816,6 +8894,56 @@ const AdminDashboard: React.FC<{
 
     const handleDataChanged = () => setDataKey(Date.now());
     const handleAddMonthlyClient = () => setActiveView('addMonthlyClient');
+
+    // Reload combined appointments when dataKey changes (e.g., after creating mensalista)
+    useEffect(() => {
+        const loadAllAdminAppointments = async () => {
+            try {
+                const { data: bathAppointments, error: bathError } = await supabase
+                    .from('appointments')
+                    .select('*');
+                if (bathError) console.warn('Erro ao buscar appointments (Banho & Tosa):', bathError);
+
+                const { data: petMovelAppointments, error: petMovelError } = await supabase
+                    .from('pet_movel_appointments')
+                    .select('*');
+                if (petMovelError) console.warn('Erro ao buscar pet_movel_appointments:', petMovelError);
+
+                const normalize = (arr: any[] | null | undefined): AdminAppointment[] => {
+                    if (!arr) return [];
+                    return arr.map((rec: any) => ({
+                        id: rec.id,
+                        appointment_time: rec.appointment_time,
+                        pet_name: rec.pet_name,
+                        pet_breed: rec.pet_breed ?? undefined,
+                        owner_name: rec.owner_name ?? rec.client_name ?? '',
+                        owner_address: rec.owner_address ?? rec.address ?? undefined,
+                        whatsapp: rec.whatsapp ?? rec.phone ?? '',
+                        service: rec.service,
+                        weight: rec.weight,
+                        addons: rec.addons ?? [],
+                        price: rec.price ?? 0,
+                        status: rec.status,
+                        monthly_client_id: rec.monthly_client_id ?? undefined,
+                        condominium: rec.condominium ?? rec.condo ?? undefined,
+                        extra_services: rec.extra_services ?? undefined,
+                        observation: rec.observation ?? rec.notes ?? undefined,
+                    }));
+                };
+
+                const combined = [
+                    ...normalize(bathAppointments),
+                    ...normalize(petMovelAppointments),
+                ].sort((a, b) => new Date(a.appointment_time).getTime() - new Date(b.appointment_time).getTime());
+
+                setAppointments(combined);
+            } catch (err) {
+                console.warn('Falha ao recarregar agendamentos após alteração de dados:', err);
+            }
+        };
+
+        loadAllAdminAppointments();
+    }, [dataKey]);
     
     const menuItems = [
         { id: 'appointments', label: 'Banho & Tosa', icon: <BathTosaIcon/> },
