@@ -4760,84 +4760,77 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
             {deletingClient && <ConfirmationModal isOpen={!!deletingClient} onClose={() => setDeletingClient(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o mensalista ${deletingClient.pet_name}? Todos os seus agendamentos futuros também serão removidos.`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
             
             <div className="mb-6">
-                <h2 className="text-3xl font-bold text-gray-800 truncate mb-4">Clientes Mensalistas</h2>
-                <div className="flex items-center gap-3 mb-4">
+                <h2 className="text-xl sm:text-3xl font-bold text-gray-800 truncate mb-4">Clientes Mensalistas</h2>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 mb-4">
                     <div className="flex-1">
                         <input
                             type="text"
                             placeholder="Buscar por nome do pet ou dono..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-white"
+                            className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-white"
                         />
                     </div>
                     
                     {/* Toggle de Visualização */}
-                    <div className="flex bg-gray-100 rounded-lg p-1">
+                    <div className="flex flex-wrap bg-gray-100 rounded-lg p-1">
                         <button
                             onClick={() => setViewMode('cards')}
-                            className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
+                            className={`px-2.5 sm:px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
                                 viewMode === 'cards' 
                                 ? 'bg-white text-pink-600 shadow-sm' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}
                         >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                             </svg>
                             Cards
                         </button>
                         <button
                             onClick={() => setViewMode('list')}
-                            className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
+                            className={`px-2.5 sm:px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
                                 viewMode === 'list' 
                                 ? 'bg-white text-pink-600 shadow-sm' 
                                 : 'text-gray-600 hover:text-gray-800'
                             }`}
                         >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                             </svg>
                             Lista
                         </button>
                     </div>
 
-                    {/* Toggle de Arquivados/Pendentes */}
-                    <div className="flex bg-gray-100 rounded-lg p-1">
+                    {/* Toggle único Pendentes/Arquivados */}
+                    <div className="bg-gray-100 rounded-lg p-1">
                         <button
-                            onClick={() => setShowArchived(false)}
-                            className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
-                                !showArchived
-                                ? 'bg-white text-blue-600 shadow-sm' 
-                                : 'text-gray-600 hover:text-gray-800'
-                            }`}
-                            title="Mostrar Pendentes"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
-                            </svg>
-                            Pendentes ({pendingCount})
-                        </button>
-                        <button
-                            onClick={() => setShowArchived(true)}
-                            className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
+                            onClick={() => setShowArchived(prev => !prev)}
+                            className={`px-2.5 sm:px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
                                 showArchived
                                 ? 'bg-white text-green-600 shadow-sm' 
-                                : 'text-gray-600 hover:text-gray-800'
+                                : 'bg-white text-blue-600 shadow-sm'
                             }`}
-                            title="Mostrar Arquivados"
+                            title={showArchived ? 'Mostrar Pendentes' : 'Mostrar Arquivados'}
+                            aria-label={showArchived ? 'Mostrar Pendentes' : 'Mostrar Arquivados'}
                         >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M6 10h12M8 13h8M10 16h4" />
-                            </svg>
-                            Arquivados ({archivedCount})
+                            {showArchived ? (
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M6 10h12M8 13h8M10 16h4" />
+                                </svg>
+                            ) : (
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
+                                </svg>
+                            )}
+                            {showArchived ? `Arquivados (${archivedCount})` : `Pendentes (${pendingCount})`}
                         </button>
                     </div>
                     
                     {/* Botão de Filtro */}
                     <button 
                         onClick={() => setShowFilterPanel(!showFilterPanel)}
-                        className={`px-3 py-2.5 rounded-lg transition-colors flex items-center justify-center ${
+                        className={`px-3 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-colors flex items-center justify-center ${
                             showFilterPanel 
                             ? 'bg-blue-600 text-white' 
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -4852,7 +4845,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                     {/* Botão de Estatísticas */}
                     <button 
                         onClick={() => setShowStatisticsModal(true)}
-                        className="bg-green-600 text-white font-semibold py-2.5 px-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
+                        className="bg-green-600 text-white font-semibold py-2 sm:py-2.5 px-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
                         title="Estatísticas"
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4860,7 +4853,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                         </svg>
                     </button>
                     
-                    <button onClick={onAddClient} className="bg-pink-600 text-white font-semibold py-2.5 px-3 rounded-lg hover:bg-pink-700 transition-colors flex items-center justify-center">
+                    <button onClick={onAddClient} className="bg-pink-600 text-white font-semibold py-2 sm:py-2.5 px-3 rounded-lg hover:bg-pink-700 transition-colors flex items-center justify-center">
                         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                         </svg>
@@ -4942,7 +4935,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                 filteredClients.length > 0 ? (
                     viewMode === 'cards' ? (
                         // Visualização em Cards
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                             {filteredClients.map(client => (
                                 <MonthlyClientCard
                                     key={client.id}
@@ -5111,21 +5104,21 @@ const MonthlyClientCard: React.FC<{
 
     return (
         <div 
-            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] cursor-pointer overflow-hidden border border-gray-100"
+            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform md:hover:scale-[1.02] cursor-pointer overflow-hidden border border-gray-100 w-full max-w-full"
             onClick={() => onClick(client)}
         >
             {/* Header do Card */}
-            <div className="bg-gradient-to-r from-pink-500 to-purple-600 p-4 text-white">
+            <div className="bg-gradient-to-r from-pink-500 to-purple-600 p-3 sm:p-4 text-white">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
                             </svg>
                         </div>
                         <div className="flex-1">
                             <div className="flex items-center gap-2">
-                                <h3 className="text-xl font-bold truncate">{client.pet_name}</h3>
+                                <h3 className="text-lg sm:text-xl font-bold truncate">{client.pet_name}</h3>
                                 {isClientInDaycare && (
                                     <span className="px-2 py-1 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full">
                                         🏠 Creche
@@ -5137,7 +5130,7 @@ const MonthlyClientCard: React.FC<{
                     </div>
                     <div className="text-right">
                         <p className="text-xs text-pink-100">Valor Total</p>
-                        <p className="text-lg font-bold">R$ {totalInvoiceValue.toFixed(2).replace('.', ',')}
+                        <p className="text-base sm:text-lg font-bold">R$ {totalInvoiceValue.toFixed(2).replace('.', ',')}
                             {hasMonthlyExtras && (
                                 <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700" title="Serviços extras adicionados">(i)</span>
                             )}
@@ -5147,9 +5140,9 @@ const MonthlyClientCard: React.FC<{
             </div>
 
             {/* Conteúdo do Card */}
-            <div className="p-5 space-y-4">
+            <div className="p-4 sm:p-5 space-y-4">
                 {/* Informações básicas */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Serviço</p>
                         <p className="text-gray-800 font-medium">{client.service}</p>
@@ -5240,7 +5233,7 @@ const MonthlyClientCard: React.FC<{
             </div>
 
             {/* Footer com botões de ação */}
-            <div className="p-2 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+            <div className="p-2 bg-gray-50 border-t border-gray-100 flex flex-wrap justify-between items-center gap-2">
                 <button 
                     onClick={(e) => { e.stopPropagation(); onAddExtraServices(client); }}
                     className="px-3 py-2 bg-purple-100 text-purple-700 text-sm font-semibold rounded-lg hover:bg-purple-200 transition-colors flex items-center gap-1"
@@ -5250,7 +5243,7 @@ const MonthlyClientCard: React.FC<{
                     </svg>
                     Serviços Extras
                 </button>
-                <div className="flex gap-1">
+                <div className="flex gap-2 sm:gap-1 flex-wrap">
                     {/* Botão Arquivar/Desarquivar */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onTogglePaymentStatus(client, e); }}
