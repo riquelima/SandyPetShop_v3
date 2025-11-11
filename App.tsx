@@ -3110,20 +3110,34 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
             {appointmentToDelete && <ConfirmationModal isOpen={!!appointmentToDelete} onClose={() => setAppointmentToDelete(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o agendamento para ${appointmentToDelete.pet_name}?`} confirmText="Excluir" variant="danger" isLoading={deletingAppointmentId === appointmentToDelete.id} />}
             <StatisticsModal isOpen={isStatisticsModalOpen} onClose={() => setIsStatisticsModalOpen(false)} />
 
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex flex-col gap-4 mb-6">
                 <div className="relative flex-grow">
                     <input type="text" placeholder="Buscar por pet, dono ou serviço..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500" />
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><SearchIcon /></div>
                 </div>
-                <button onClick={handleOpenAddModal} className="flex-shrink-0 flex items-center justify-center gap-3 bg-green-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-green-700 transition-colors shadow-lg border-2 border-green-500" style={{minWidth: '200px'}}>
-                    <UserPlusIcon /> Adicionar Agendamento
-                </button>
-                <button onClick={() => setIsStatisticsModalOpen(true)} className="flex-shrink-0 flex items-center justify-center gap-3 bg-blue-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-lg border-2 border-blue-500" style={{minWidth: '160px'}}>
-                    📊 Estatísticas
-                </button>
-                <button onClick={() => setAdminView(adminView === 'daily' ? 'all' : 'daily')} className="flex-shrink-0 flex items-center justify-center gap-3 bg-pink-100 text-pink-800 font-semibold py-3 px-5 rounded-lg hover:bg-pink-200 transition-colors">
-                    {adminView === 'daily' ? <><ListIcon /> Ver Todos</> : <><CalendarIcon /> Ver Calendário</>}
-                </button>
+                <div className="flex flex-row items-center gap-2 sm:gap-4">
+                    <button onClick={handleOpenAddModal} className="flex-shrink-0 flex items-center justify-center gap-0 sm:gap-3 bg-green-600 text-white font-bold w-10 h-10 sm:w-auto sm:h-auto p-2 sm:py-4 sm:px-6 rounded-lg hover:bg-green-700 transition-colors shadow-lg border-2 border-green-500 sm:min-w-[200px]">
+                        <UserPlusIcon />
+                        <span className="hidden sm:inline">Adicionar Agendamento</span>
+                    </button>
+                    <button onClick={() => setIsStatisticsModalOpen(true)} className="flex-shrink-0 flex items-center justify-center gap-0 sm:gap-3 bg-blue-600 text-white font-bold w-10 h-10 sm:w-auto sm:h-auto p-2 sm:py-4 sm:px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-lg border-2 border-blue-500 sm:min-w-[160px]">
+                        <span className="text-lg">📊</span>
+                        <span className="hidden sm:inline">Estatísticas</span>
+                    </button>
+                    <button onClick={() => setAdminView(adminView === 'daily' ? 'all' : 'daily')} className="flex-shrink-0 flex items-center justify-center gap-0 sm:gap-3 bg-pink-100 text-pink-800 font-semibold w-10 h-10 sm:w-auto sm:h-auto p-2 sm:py-3 sm:px-5 rounded-lg hover:bg-pink-200 transition-colors">
+                        {adminView === 'daily' ? (
+                            <>
+                                <ListIcon />
+                                <span className="hidden sm:inline">Ver Todos</span>
+                            </>
+                        ) : (
+                            <>
+                                <CalendarIcon />
+                                <span className="hidden sm:inline">Ver Calendário</span>
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
             {loading ? <div className="flex justify-center py-16"><LoadingSpinner /></div> : (
                 <>
