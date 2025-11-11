@@ -5145,7 +5145,12 @@ const MonthlyClientCard: React.FC<{
     };
 
     const formatDateToBR = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('pt-BR');
+        // Evitar conversão de fuso: tratar como data pura (YYYY-MM-DD)
+        const datePart = (dateString || '').split('T')[0];
+        const parts = datePart.split('-');
+        if (parts.length !== 3) return dateString;
+        const [year, month, day] = parts;
+        return `${day}/${month}/${year}`;
     };
 
     const calculateTotalInvoiceValue = (client: MonthlyClient) => {
