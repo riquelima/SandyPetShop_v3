@@ -1171,37 +1171,40 @@ const MonthlyClientsStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => 
                 return;
             }
 
-            // Calcular estatísticas
-            const totalClients = monthlyClients?.length || 0;
-            const totalAppointments = appointments?.length || 0;
-            const completedAppointments = appointments?.filter(apt => apt.status === 'CONCLUÍDO').length || 0;
-            const pendingAppointments = appointments?.filter(apt => apt.status === 'AGENDADO').length || 0;
+            // Filtrar mensalistas pelo mês de vencimento (payment_due_date) correspondente ao mês selecionado
+            const selectedYearMonth = `${year}-${String(month).padStart(2, '0')}`;
+            const monthlyClientsForMonth = (monthlyClients || []).filter((client: any) => {
+                const dueDate: string | null = client.payment_due_date || null;
+                if (!dueDate || typeof dueDate !== 'string') return false;
+                // Comparar ano-mês sem depender de fuso horário
+                return dueDate.slice(0, 7) === selectedYearMonth;
+            });
+
+            // Filtrar agendamentos para apenas os mensalistas do mês
+            const clientIdsForMonth = new Set(monthlyClientsForMonth.map((c: any) => c.id));
+            const appointmentsForMonthClients = (appointments || []).filter(apt => clientIdsForMonth.has(apt.monthly_client_id));
+
+            // Calcular estatísticas com base nos mensalistas do mês
+            const totalClients = monthlyClientsForMonth.length;
+            const totalAppointments = appointmentsForMonthClients.length;
+            const completedAppointments = appointmentsForMonthClients.filter(apt => apt.status === 'CONCLUÍDO').length;
+            const pendingAppointments = appointmentsForMonthClients.filter(apt => apt.status === 'AGENDADO').length;
             
             // Calcular receita realizada (agendamentos concluídos)
-            const realizedRevenue = appointments
-                ?.filter(apt => apt.status === 'CONCLUÍDO')
-                .reduce((sum, apt) => sum + (apt.price || 0), 0) || 0;
+            const realizedRevenue = appointmentsForMonthClients
+                .filter(apt => apt.status === 'CONCLUÍDO')
+                .reduce((sum, apt) => sum + (apt.price || 0), 0);
 
-            // Calcular receita estimada total do mês (todos os mensalistas ativos)
-            const estimatedRevenue = monthlyClients?.reduce((sum, client) => {
-                const clientPrice = (client as any).price || 0;
-                
-                // Calcular quantos agendamentos o cliente deveria ter no mês
-                let expectedAppointments = 0;
-                if (client.recurrence_type === 'weekly') {
-                    expectedAppointments = 4; // 4 semanas por mês
-                } else if (client.recurrence_type === 'bi-weekly') {
-                    expectedAppointments = 2; // 2 vezes por mês
-                } else if (client.recurrence_type === 'monthly') {
-                    expectedAppointments = 1; // 1 vez por mês
-                }
-                
-                return sum + (clientPrice * expectedAppointments);
-            }, 0) || 0;
+            // Calcular receita estimada total do mês (soma do preço do pacote mensal por cliente ativo)
+            // Obs.: o campo `monthly_clients.price` representa o valor do pacote mensal (não por agendamento)
+            const estimatedRevenue = monthlyClientsForMonth.reduce((sum, client: any) => {
+                const clientMonthlyPackagePrice = Number(client.price) || 0;
+                return sum + clientMonthlyPackagePrice;
+            }, 0);
 
             // Agrupar por condomínio
             const condominiumStats: { [key: string]: { clients: number; appointments: number; revenue: number } } = {};
-            monthlyClients?.forEach(client => {
+            monthlyClientsForMonth.forEach((client: any) => {
                 const condo = client.condominium || 'Não especificado';
                 if (!condominiumStats[condo]) {
                     condominiumStats[condo] = { clients: 0, appointments: 0, revenue: 0 };
@@ -1209,7 +1212,7 @@ const MonthlyClientsStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => 
                 condominiumStats[condo].clients++;
                 
                 // Contar agendamentos deste cliente
-                const clientAppointments = appointments?.filter(apt => apt.monthly_client_id === client.id) || [];
+                const clientAppointments = appointmentsForMonthClients.filter(apt => apt.monthly_client_id === client.id);
                 condominiumStats[condo].appointments += clientAppointments.length;
                 condominiumStats[condo].revenue += clientAppointments
                     .filter(apt => apt.status === 'CONCLUÍDO')
@@ -1218,8 +1221,8 @@ const MonthlyClientsStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => 
 
             // Agrupar por status de pagamento
             const paymentStats: { [key: string]: number } = {};
-            monthlyClients?.forEach(client => {
-                const status = (client as any).payment_status || 'Pendente';
+            monthlyClientsForMonth.forEach((client: any) => {
+                const status = client.payment_status || 'Pendente';
                 paymentStats[status] = (paymentStats[status] || 0) + 1;
             });
 
@@ -5260,7 +5263,7 @@ const MonthlyClientCard: React.FC<{
 
     return (
         <div 
-            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform md:hover:scale-[1.02] cursor-pointer overflow-hidden border border-gray-100 w-full max-w-full"
+            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform md:hover:scale-[1.02] cursor-pointer overflow-hidden border border-gray-100 w-full max-w-full min-h-[80vh] sm:min-h-0 flex flex-col"
             onClick={() => onClick(client)}
         >
             {/* Header do Card */}
@@ -5298,7 +5301,7 @@ const MonthlyClientCard: React.FC<{
             </div>
 
             {/* Conteúdo do Card */}
-            <div className="p-4 sm:p-5 space-y-4">
+            <div className="p-4 sm:p-5 space-y-4 flex-1 overflow-y-auto">
                 {/* Informações básicas */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
