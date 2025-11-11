@@ -3087,6 +3087,8 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
     }, [appointments, searchTerm]);
     
     const dailyAppointments = useMemo(() => filteredAppointments.filter(app => isSameSaoPauloDay(new Date(app.appointment_time), selectedAdminDate)).sort((a, b) => new Date(a.appointment_time).getTime() - new Date(b.appointment_time).getTime()), [filteredAppointments, selectedAdminDate]);
+    const dailyScheduled = useMemo(() => dailyAppointments.filter(a => a.status === 'AGENDADO'), [dailyAppointments]);
+    const dailyCompleted = useMemo(() => dailyAppointments.filter(a => a.status === 'CONCLUÍDO'), [dailyAppointments]);
     
     const { upcomingAppointments, pastAppointments } = useMemo(() => {
         if (adminView !== 'all') return { upcomingAppointments: [], pastAppointments: [] };
@@ -3130,7 +3132,37 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
                             <section className="mb-8 p-4 bg-white rounded-2xl shadow-sm animate-fadeIn"><Calendar selectedDate={selectedAdminDate} onDateChange={setSelectedAdminDate} /></section>
                             <section className="animate-fadeInUp">
                                 <h2 className="text-2xl font-bold text-gray-700 mb-4 pb-2 border-b-2 border-pink-200">Agendamentos para {selectedAdminDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}</h2>
-                                {dailyAppointments.length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{renderAppointments(dailyAppointments)}</div> : <div className="text-center py-16 bg-white rounded-lg shadow-sm"><p className="text-gray-500 text-lg">Nenhum agendamento para este dia.</p></div>}
+                                {dailyAppointments.length > 0 ? (
+                                    <>
+                                        <h3 className="text-lg font-semibold text-gray-700 mb-3">Agendados</h3>
+                                        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3">
+                                            {dailyScheduled.map(app => (
+                                                <div key={app.id} className="flex-none min-w-[280px] sm:min-w-[320px] md:min-w-0">
+                                                    <AppointmentCard appointment={app} onUpdateStatus={handleUpdateStatus} isUpdating={updatingStatusId === app.id} onEdit={handleOpenEditModal} onDelete={handleRequestDelete} isDeleting={deletingAppointmentId === app.id} onOpenActionMenu={onOpenActionMenu} onDeleteObservation={onDeleteObservation} />
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="mt-8">
+                                            <h3 className="text-lg font-semibold text-gray-700 mb-3">Concluídos</h3>
+                                            {dailyCompleted.length > 0 ? (
+                                                <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3">
+                                                    {dailyCompleted.map(app => (
+                                                        <div key={app.id} className="flex-none min-w-[280px] sm:min-w-[320px] md:min-w-0">
+                                                            <AppointmentCard appointment={app} onUpdateStatus={handleUpdateStatus} isUpdating={updatingStatusId === app.id} onEdit={handleOpenEditModal} onDelete={handleRequestDelete} isDeleting={deletingAppointmentId === app.id} onOpenActionMenu={onOpenActionMenu} onDeleteObservation={onDeleteObservation} />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-6 bg-white rounded-lg shadow-sm">
+                                                    <p className="text-gray-500">Nenhum concluído para este dia.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-center py-16 bg-white rounded-lg shadow-sm"><p className="text-gray-500 text-lg">Nenhum agendamento para este dia.</p></div>
+                                )}
                             </section>
                         </>
                     ) : (
