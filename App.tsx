@@ -3131,7 +3131,7 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
                         <>
                             <section className="mb-8 p-4 bg-white rounded-2xl shadow-sm animate-fadeIn"><Calendar selectedDate={selectedAdminDate} onDateChange={setSelectedAdminDate} /></section>
                             <section className="animate-fadeInUp">
-                                <h2 className="text-2xl font-bold text-gray-700 mb-4 pb-2 border-b-2 border-pink-200">Agendamentos para {selectedAdminDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}</h2>
+                                <h2 className="text-2xl font-bold text-gray-700 mb-4 pb-2 border-b-2 border-pink-200 whitespace-nowrap truncate">Agendamentos - {selectedAdminDate.toLocaleDateString('pt-BR')}</h2>
                                 {dailyAppointments.length > 0 ? (
                                     <>
                                         <h3 className="text-lg font-semibold text-gray-700 mb-3">Agendados</h3>
