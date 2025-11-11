@@ -88,20 +88,69 @@ export const NotificationBell: React.FC = () => {
     if (!error) setItems(prev => prev.map(i => ({ ...i, read: true })));
   };
 
+  const clearAll = async () => {
+    const confirmed = window.confirm('Tem certeza que deseja limpar todas as notificações? Esta ação removerá o histórico.');
+    if (!confirmed) return;
+    // Delete all notifications records
+    const { error } = await supabase.from('notifications').delete().gte('id', 0);
+    if (!error) {
+      setItems([]);
+    }
+  };
+
+  const formatApptDateTime = (n: NotificationItem) => {
+    const d = (n.data?.appointment_time || n.data?.scheduled_at || n.data?.date || null) as string | null;
+    const combined = n.data?.appointment_date && n.data?.appointment_hour
+      ? `${n.data.appointment_date}T${n.data.appointment_hour}`
+      : null;
+    const target = d || combined;
+    try {
+      const ref = target ? new Date(target) : new Date(n.created_at);
+      return ref.toLocaleString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    } catch {
+      return new Date(n.created_at).toLocaleString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    }
+  };
+
   const renderDescription = (n: NotificationItem) => {
-    if (n.type === 'appointment') {
-      return `${n.data.pet_name} • ${n.data.owner_name} • ${n.data.service}`;
-    }
-    if (n.type === 'pet_movel') {
-      return `${n.data.pet_name} • ${n.data.owner_name} • ${n.data.service}`;
-    }
-    if (n.type === 'daycare') {
-      return `${n.data.pet_name} • Tutor: ${n.data.tutor_name} • Plano: ${n.data.contracted_plan ?? ''}`;
-    }
-    if (n.type === 'hotel') {
-      return `${n.data.pet_name} • Tutor: ${n.data.tutor_name}`;
-    }
-    return 'Nova notificação';
+    const pet = n.data?.pet_name;
+    const tutor = n.data?.owner_name || n.data?.tutor_name;
+    const service = n.data?.service;
+    const when = formatApptDateTime(n);
+    return (
+      <div className="flex flex-wrap gap-1">
+        {pet && (
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-pink-50 text-pink-700">🐶 {pet}</span>
+        )}
+        {tutor && (
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700">👤 {tutor}</span>
+        )}
+        {service && (
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">🧼 {service}</span>
+        )}
+        {when && (
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">🗓 {when}</span>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -129,12 +178,21 @@ export const NotificationBell: React.FC = () => {
           <div ref={panelRef} className="relative w-full max-w-[95vw] sm:max-w-md md:max-w-lg bg-white border border-pink-100 rounded-2xl shadow-xl p-3">
             <div className="flex items-center justify-between px-2 py-1">
               <div className="font-semibold text-pink-800">Central de Notificações</div>
-              <button
-                onClick={markAllRead}
-                className="flex items-center gap-2 text-xs font-semibold text-pink-700 hover:text-pink-900 bg-pink-50 hover:bg-pink-100 px-3 py-1 rounded-lg"
-              >
-                <CheckIcon className="h-4 w-4"/> Marcar todas como lidas
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={markAllRead}
+                  className="flex items-center gap-2 text-xs font-semibold text-pink-700 hover:text-pink-900 bg-pink-50 hover:bg-pink-100 px-3 py-1 rounded-lg"
+                >
+                  <CheckIcon className="h-4 w-4"/> Marcar todas como lidas
+                </button>
+                <button
+                  onClick={clearAll}
+                  className="flex items-center gap-2 text-xs font-semibold text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-lg"
+                  title="Limpar todas as notificações"
+                >
+                  <TrashIcon className="h-4 w-4"/> Limpar todas
+                </button>
+              </div>
             </div>
 
             <div className="max-h-[80vh] overflow-y-auto mt-2 divide-y divide-gray-100">
