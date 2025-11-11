@@ -4914,7 +4914,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
             
             <div className="mb-6">
                 <h2 className="text-xl sm:text-3xl font-bold text-gray-800 truncate mb-4 text-center sm:text-left">Clientes Mensalistas</h2>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 mb-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 mb-4">
                     <div className="flex-1">
                         <input
                             type="text"
@@ -4924,70 +4924,74 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                             className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-white"
                         />
                     </div>
-                    
-                    {/* Toggle de Visualização */}
-                    <div className="flex flex-wrap bg-gray-100 rounded-lg p-1">
-                        <button
-                            onClick={() => setViewMode('cards')}
-                            className={`px-2.5 sm:px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
-                                viewMode === 'cards' 
-                                ? 'bg-white text-pink-600 shadow-sm' 
-                                : 'text-gray-600 hover:text-gray-800'
-                            }`}
-                        >
-                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                            </svg>
-                            Cards
-                        </button>
-                        <button
-                            onClick={() => setViewMode('list')}
-                            className={`px-2.5 sm:px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
-                                viewMode === 'list' 
-                                ? 'bg-white text-pink-600 shadow-sm' 
-                                : 'text-gray-600 hover:text-gray-800'
-                            }`}
-                        >
-                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                            </svg>
-                            Lista
-                        </button>
-                    </div>
-                    {/* Grupo de botões (Filtro, Estatísticas, Adicionar) em linha no mobile */}
-                    <div className="flex w-full sm:w-auto justify-center items-center gap-2 sm:gap-3 flex-nowrap">
-                        {/* Botão de Filtro */}
-                        <button 
-                            onClick={() => setShowFilterPanel(!showFilterPanel)}
-                            className={`px-3 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-colors flex items-center justify-center ${
-                                showFilterPanel 
-                                ? 'bg-blue-600 text-white' 
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                            title="Filtros"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                            </svg>
-                        </button>
-                        
-                        {/* Botão de Estatísticas */}
-                        <button 
-                            onClick={() => setShowStatisticsModal(true)}
-                            className="bg-green-600 text-white font-semibold py-2 sm:py-2.5 px-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
-                            title="Estatísticas"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
-                        </button>
-                        
-                        {/* Botão Adicionar Mensalista */}
-                        <button onClick={onAddClient} className="bg-pink-600 text-white font-semibold py-2 sm:py-2.5 px-3 rounded-lg hover:bg-pink-700 transition-colors flex items-center justify-center">
-                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                        </button>
+
+                    {/* Linha única no mobile: Toggle de Visualização + Grupo de Botões */}
+                    <div className="flex w-full items-center justify-between gap-2">
+                        {/* Toggle de Visualização */}
+                        <div className="flex flex-wrap bg-gray-100 rounded-lg p-1 flex-none">
+                            <button
+                                onClick={() => setViewMode('cards')}
+                                className={`px-2.5 sm:px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
+                                    viewMode === 'cards' 
+                                    ? 'bg-white text-pink-600 shadow-sm' 
+                                    : 'text-gray-600 hover:text-gray-800'
+                                }`}
+                            >
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                </svg>
+                                Cards
+                            </button>
+                            <button
+                                onClick={() => setViewMode('list')}
+                                className={`px-2.5 sm:px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
+                                    viewMode === 'list' 
+                                    ? 'bg-white text-pink-600 shadow-sm' 
+                                    : 'text-gray-600 hover:text-gray-800'
+                                }`}
+                            >
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                </svg>
+                                Lista
+                            </button>
+                        </div>
+
+                        {/* Grupo de botões (Filtro, Estatísticas, Adicionar) */}
+                        <div className="flex justify-center items-center gap-2 sm:gap-3 flex-nowrap flex-none">
+                            {/* Botão de Filtro */}
+                            <button 
+                                onClick={() => setShowFilterPanel(!showFilterPanel)}
+                                className={`px-3 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-colors flex items-center justify-center ${
+                                    showFilterPanel 
+                                    ? 'bg-blue-600 text-white' 
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                                title="Filtros"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                                </svg>
+                            </button>
+                            
+                            {/* Botão de Estatísticas */}
+                            <button 
+                                onClick={() => setShowStatisticsModal(true)}
+                                className="bg-green-600 text-white font-semibold py-2 sm:py-2.5 px-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
+                                title="Estatísticas"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                            </button>
+                            
+                            {/* Botão Adicionar Mensalista */}
+                            <button onClick={onAddClient} className="bg-pink-600 text-white font-semibold py-2 sm:py-2.5 px-3 rounded-lg hover:bg-pink-700 transition-colors flex items-center justify-center">
+                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -5082,9 +5086,9 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                 filteredClients.length > 0 ? (
                     viewMode === 'cards' ? (
                         // Visualização em Cards com carrossel horizontal no mobile
-                        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3">
+                        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
                             {filteredClients.map(client => (
-                                <div key={client.id} className="flex-none min-w-[280px] sm:min-w-[320px] md:min-w-0 snap-start">
+                                <div key={client.id} className="flex-none min-w-[85%] sm:min-w-[70%] md:min-w-0 snap-start">
                                     <MonthlyClientCard
                                         client={client}
                                         onEdit={() => setEditingClient(client)}
