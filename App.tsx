@@ -9069,8 +9069,9 @@ const AdminDashboard: React.FC<{
                                 <LogoutIcon/> Sair
                             </button>
                         </div>
-                        <div className="md:hidden">
-                            <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="p-3 rounded-xl text-gray-500 hover:bg-pink-50 hover:text-pink-600 transition-colors">
+                        <div className="md:hidden flex items-center gap-2">
+                            <NotificationBell />
+                            <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="p-3 rounded-xl text-gray-500 hover:bg-pink-50 hover:text-pink-600 transition-colors" aria-label="Menu">
                                 {showMobileMenu ? <CloseIcon /> : <MenuIcon />}
                             </button>
                         </div>
