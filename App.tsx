@@ -4,6 +4,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Appointment, ServiceType, PetWeight, AdminAppointment, Client, MonthlyClient, DaycareRegistration, PetMovelAppointment, AddonService, HotelRegistration } from './types';
 import { SERVICES, WORKING_HOURS, MAX_CAPACITY_PER_SLOT, LUNCH_HOUR, PET_WEIGHT_OPTIONS, SERVICE_PRICES, ADDON_SERVICES, VISIT_WORKING_HOURS, DAYCARE_PLAN_PRICES, DAYCARE_EXTRA_SERVICES_PRICES, HOTEL_BASE_PRICE, HOTEL_EXTRA_SERVICES_PRICES } from './constants';
 import { supabase } from './supabaseClient';
+import NotificationBell from './NotificationBell';
 import ExtraServicesModal from './ExtraServicesModal';
 import ActionChooserModal from './src/ActionChooserModal';
 
@@ -833,9 +834,8 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                                     <select name="condominium" id="condominium" value={formData.condominium} onChange={handleInputChange} className="block w-full pl-10 pr-5 py-4 bg-gray-50 border border-gray-300 rounded-lg">
                                         <option value="">Selecione um condomínio</option>
                                         <option value="Vitta Parque">Vitta Parque</option>
-                                        <option value="Maxhaus">Maxhaus</option>
+                                        <option value="Max Haus">Max Haus</option>
                                         <option value="Paseo">Paseo</option>
-                                        <option value="Outro">Outro</option>
                                     </select>
                                 </div></div>
                                 <div className="md:col-span-2"><label htmlFor="ownerAddress" className="block text-base font-semibold text-gray-700">Endereço</label><div className="relative mt-1"><span className="absolute inset-y-0 left-0 flex items-center pl-3"><AddressIcon/></span><input type="text" name="ownerAddress" id="ownerAddress" value={formData.ownerAddress} onChange={handleInputChange} required className="block w-full pl-10 pr-5 py-4 bg-gray-50 border border-gray-300 rounded-lg"/></div></div>
@@ -915,7 +915,8 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                                         onChange={setPaymentDueDate}
                                         label="Data de Vencimento do Pagamento"
                                         required
-                                        className="mt-1" 
+                                        className="mt-1"
+                                        disableWeekends={false}
                                     />
                                 </div>
                                 <div>
@@ -2448,7 +2449,7 @@ const AdminAddAppointmentModal: React.FC<{
                                             >
                                                 <option value="">Selecione o condomínio</option>
                                                 <option value="Vitta Parque">Vitta Parque</option>
-                                                <option value="Maxhaus">Maxhaus</option>
+                                                <option value="Max Haus">Max Haus</option>
                                                 <option value="Paseo">Paseo</option>
                                             </select>
                                         </div>
@@ -3224,7 +3225,7 @@ const EditPetMovelAppointmentModal: React.FC<{
                            <label className="font-semibold text-gray-600">Condomínio</label>
                            <select name="condominium" value={formData.condominium} onChange={handleInputChange} className="w-full mt-1 px-5 py-4 border rounded-lg bg-white">
                               <option value="Vitta Parque">Vitta Parque</option>
-                              <option value="Maxhaus">Maxhaus</option>
+                              <option value="Max Haus">Max Haus</option>
                               <option value="Paseo">Paseo</option>
                            </select>
                         </div>
@@ -3313,6 +3314,7 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
     const [selectedAppointmentForDelete, setSelectedAppointmentForDelete] = useState<PetMovelAppointment | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [searchTerm, setSearchTerm] = useState<string>('');
+    const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
     const [selectedClientForAppointments, setSelectedClientForAppointments] = useState<MonthlyClient | null>(null);
     const [clientAppointments, setClientAppointments] = useState<AdminAppointment[]>([]);
     const [loadingAppointments, setLoadingAppointments] = useState(false);
@@ -3336,9 +3338,7 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
         } else {
             // Filter clients by specific condominiums for Pet Móvel
             const petMovelCondominiums = [
-                'Paseo', 'Paseo Residence', 'Paseo Residencial',
-                'Max Haus', 'Max House', 'Maxhaus',
-                'Vitta', 'Vitta Residencial', 'Vitta Residence'
+                'Vitta Parque', 'Paseo', 'Max Haus'
             ];
             
             const petMovelClients = (data as MonthlyClient[]).filter(client => {
@@ -3584,7 +3584,8 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
             {/* Barra de busca e filtros */}
             <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
                 <div className="flex flex-col lg:flex-row gap-4">
-                    <div className="relative flex-1">
+                    {/* Desktop: input mais comprido */}
+                    <div className="relative hidden md:block md:flex-1 md:max-w-6xl lg:max-w-7xl xl:max-w-full">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <SearchIcon className="h-5 w-5 text-gray-400" />
                         </div>
@@ -3593,7 +3594,7 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                             placeholder="Digite sua busca"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="block w-full pl-12 pr-10 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-base"
+                            className="block w-full pl-12 pr-12 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-base"
                         />
                         {searchTerm && (
                             <button
@@ -3604,7 +3605,40 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                             </button>
                         )}
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-2 w-full">
+                    {/* Mobile: ícone que expande para input */}
+                    <div className="relative md:hidden w-full">
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                aria-label="Abrir busca"
+                                onClick={() => setMobileSearchOpen((v) => !v)}
+                                className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100"
+                            >
+                                <SearchIcon className="h-5 w-5" />
+                            </button>
+                            <div className={`relative flex-1 transition-all duration-300 ${mobileSearchOpen ? 'max-w-full' : 'max-w-0'} overflow-hidden`}>
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <SearchIcon className="h-5 w-5 text-gray-400" />
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="Digite sua busca"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="block w-full pl-12 pr-10 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-base"
+                                />
+                                {searchTerm && (
+                                    <button
+                                        onClick={() => { setSearchTerm(''); setMobileSearchOpen(false); }}
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                    >
+                                        <CloseIcon />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
                         {/* Botão de visualização - apenas Lista */}
                         <div className="flex bg-gray-100 rounded-lg p-1 w-full sm:w-auto">
                             <button 
@@ -3672,9 +3706,11 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                                 className="w-full text-left p-6 flex justify-between items-center hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-colors"
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                                        {condo.charAt(0)}
-                                    </div>
+                                    <img 
+                                        src="https://cdn-icons-png.flaticon.com/512/6917/6917662.png" 
+                                        alt={`Condomínio ${condo}`} 
+                                        className="w-12 h-12 rounded-lg object-cover"
+                                    />
                                     <div>
                                         <h3 className="text-xl font-bold text-gray-800">{condo}</h3>
                                         <p className="text-sm text-gray-500">
@@ -3696,16 +3732,18 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                                                         className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
                                                         onClick={() => handleOpenAppointmentsModal(client)}
                                                     >
-                                                        <div className="flex items-start justify-between mb-3">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-10 h-10 bg-gradient-to-br from-pink-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
-                                                                    {client.pet_name.charAt(0).toUpperCase()}
+                                                            <div className="flex items-start justify-between mb-3">
+                                                                <div className="flex items-center gap-3">
+                                                                    <img
+                                                                        src="https://cdn-icons-png.flaticon.com/512/2171/2171990.png"
+                                                                        alt={`Pet ${client.pet_name}`}
+                                                                        className="w-10 h-10 rounded-full object-cover"
+                                                                    />
+                                                                    <div>
+                                                                        <h5 className="font-bold text-gray-800">{client.pet_name}</h5>
+                                                                        <p className="text-sm text-gray-500">{client.owner_name}</p>
+                                                                    </div>
                                                                 </div>
-                                                                <div>
-                                                                    <h5 className="font-bold text-gray-800">{client.pet_name}</h5>
-                                                                    <p className="text-sm text-gray-500">{client.owner_name}</p>
-                                                                </div>
-                                                            </div>
                                                             <div className="flex gap-1">
                                                                 <button 
                                                                     onClick={(e) => {
@@ -3883,9 +3921,11 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                                             <div key={appointment.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                                                 <div className="flex items-center justify-between mb-3">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-gradient-to-br from-pink-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
-                                                            <ClockIcon className="w-5 h-5" />
-                                                        </div>
+                                                        <img 
+                                                            src="https://cdn-icons-png.flaticon.com/512/2171/2171990.png" 
+                                                            alt="Ícone do pet" 
+                                                            className="w-10 h-10 rounded-full object-cover"
+                                                        />
                                                         <div>
                                                             <h4 className="font-semibold text-gray-800">
                                                                 {new Date(appointment.appointment_time).toLocaleDateString('pt-BR', {
@@ -4237,6 +4277,49 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
         }
     };
 
+    // Gera lista de rótulos dos campos alterados para mensagem de sucesso
+    const getChangedFieldLabels = (payload: any): string[] => {
+        const labels: Record<string, string> = {
+            pet_name: 'Nome do Pet',
+            pet_breed: 'Raça',
+            owner_name: 'Nome do Dono',
+            owner_address: 'Endereço',
+            whatsapp: 'WhatsApp',
+            condominium: 'Condomínio',
+            service: 'Serviço',
+            weight: 'Peso',
+            price: 'Valor total',
+            recurrence_type: 'Recorrência',
+            recurrence_day: 'Dia da recorrência',
+            recurrence_time: 'Hora da recorrência',
+            payment_due_date: 'Data de vencimento',
+            is_active: 'Status ativo',
+            payment_status: 'Status do pagamento',
+        };
+
+        const normalizeDate = (v: any) => {
+            if (!v) return null;
+            const s = String(v);
+            return s.includes('T') ? s.split('T')[0] : s;
+        };
+
+        const changed: string[] = [];
+        const original: any = client as any;
+        const keys = Object.keys(labels);
+        for (const k of keys) {
+            let orig = original[k];
+            let next = payload[k];
+            if (k === 'payment_due_date') {
+                orig = normalizeDate(orig);
+                next = normalizeDate(next);
+            }
+            if (orig !== next) {
+                changed.push(labels[k]);
+            }
+        }
+        return changed;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         // Permitir edição mesmo com campos incompletos
@@ -4285,7 +4368,8 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
             recurrence_type: recurrence.type,
             recurrence_day: safeRecurrenceDay,
             recurrence_time: safeRecurrenceTime,
-            payment_due_date: paymentDueDate,
+            // Enviar null quando vazio para evitar erro de sintaxe de data (400 Bad Request)
+            payment_due_date: paymentDueDate && paymentDueDate.trim() !== '' ? paymentDueDate : null,
             is_active: isActive,
             payment_status: paymentStatus,
         };
@@ -4295,6 +4379,11 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
             setIsSubmitting(false);
             return;
         }
+
+        const changedLabels = getChangedFieldLabels(updatePayload);
+        const baseSuccessMessage = changedLabels.length <= 1
+            ? `${changedLabels[0] ?? 'Dados'} atualizado(s) com sucesso.`
+            : `Campos atualizados: ${changedLabels.join(', ')}.`;
 
         if (isActive && selectedService && selectedWeight) {
             const appointmentsToCreate: { appointment_time: string }[] = [];
@@ -4381,23 +4470,23 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
 
                     if (appointmentsResult.error || petMovelResult.error) {
                         const errorMsg = appointmentsResult.error?.message || petMovelResult.error?.message || 'Erro desconhecido';
-                        setAlertInfo({ title: 'Erro Parcial', message: `Dados atualizados, mas falha ao recriar agendamentos: ${errorMsg}`, variant: 'error' });
+                        setAlertInfo({ title: 'Erro Parcial', message: `${baseSuccessMessage} Falha ao recriar agendamentos: ${errorMsg}`, variant: 'error' });
                     } else {
-                        setAlertInfo({ title: 'Sucesso!', message: "Mensalista atualizado e agendamentos (incluindo Pet Móvel) recriados com sucesso!", variant: 'success' });
+                        setAlertInfo({ title: 'Sucesso!', message: `${baseSuccessMessage} Agendamentos (incluindo Pet Móvel) recriados com sucesso!`, variant: 'success' });
                     }
                 } else {
                     const { error: insertError } = await supabase.from('appointments').insert(supabasePayloads);
                     if (insertError) {
-                        setAlertInfo({ title: 'Erro Parcial', message: "Os dados do mensalista foram atualizados, mas houve um erro ao recriar os agendamentos futuros.", variant: 'error' });
+                        setAlertInfo({ title: 'Erro Parcial', message: `${baseSuccessMessage} Houve um erro ao recriar os agendamentos futuros.`, variant: 'error' });
                     } else {
-                        setAlertInfo({ title: 'Sucesso!', message: "Mensalista atualizado e agendamentos futuros recriados com sucesso!", variant: 'success' });
+                        setAlertInfo({ title: 'Sucesso!', message: `${baseSuccessMessage} Agendamentos futuros recriados com sucesso!`, variant: 'success' });
                     }
                 }
             } else {
-                setAlertInfo({ title: 'Sucesso', message: "Dados do mensalista atualizados. Nenhum agendamento futuro foi criado com as novas regras.", variant: 'success' });
+                setAlertInfo({ title: 'Sucesso', message: `${baseSuccessMessage} Nenhum agendamento futuro foi criado.`, variant: 'success' });
             }
         } else {
-             setAlertInfo({ title: 'Sucesso', message: "Mensalista atualizado e marcado como inativo. Agendamentos futuros não foram criados.", variant: 'success' });
+             setAlertInfo({ title: 'Sucesso', message: baseSuccessMessage, variant: 'success' });
         }
 
         setIsSubmitting(false);
@@ -4447,7 +4536,8 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
                                         onChange={setPaymentDueDate}
                                         label="Data de Vencimento do Pagamento"
                                         required
-                                        className="w-full mt-1" 
+                                        className="w-full mt-1"
+                                        disableWeekends={false}
                                     />
                                 </div>
                             </div>
@@ -4490,7 +4580,8 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
     const [alertInfo, setAlertInfo] = useState<{ title: string; message: string; variant: 'success' | 'error' } | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
-    const [showArchived, setShowArchived] = useState(false);
+    // Filtro de status de pagamento: '' (Todos), 'Pendente' ou 'Pago'
+    const [filterPaymentStatus, setFilterPaymentStatus] = useState<'' | 'Pendente' | 'Pago'>('');
     
     // Estados para filtros
     const [showFilterPanel, setShowFilterPanel] = useState(false);
@@ -4697,8 +4788,10 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
             console.log('Clientes após filtro:', filtered.length);
         }
 
-        // Filtro por arquivados/pedentes
-        filtered = filtered.filter(client => showArchived ? client.payment_status === 'Pago' : client.payment_status === 'Pendente');
+        // Filtro por status de pagamento (Pendente/Pago)
+        if (filterPaymentStatus) {
+            filtered = filtered.filter(client => client.payment_status === filterPaymentStatus);
+        }
         
         // Ordenação
         if (sortBy === 'pet-az') {
@@ -4711,7 +4804,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
         }
         
         return filtered;
-    }, [monthlyClients, searchTerm, filterCondominium, filterDueDate, sortBy, showArchived]);
+    }, [monthlyClients, searchTerm, filterCondominium, filterDueDate, sortBy, filterPaymentStatus]);
 
     const handleTogglePaymentStatus = async (client: MonthlyClient, e: React.MouseEvent) => {
         e.stopPropagation(); // Prevent the card's onClick from firing
@@ -4802,30 +4895,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                         </button>
                     </div>
 
-                    {/* Toggle único Pendentes/Arquivados */}
-                    <div className="bg-gray-100 rounded-lg p-1">
-                        <button
-                            onClick={() => setShowArchived(prev => !prev)}
-                            className={`px-2.5 sm:px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
-                                showArchived
-                                ? 'bg-white text-green-600 shadow-sm' 
-                                : 'bg-white text-blue-600 shadow-sm'
-                            }`}
-                            title={showArchived ? 'Mostrar Pendentes' : 'Mostrar Arquivados'}
-                            aria-label={showArchived ? 'Mostrar Pendentes' : 'Mostrar Arquivados'}
-                        >
-                            {showArchived ? (
-                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M6 10h12M8 13h8M10 16h4" />
-                                </svg>
-                            ) : (
-                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
-                                </svg>
-                            )}
-                            {showArchived ? `Arquivados (${archivedCount})` : `Pendentes (${pendingCount})`}
-                        </button>
-                    </div>
+                    {/* Removido botão de Pendentes/Arquivados; status agora está nos filtros */}
                     
                     {/* Botão de Filtro */}
                     <button 
@@ -4894,9 +4964,24 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                                 onChange={setFilterDueDate}
                                 label="Data de Vencimento"
                                 className="w-full"
+                                disableWeekends={false}
                             />
                         </div>
                         
+                        {/* Filtro por Status de Pagamento */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Status de Pagamento</label>
+                            <select
+                                value={filterPaymentStatus}
+                                onChange={(e) => setFilterPaymentStatus(e.target.value as '' | 'Pendente' | 'Pago')}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                                <option value="">Todos</option>
+                                <option value="Pendente">Pendente</option>
+                                <option value="Pago">Pago</option>
+                            </select>
+                        </div>
+
                         {/* Ordenação */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Ordenar por</label>
@@ -4917,6 +5002,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                                 onClick={() => {
                                     setFilterCondominium('');
                                     setFilterDueDate('');
+                                    setFilterPaymentStatus('');
                                     setSortBy('');
                                 }}
                                 className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
@@ -5112,9 +5198,11 @@ const MonthlyClientCard: React.FC<{
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                            </svg>
+                            <img
+                                src="https://cdn-icons-png.flaticon.com/512/2171/2171990.png"
+                                alt="Ícone de pet"
+                                className="w-6 h-6 sm:w-7 sm:h-7 object-contain"
+                            />
                         </div>
                         <div className="flex-1">
                             <div className="flex items-center gap-2">
@@ -5244,33 +5332,6 @@ const MonthlyClientCard: React.FC<{
                     Serviços Extras
                 </button>
                 <div className="flex gap-2 sm:gap-1 flex-wrap">
-                    {/* Botão Arquivar/Desarquivar */}
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onTogglePaymentStatus(client, e); }}
-                        className={`px-3 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center gap-1 ${
-                            client.payment_status === 'Pendente' 
-                            ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
-                            : 'bg-green-100 text-green-700 hover:bg-green-200'
-                        }`}
-                        aria-label={client.payment_status === 'Pendente' ? 'Arquivar mensalista' : 'Desarquivar mensalista'}
-                        title={client.payment_status === 'Pendente' ? 'Arquivar mensalista (marca como Pago)' : 'Desarquivar mensalista (marca como Pendente)'}
-                    >
-                        {client.payment_status === 'Pendente' ? (
-                            <>
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0l-4 4H8l-4-4m16 0H4" />
-                                </svg>
-                                Arquivar
-                            </>
-                        ) : (
-                            <>
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16m-2 4H6m2 4h8" />
-                                </svg>
-                                Desarquivar
-                            </>
-                        )}
-                    </button>
                     <button 
                         onClick={(e) => { e.stopPropagation(); onEdit(client); }}
                         className="p-2 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors"
@@ -7505,7 +7566,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                     <div className="space-y-6">
                         <h3 className="text-md font-semibold text-gray-700 mb-2">1. Selecione o Condomínio</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            {['Vitta Parque', 'Maxhaus', 'Paseo'].map(condo => (
+                            {['Vitta Parque', 'Max Haus', 'Paseo'].map(condo => (
                                 <button
                                     key={condo}
                                     type="button"
@@ -7677,7 +7738,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                       switch (selectedCondo) {
                         case 'Vitta Parque':
                           return [3]; // Quarta-feira (0=domingo, 1=segunda, 2=terça, 3=quarta, 4=quinta, 5=sexta, 6=sábado)
-                        case 'Maxhaus':
+                        case 'Max Haus':
                           return [4]; // Quinta-feira
                         case 'Paseo':
                           return [5]; // Sexta-feira
@@ -8998,6 +9059,7 @@ const AdminDashboard: React.FC<{
                                 {isScheduleOpen ? <LockOpenIcon /> : <LockClosedIcon />}
                                 {isScheduleOpen ? 'Fechar Agenda' : 'Abrir Agenda'}
                             </button>
+                            <NotificationBell />
                             <button onClick={onLogout} className="flex items-center gap-3 text-base font-semibold text-gray-600 hover:text-pink-600 bg-gray-50 hover:bg-pink-50 px-5 py-3 rounded-xl transition-all shadow-sm hover:shadow">
                                 <LogoutIcon/> Sair
                             </button>
