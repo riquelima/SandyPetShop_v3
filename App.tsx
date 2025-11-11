@@ -7,6 +7,7 @@ import { supabase } from './supabaseClient';
 import NotificationBell from './NotificationBell';
 import ExtraServicesModal from './ExtraServicesModal';
 import ActionChooserModal from './src/ActionChooserModal';
+import { Menu, MenuItem } from './src/components/ui/menu';
 
 
 // --- TIMEZONE-AWARE HELPER FUNCTIONS (UTC-3 / SÃO PAULO) ---
@@ -3611,7 +3612,7 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
             <div className="bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl p-6 text-white shadow-lg mb-6">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div>
-                        <h2 className="text-3xl lg:text-4xl font-bold mb-2">Pet Móvel</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold mb-2 text-center sm:text-left">Pet Móvel</h2>
                         <p className="text-pink-100">Gerencie seus clientes Pet Móvel</p>
                     </div>
                     <div className="flex flex-wrap gap-4">
@@ -4262,7 +4263,7 @@ const ClientsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
             </div>
             
             <div className="p-6 bg-white rounded-2xl shadow-sm">
-                <h2 className="text-2xl font-bold text-gray-700 mb-4">Lista de Clientes</h2>
+            <h2 className="text-2xl font-bold text-gray-700 mb-4 text-center sm:text-left">Lista de Clientes</h2>
                 {loading ? <div className="flex justify-center py-6 sm:py-8"><LoadingSpinner /></div> : (
                     <div className="divide-y divide-gray-200">
                         {clients.length > 0 ? clients.map(client => (
@@ -4912,7 +4913,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
             {deletingClient && <ConfirmationModal isOpen={!!deletingClient} onClose={() => setDeletingClient(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o mensalista ${deletingClient.pet_name}? Todos os seus agendamentos futuros também serão removidos.`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
             
             <div className="mb-6">
-                <h2 className="text-xl sm:text-3xl font-bold text-gray-800 truncate mb-4">Clientes Mensalistas</h2>
+                <h2 className="text-xl sm:text-3xl font-bold text-gray-800 truncate mb-4 text-center sm:text-left">Clientes Mensalistas</h2>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 mb-4">
                     <div className="flex-1">
                         <input
@@ -5080,19 +5081,19 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
             {loading ? <div className="flex justify-center py-16"><LoadingSpinner /></div> : (
                 filteredClients.length > 0 ? (
                     viewMode === 'cards' ? (
-                        // Visualização em Cards
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                        // Visualização em Cards com carrossel horizontal no mobile
+                        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3">
                             {filteredClients.map(client => (
-                                <MonthlyClientCard
-                                    key={client.id}
-                                    client={client}
-                                    onEdit={() => setEditingClient(client)}
-                                    onDelete={() => setDeletingClient(client)}
-                                    onAddExtraServices={() => handleAddExtraServices(client)}
-                                    onTogglePaymentStatus={(e) => handleTogglePaymentStatus(client, e)}
-                                    isClientInDaycare={isClientInDaycare(client)}
-                                
-                                />
+                                <div key={client.id} className="flex-none min-w-[280px] sm:min-w-[320px] md:min-w-0 snap-start">
+                                    <MonthlyClientCard
+                                        client={client}
+                                        onEdit={() => setEditingClient(client)}
+                                        onDelete={() => setDeletingClient(client)}
+                                        onAddExtraServices={() => handleAddExtraServices(client)}
+                                        onTogglePaymentStatus={(e) => handleTogglePaymentStatus(client, e)}
+                                        isClientInDaycare={isClientInDaycare(client)}
+                                    />
+                                </div>
                             ))}
                         </div>
                     ) : (
@@ -8143,7 +8144,7 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
             <div className="bg-white rounded-2xl shadow-sm p-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-800">Hotel Pet</h1>
+            <h1 className="text-3xl font-bold text-gray-800 text-center sm:text-left">Hotel Pet</h1>
                         <p className="text-gray-600 mt-1">Gerencie os registros de hospedagem</p>
                     </div>
                     <div className="flex gap-3">
@@ -9082,22 +9083,17 @@ const AdminDashboard: React.FC<{
     };
 
     const NavMenu = () => (
-         <nav className="flex flex-col gap-3">
+        <Menu ariaLabel="Navegação administrativa">
             {menuItems.map(item => (
-                <button
+                <MenuItem
                     key={item.id}
+                    active={activeView === item.id}
+                    icon={item.icon}
+                    label={item.label}
                     onClick={() => { setActiveView(item.id); setShowMobileMenu(false); }}
-                    className={`w-full flex items-center gap-4 px-6 py-4 rounded-xl text-base font-semibold transition-all shadow-sm ${
-                        activeView === item.id 
-                            ? 'bg-gradient-to-r from-pink-600 to-pink-700 text-white shadow-lg scale-105' 
-                            : 'text-gray-700 hover:bg-white hover:shadow-md bg-white/50'
-                    }`}
-                >
-                    {item.icon}
-                    <span>{item.label}</span>
-                </button>
+                />
             ))}
-        </nav>
+        </Menu>
     );
 
     return (

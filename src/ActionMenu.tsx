@@ -1,4 +1,5 @@
 import React from 'react';
+import { Menu, MenuItem } from './components/ui/menu';
 
 const ActionMenu: React.FC<{ 
     isOpen: boolean;
@@ -10,24 +11,14 @@ const ActionMenu: React.FC<{
     if (!isOpen) return null;
 
     return (
-        <div 
-            className="fixed bg-white rounded-md shadow-lg border border-gray-200 animate-fadeIn"
+        <div
+            className="fixed bg-white rounded-xl shadow-lg border border-gray-200 animate-fadeIn"
             style={{ top: position.top, left: position.left, zIndex: 9999 }}
         >
-            <div className="py-1">
-                <button 
-                    onClick={onAddObservation}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
-                    Adicionar Observação
-                </button>
-                <button 
-                    onClick={onAddExtraServices}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
-                    Adicionar Serviço Extra
-                </button>
-            </div>
+            <Menu className="p-2" ariaLabel="Menu de ações do agendamento">
+                <MenuItem tone="subtle" label="Adicionar Observação" onClick={onAddObservation} />
+                <MenuItem tone="subtle" label="Adicionar Serviço Extra" onClick={onAddExtraServices} />
+            </Menu>
         </div>
     );
 };

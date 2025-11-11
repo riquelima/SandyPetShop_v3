@@ -2,6 +2,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import MobileUiDemo from '@/src/pages/MobileUiDemo';
 
 // Register the service worker to enable PWA features like offline caching
 if ('serviceWorker' in navigator) {
@@ -20,8 +21,9 @@ if (!rootElement) {
 }
 
 const root = ReactDOM.createRoot(rootElement);
+const useMobileDemo = window.location.hash === '#mobile-ui-demo'
 root.render(
   <React.StrictMode>
-    <App />
+    {useMobileDemo ? <MobileUiDemo /> : <App />}
   </React.StrictMode>
 );
