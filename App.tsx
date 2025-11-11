@@ -5263,7 +5263,7 @@ const MonthlyClientCard: React.FC<{
 
     return (
         <div 
-            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform md:hover:scale-[1.02] cursor-pointer overflow-hidden border border-gray-100 w-full max-w-full min-h-[80vh] sm:min-h-0 flex flex-col"
+            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform md:hover:scale-[1.02] cursor-pointer overflow-hidden border border-gray-100 w-full max-w-full min-h-[65vh] sm:min-h-0 flex flex-col"
             onClick={() => onClick(client)}
         >
             {/* Header do Card */}
