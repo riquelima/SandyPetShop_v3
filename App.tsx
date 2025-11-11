@@ -2807,7 +2807,7 @@ const Calendar: React.FC<{
             disabled={isDisabled}
             onClick={() => !isDisabled && onDateChange(date)}
             className={`p-2 w-10 h-10 rounded-full text-center transition-colors flex items-center justify-center
-              ${isSelected ? 'bg-pink-600 text-white font-bold' : 'hover:bg-pink-100'}
+              ${isSelected ? 'bg-pink-300 text-black font-bold border border-pink-600' : 'hover:bg-pink-100'}
               ${isDisabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-700'}
             `}
           >
@@ -5711,7 +5711,7 @@ const EditDaycareEnrollmentModal: React.FC<{
             <div className="flex flex-wrap gap-2">
                 {options.map(opt => (
                     <button type="button" key={opt.label} onClick={() => handleRadioChange(name, opt.value)}
-                        className={`px-4 py-3.5 rounded-lg border text-sm font-semibold transition-colors ${formData[name as keyof typeof formData] === opt.value ? 'bg-pink-600 text-white border-pink-600' : 'bg-white text-gray-700 hover:bg-pink-50'}`}>
+                        className={`px-4 py-3.5 rounded-lg border text-sm font-semibold transition-colors ${formData[name as keyof typeof formData] === opt.value ? 'bg-pink-300 text-black border-pink-600' : 'bg-white text-gray-700 hover:bg-pink-50'}`}>
                         {opt.label}
                     </button>
                 ))}
@@ -6281,10 +6281,10 @@ const HotelRegistrationForm: React.FC<{
             <label className="block text-base font-semibold text-gray-700 mb-2">{label}</label>
             <div className="flex flex-wrap gap-2">
                 {options.map(opt => (
-                    <button type="button" key={opt.label} onClick={() => handleRadioChange(name, opt.value)}
-                        className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${formData[name as keyof typeof formData] === opt.value ? 'bg-pink-600 text-white border-pink-600' : 'bg-white text-gray-700 border-gray-300 hover:border-pink-400'}`}>
-                        {opt.label}
-                    </button>
+                <button type="button" key={opt.label} onClick={() => handleRadioChange(name, opt.value)}
+                    className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${formData[name as keyof typeof formData] === opt.value ? 'bg-pink-300 text-black border-pink-600' : 'bg-white text-gray-700 border-gray-300 hover:border-pink-400'}`}>
+                    {opt.label}
+                </button>
                 ))}
             </div>
         </div>
@@ -6645,7 +6645,7 @@ const DaycareRegistrationForm: React.FC<{
             <div className="flex flex-wrap gap-2">
                 {options.map(opt => (
                     <button type="button" key={opt.label} onClick={() => handleRadioChange(name, opt.value)}
-                        className={`px-4 py-3.5 rounded-lg border text-sm font-semibold transition-colors ${formData[name as keyof typeof formData] === opt.value ? 'bg-pink-600 text-white border-pink-600' : 'bg-white text-gray-700 hover:bg-pink-50'}`}>
+                    className={`px-4 py-3.5 rounded-lg border text-sm font-semibold transition-colors ${formData[name as keyof typeof formData] === opt.value ? 'bg-pink-300 text-black border-pink-600' : 'bg-white text-gray-700 hover:bg-pink-50'}`}>
                         {opt.label}
                     </button>
                 ))}
@@ -7197,8 +7197,8 @@ const TimeSlotPicker: React.FC<{
               type="button"
               disabled={isDisabled}
               onClick={() => onTimeSelect(hour)}
-              className={`p-5 rounded-lg text-center font-semibold transition-colors border-2
-                ${selectedTime === hour ? 'bg-pink-600 text-white border-pink-600' : ''}
+            className={`p-5 rounded-lg text-center font-semibold transition-colors border-2
+                ${selectedTime === hour ? 'bg-pink-300 text-black border-pink-600' : ''}
                 ${isDisabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' : 'bg-white hover:bg-pink-50 border-gray-200'}
               `}
             >
@@ -7593,10 +7593,10 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                     <div className="space-y-6">
                         <h3 className="text-md font-semibold text-gray-700 mb-2">1. Serviço Principal</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <button type="button" onClick={() => setSelectedService(ServiceType.BATH)} className={`p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center h-full ${selectedService === ServiceType.BATH ? 'bg-pink-600 text-white border-pink-600 shadow-lg' : 'bg-white hover:bg-pink-50 border-gray-200'}`}>
+<button type="button" onClick={() => setSelectedService(ServiceType.BATH)} className={`p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center h-full ${selectedService === ServiceType.BATH ? 'bg-pink-300 text-black border-pink-600 shadow-lg' : 'bg-white hover:bg-pink-50 border-gray-200'}`}>
                                 <span className="text-lg">{SERVICES[ServiceType.BATH].label}</span>
                             </button>
-                             <button type="button" onClick={() => setSelectedService(ServiceType.BATH_AND_GROOMING)} className={`p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center h-full ${selectedService === ServiceType.BATH_AND_GROOMING ? 'bg-pink-600 text-white border-pink-600 shadow-lg' : 'bg-white hover:bg-pink-50 border-gray-200'}`}>
+<button type="button" onClick={() => setSelectedService(ServiceType.BATH_AND_GROOMING)} className={`p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center h-full ${selectedService === ServiceType.BATH_AND_GROOMING ? 'bg-pink-300 text-black border-pink-600 shadow-lg' : 'bg-white hover:bg-pink-50 border-gray-200'}`}>
                                 <span className="text-lg">{SERVICES[ServiceType.BATH_AND_GROOMING].label}</span>
                             </button>
                         </div>
@@ -7608,10 +7608,10 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                     <div className="space-y-6">
                         <h3 className="text-md font-semibold text-gray-700 mb-2">1. Serviço Principal (Pet Móvel)</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <button type="button" onClick={() => setSelectedService(ServiceType.PET_MOBILE_BATH)} className={`p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center h-full ${selectedService === ServiceType.PET_MOBILE_BATH ? 'bg-pink-600 text-white border-pink-600 shadow-lg' : 'bg-white hover:bg-pink-50 border-gray-200'}`}>
+<button type="button" onClick={() => setSelectedService(ServiceType.PET_MOBILE_BATH)} className={`p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center h-full ${selectedService === ServiceType.PET_MOBILE_BATH ? 'bg-pink-300 text-black border-pink-600 shadow-lg' : 'bg-white hover:bg-pink-50 border-gray-200'}`}>
                                 <span className="text-lg">Banho</span>
                             </button>
-                            <button type="button" onClick={() => setSelectedService(ServiceType.PET_MOBILE_BATH_AND_GROOMING)} className={`p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center h-full ${selectedService === ServiceType.PET_MOBILE_BATH_AND_GROOMING ? 'bg-pink-600 text-white border-pink-600 shadow-lg' : 'bg-white hover:bg-pink-50 border-gray-200'}`}>
+<button type="button" onClick={() => setSelectedService(ServiceType.PET_MOBILE_BATH_AND_GROOMING)} className={`p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center h-full ${selectedService === ServiceType.PET_MOBILE_BATH_AND_GROOMING ? 'bg-pink-300 text-black border-pink-600 shadow-lg' : 'bg-white hover:bg-pink-50 border-gray-200'}`}>
                                 <span className="text-lg">Banho & Tosa</span>
                             </button>
                         </div>
