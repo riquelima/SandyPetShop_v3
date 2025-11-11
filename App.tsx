@@ -4189,6 +4189,7 @@ const ClientsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
     const [editingClient, setEditingClient] = useState<Client | null>(null);
     const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isAddClientOpenMobile, setIsAddClientOpenMobile] = useState(false);
 
     const fetchClients = useCallback(async () => {
         setLoading(true);
@@ -4237,7 +4238,19 @@ const ClientsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
         <div className="space-y-8">
             {editingClient && <EditClientModal client={editingClient} onClose={() => setEditingClient(null)} onClientUpdated={handleClientUpdated} />}
             {clientToDelete && <ConfirmationModal isOpen={!!clientToDelete} onClose={() => setClientToDelete(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o cliente ${clientToDelete.name}?`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
-            <div className="p-6 bg-white rounded-2xl shadow-sm">
+            {/* Botão mobile para abrir/fechar o formulário de novo cliente */}
+            <div className="sm:hidden p-4 bg-white rounded-2xl shadow-sm">
+                <button
+                    type="button"
+                    onClick={() => setIsAddClientOpenMobile(prev => !prev)}
+                    className="w-full bg-pink-600 text-white font-semibold py-3.5 px-6 rounded-lg hover:bg-pink-700 transition-colors"
+                >
+                    Adicionar Cliente
+                </button>
+            </div>
+
+            {/* Formulário: oculto no mobile até clicar no botão; visível sempre em sm+ */}
+            <div className={`p-6 bg-white rounded-2xl shadow-sm ${isAddClientOpenMobile ? 'block' : 'hidden sm:block'}`}>
                 <h2 className="text-2xl font-bold text-gray-700 mb-4">Adicionar Novo Cliente</h2>
                 <form onSubmit={handleAddClient} className="flex flex-col sm:flex-row gap-4">
                     <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Nome do Cliente" required className="flex-grow w-full px-4 py-3.5 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500" />
