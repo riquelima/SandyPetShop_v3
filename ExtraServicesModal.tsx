@@ -179,23 +179,9 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
 
       console.log('Dados atualizados:', updatedData);
 
-      // Calcular novo total se for mensalista
-      if (type === 'monthly') {
-        const extraServicesTotal = calculateTotal();
-        const newTotal = (data.price || 0) + extraServicesTotal;
-        
-        const { error: priceUpdateError } = await supabase
-          .from('monthly_clients')
-          .update({ price: newTotal })
-          .eq('id', data.id);
-          
-        if (priceUpdateError) {
-          console.error('Erro ao atualizar preço do mensalista:', priceUpdateError);
-          throw priceUpdateError;
-        }
-          
-        updatedData.price = newTotal;
-      }
+      // Não atualizar o campo `price` do mensalista ao salvar serviços extras.
+      // O total exibido no card deve ser calculado como: preço base + extras atuais.
+      // Atualizamos apenas `extra_services` para refletir os extras selecionados.
 
       onSuccess({ ...data, ...updatedData });
       onClose();
