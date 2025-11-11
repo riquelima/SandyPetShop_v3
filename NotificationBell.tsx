@@ -94,7 +94,7 @@ export const NotificationBell: React.FC = () => {
   };
 
   return (
-    <div className="relative" ref={panelRef}>
+    <div className="relative">
       <button
         onClick={() => setOpen(o => !o)}
         className={`relative flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm hover:shadow ${
@@ -104,7 +104,7 @@ export const NotificationBell: React.FC = () => {
         title="Notificações"
       >
         {unreadCount > 0 ? <BellAlertIcon className="h-5 w-5"/> : <BellIcon className="h-5 w-5"/>}
-        <span>Notificações</span>
+        <span className="hidden md:inline">Notificações</span>
         {unreadCount > 0 && (
           <span className="ml-1 inline-flex items-center justify-center text-xs font-bold text-white bg-pink-600 rounded-full min-w-6 h-6 px-2">
             {unreadCount}
@@ -113,48 +113,51 @@ export const NotificationBell: React.FC = () => {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-3 w-96 max-w-[90vw] bg-white border border-pink-100 rounded-2xl shadow-xl z-50 p-3">
-          <div className="flex items-center justify-between px-2 py-1">
-            <div className="font-semibold text-pink-800">Central de Notificações</div>
-            <button
-              onClick={markAllRead}
-              className="flex items-center gap-2 text-xs font-semibold text-pink-700 hover:text-pink-900 bg-pink-50 hover:bg-pink-100 px-3 py-1 rounded-lg"
-            >
-              <CheckIcon className="h-4 w-4"/> Marcar todas como lidas
-            </button>
-          </div>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-800/40" onClick={() => setOpen(false)} />
+          <div ref={panelRef} className="relative w-full max-w-[95vw] sm:max-w-md md:max-w-lg bg-white border border-pink-100 rounded-2xl shadow-xl p-3">
+            <div className="flex items-center justify-between px-2 py-1">
+              <div className="font-semibold text-pink-800">Central de Notificações</div>
+              <button
+                onClick={markAllRead}
+                className="flex items-center gap-2 text-xs font-semibold text-pink-700 hover:text-pink-900 bg-pink-50 hover:bg-pink-100 px-3 py-1 rounded-lg"
+              >
+                <CheckIcon className="h-4 w-4"/> Marcar todas como lidas
+              </button>
+            </div>
 
-          <div className="max-h-80 overflow-y-auto mt-2 divide-y divide-gray-100">
-            {loading && (
-              <div className="p-4 text-gray-500 text-sm">Carregando...</div>
-            )}
-            {!loading && items.length === 0 && (
-              <div className="p-4 text-gray-500 text-sm">Sem notificações por enquanto.</div>
-            )}
-            {items.map(n => (
-              <div key={n.id} className={`p-3 flex items-start gap-3 ${n.read ? 'bg-white' : 'bg-pink-50'}`}>
-                <div className="mt-0.5">
-                  {n.type === 'daycare' || n.type === 'hotel' ? (
-                    <BellIcon className="h-5 w-5 text-pink-600"/>
-                  ) : (
-                    <BellAlertIcon className="h-5 w-5 text-pink-600"/>
+            <div className="max-h-[80vh] overflow-y-auto mt-2 divide-y divide-gray-100">
+              {loading && (
+                <div className="p-4 text-gray-500 text-sm">Carregando...</div>
+              )}
+              {!loading && items.length === 0 && (
+                <div className="p-4 text-gray-500 text-sm">Sem notificações por enquanto.</div>
+              )}
+              {items.map(n => (
+                <div key={n.id} className={`p-3 flex items-start gap-3 ${n.read ? 'bg-white' : 'bg-pink-50'}`}>
+                  <div className="mt-0.5">
+                    {n.type === 'daycare' || n.type === 'hotel' ? (
+                      <BellIcon className="h-5 w-5 text-pink-600"/>
+                    ) : (
+                      <BellAlertIcon className="h-5 w-5 text-pink-600"/>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold text-gray-800">{typeLabels[n.type] ?? 'Nova notificação'}</div>
+                    <div className="text-sm text-gray-600 mt-0.5">{renderDescription(n)}</div>
+                    <div className="text-xs text-gray-400 mt-1">{new Date(n.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', hour12: false })}</div>
+                  </div>
+                  {!n.read && (
+                    <button
+                      onClick={() => markRead(n.id)}
+                      className="text-xs font-semibold text-pink-700 bg-pink-100 hover:bg-pink-200 px-2 py-1 rounded-lg"
+                    >
+                      Marcar como lida
+                    </button>
                   )}
                 </div>
-                <div className="flex-1">
-                  <div className="font-semibold text-gray-800">{typeLabels[n.type] ?? 'Nova notificação'}</div>
-                  <div className="text-sm text-gray-600 mt-0.5">{renderDescription(n)}</div>
-            <div className="text-xs text-gray-400 mt-1">{new Date(n.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', hour12: false })}</div>
-                </div>
-                {!n.read && (
-                  <button
-                    onClick={() => markRead(n.id)}
-                    className="text-xs font-semibold text-pink-700 bg-pink-100 hover:bg-pink-200 px-2 py-1 rounded-lg"
-                  >
-                    Marcar como lida
-                  </button>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       )}
