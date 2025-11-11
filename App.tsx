@@ -3115,25 +3115,25 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
                     <input type="text" placeholder="Buscar por pet, dono ou serviço..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500" />
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><SearchIcon /></div>
                 </div>
-                <div className="flex flex-row items-center justify-center gap-3 sm:gap-4 mx-auto">
-                    <button onClick={handleOpenAddModal} className="flex-shrink-0 flex items-center justify-center gap-0 sm:gap-3 bg-green-600 text-white font-bold w-12 h-12 sm:w-auto sm:h-auto p-3 sm:py-4 sm:px-6 rounded-lg hover:bg-green-700 transition-colors shadow-lg border-2 border-green-500 sm:min-w-[200px]">
+                <div className="flex flex-row items-center justify-center gap-3 sm:gap-4 mx-auto overflow-x-auto flex-nowrap">
+                    <button onClick={handleOpenAddModal} className="flex-shrink-0 inline-flex items-center justify-center gap-2 sm:gap-3 bg-green-600 text-white font-bold w-auto h-12 sm:w-auto sm:h-auto px-3 sm:py-4 sm:px-6 rounded-lg hover:bg-green-700 transition-colors shadow-lg border-2 border-green-500 sm:min-w-[200px]">
                         <UserPlusIcon />
-                        <span className="hidden sm:inline">Adicionar Agendamento</span>
+                        <span className="inline text-xs sm:text-sm">Adicionar Agendamento</span>
                     </button>
-                    <button onClick={() => setIsStatisticsModalOpen(true)} className="flex-shrink-0 flex items-center justify-center gap-0 sm:gap-3 bg-blue-600 text-white font-bold w-12 h-12 sm:w-auto sm:h-auto p-3 sm:py-4 sm:px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-lg border-2 border-blue-500 sm:min-w-[160px]">
+                    <button onClick={() => setIsStatisticsModalOpen(true)} className="flex-shrink-0 inline-flex items-center justify-center gap-2 sm:gap-3 bg-blue-600 text-white font-bold w-auto h-12 sm:w-auto sm:h-auto px-3 sm:py-4 sm:px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-lg border-2 border-blue-500 sm:min-w-[160px]">
                         <span className="text-lg">📊</span>
-                        <span className="hidden sm:inline">Estatísticas</span>
+                        <span className="inline text-xs sm:text-sm">Estatísticas</span>
                     </button>
-                    <button onClick={() => setAdminView(adminView === 'daily' ? 'all' : 'daily')} className="flex-shrink-0 flex items-center justify-center gap-0 sm:gap-3 bg-pink-100 text-pink-800 font-semibold w-12 h-12 sm:w-auto sm:h-auto p-3 sm:py-3 sm:px-5 rounded-lg hover:bg-pink-200 transition-colors">
+                    <button onClick={() => setAdminView(adminView === 'daily' ? 'all' : 'daily')} className="flex-shrink-0 inline-flex items-center justify-center gap-2 sm:gap-3 bg-pink-100 text-pink-800 font-semibold w-auto h-12 sm:w-auto sm:h-auto px-3 sm:py-3 sm:px-5 rounded-lg hover:bg-pink-200 transition-colors">
                         {adminView === 'daily' ? (
                             <>
                                 <ListIcon />
-                                <span className="hidden sm:inline">Ver Todos</span>
+                                <span className="inline text-xs sm:text-sm">Ver Todos</span>
                             </>
                         ) : (
                             <>
                                 <CalendarIcon />
-                                <span className="hidden sm:inline">Ver Calendário</span>
+                                <span className="inline text-xs sm:text-sm">Ver Calendário</span>
                             </>
                         )}
                     </button>
