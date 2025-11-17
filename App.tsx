@@ -3768,9 +3768,9 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                                     {clientList.map(client => (
                                         <div key={client.id} className="shrink-0 w-[92vw] sm:w-[420px] lg:w-[460px] snap-center">
                                                         <div 
-                                                            className="bg-white rounded-2xl shadow-sm p-6 min-h-[380px] hover:shadow-md transition-shadow border border-gray-200 cursor-pointer"
-                                                        onClick={() => handleOpenAppointmentsModal(client)}
-                                                    >
+                                                            className="bg-white rounded-2xl shadow-sm p-6 min-h-[380px] hover:shadow-md transition-shadow border border-gray-200 cursor-pointer flex flex-col"
+                                                            onClick={() => handleOpenAppointmentsModal(client)}
+                                                        >
                                                             <div className="rounded-xl mb-3 p-5 bg-gradient-to-r from-pink-500 to-purple-500 text-white flex items-center justify-between">
                                                                 <div className="flex items-center gap-3">
                                                                     <img
@@ -3801,7 +3801,7 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                                                                     <span className="text-xs">Agendamentos: toque para ver datas</span>
                                                                 </div>
                                                             </div>
-                                                            <div className="mt-4">
+                                                            <div className="mt-auto pt-4">
                                                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
                                                                     <button 
                                                                         onClick={(e) => { e.stopPropagation(); handleOpenAppointmentsModal(client); }}
@@ -4964,26 +4964,8 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                         </div>
                     </div>
 
-                    {/* Linha única no mobile: Toggle de Visualização + Grupo de Botões */}
-                    <div className="flex w-full items-center justify-between gap-2 md:flex-[1]">
-                        {/* Toggle de Visualização */}
-                        <div className="flex flex-wrap bg-gray-100 rounded-lg p-1 flex-none">
-                            <button
-                                onClick={() => setViewMode('cards')}
-                                className={`px-2.5 sm:px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
-                                    viewMode === 'cards' 
-                                    ? 'bg-white text-pink-600 shadow-sm' 
-                                    : 'text-gray-600 hover:text-gray-800'
-                                }`}
-                            >
-                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                </svg>
-                                Cards
-                            </button>
-                            {/* Removido botão Lista */}
-                        </div>
-
+                    {/* Linha única no mobile: Grupo de Botões */}
+                    <div className="flex w-full items-center justify-end gap-2 md:flex-[1]">
                         {/* Grupo de botões (Filtro, Estatísticas, Adicionar) */}
                         <div className="flex justify-center items-center gap-2 sm:gap-3 flex-nowrap flex-none">
                             {/* Botão de Filtro */}
@@ -5417,31 +5399,32 @@ const MonthlyClientCard: React.FC<{
                 </div>
             </div>
 
-            {/* Footer com botões de ação */}
-            <div className="p-2 bg-gray-50 border-t border-gray-100 flex flex-wrap justify-between items-center gap-2">
-                <button 
-                    onClick={(e) => { e.stopPropagation(); onAddExtraServices(client); }}
-                    className="px-3 py-2 bg-purple-100 text-purple-700 text-sm font-semibold rounded-lg hover:bg-purple-200 transition-colors flex items-center gap-1"
-                >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Serviços Extras
-                </button>
-                <div className="flex gap-2 sm:gap-1 flex-wrap">
+            <div className="p-2 bg-gray-50 border-t border-gray-100">
+                <div className="grid grid-cols-3 gap-1.5">
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onAddExtraServices(client); }}
+                        className="w-full bg-purple-100 text-purple-700 py-1.5 px-2 rounded-md hover:bg-purple-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span>Extras</span>
+                    </button>
                     <button 
                         onClick={(e) => { e.stopPropagation(); onEdit(client); }}
-                        className="p-2 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors"
+                        className="w-full bg-gray-100 text-gray-700 py-1.5 px-2 rounded-md hover:bg-gray-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
                         aria-label="Editar mensalista"
                     >
-                        <EditIcon />
+                        <EditIcon className="w-4 h-4" />
+                        <span>Editar</span>
                     </button>
                     <button 
                         onClick={(e) => { e.stopPropagation(); onDelete(client); }}
-                        className="p-2 rounded-full text-red-500 hover:bg-red-100 transition-colors"
+                        className="w-full bg-red-50 text-red-600 py-1.5 px-2 rounded-md hover:bg-red-100 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
                         aria-label="Excluir mensalista"
                     >
-                        <DeleteIcon />
+                        <DeleteIcon className="w-4 h-4" />
+                        <span>Excluir</span>
                     </button>
                 </div>
             </div>
