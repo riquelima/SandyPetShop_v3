@@ -5632,14 +5632,7 @@ const DaycareEnrollmentDetailsModal: React.FC<{
                             <DetailItem label="Telefone do Veterinário" value={enrollment.vet_phone} />
                             <DetailItem label="Endereço" value={enrollment.address} />
           </div>
-          <div className="mt-4 flex items-center justify-center gap-4">
-            <a href="https://www.instagram.com/sandyspetmovelcrechehotel/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-              <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" className="w-7 h-7" />
-            </a>
-            <a href="https://wa.me/5511994580316?text=Ol%C3%A1%20Sandy%2C%20vim%20do%20site%20e%20gostaria%20de%20ajuda" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">
-              <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" className="w-7 h-7" />
-            </a>
-          </div>
+          
         </section>
                      {/* Health Info */}
                     <section>
@@ -5655,8 +5648,16 @@ const DaycareEnrollmentDetailsModal: React.FC<{
                            {enrollment.has_allergies && <DetailItem label="Descrição da Alergia" value={enrollment.allergies_description} />}
                            <DetailItem label="Necessita de Cuidados Especiais?" value={enrollment.needs_special_care ? 'Sim' : 'Não'} />
                            {enrollment.needs_special_care && <DetailItem label="Descrição do Cuidado" value={enrollment.special_care_description} />}
-                        </div>
-                    </section>
+          </div>
+          <div className="mt-4 flex items-center justify-center gap-4">
+            <a href="https://www.instagram.com/sandyspetmovelcrechehotel/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+              <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" className="w-7 h-7" />
+            </a>
+            <a href="https://wa.me/5511994580316?text=Ol%C3%A1%20Sandy%2C%20vim%20do%20site%20e%20gostaria%20de%20ajuda" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">
+              <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" className="w-7 h-7" />
+            </a>
+          </div>
+        </section>
                     {/* Plan & Belongings */}
                     <section>
                          <h3 className="text-lg font-semibold text-pink-700 border-b pb-2 mb-4">Plano, Pertences e Detalhes Financeiros</h3>
