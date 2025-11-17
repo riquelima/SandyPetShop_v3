@@ -3771,14 +3771,15 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                                 <div className="border-t border-gray-100 bg-gray-50/50 animate-fadeIn">
                                     {Object.entries(clients).map(([number, clientList]) => (
                                         <div key={number} className="p-6 border-b border-gray-100 last:border-b-0">
-                                            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                                            <div className="overflow-x-auto">
+                                                <div className="flex gap-4 pb-2 snap-x snap-mandatory">
                                                 {clientList.map(client => (
-                                                    <div 
-                                                        key={client.id} 
-                                                        className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
-                                                        onClick={() => handleOpenAppointmentsModal(client)}
-                                                    >
-                                                            <div className="flex items-start justify-between mb-3">
+                                                    <div key={client.id} className="shrink-0 w-[360px] sm:w-[420px] lg:w-[460px] snap-center">
+                                                        <div 
+                                                            className="bg-white rounded-2xl shadow-sm p-5 min-h-[300px] hover:shadow-md transition-shadow border border-gray-200 cursor-pointer"
+                                                            onClick={() => handleOpenAppointmentsModal(client)}
+                                                        >
+                                                            <div className="rounded-xl mb-3 p-5 bg-gradient-to-r from-pink-500 to-purple-500 text-white flex items-center justify-between">
                                                                 <div className="flex items-center gap-3">
                                                                     <img
                                                                         src="https://cdn-icons-png.flaticon.com/512/2171/2171990.png"
@@ -3786,64 +3787,65 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                                                                         className="w-10 h-10 rounded-full object-cover"
                                                                     />
                                                                     <div>
-                                                                        <h5 className="font-bold text-gray-800">{client.pet_name}</h5>
-                                                                        <p className="text-sm text-gray-500">{client.owner_name}</p>
+                                                                        <h5 className="text-lg font-bold leading-none">{client.pet_name}</h5>
+                                                                        <p className="text-xs opacity-90">{client.owner_name}</p>
                                                                     </div>
                                                                 </div>
-                                                            <div className="flex gap-1">
-                                                                <button 
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setSelectedForEdit(client);
-                                                                    }} 
-                                                                    className="p-1.5 rounded-lg text-gray-400 hover:text-pink-600 hover:bg-pink-50 transition-colors" 
-                                                                    aria-label="Editar"
-                                                                >
-                                                                    <EditIcon className="w-4 h-4" />
-                                                                </button>
-                                                                <button 
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setSelectedForDelete(client);
-                                                                    }} 
-                                                                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" 
-                                                                    aria-label="Excluir"
-                                                                >
-                                                                    <DeleteIcon className="w-4 h-4" />
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <div className="space-y-2">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="w-2 h-2 bg-pink-400 rounded-full"></div>
-                                                                <p className="text-sm text-gray-600">{client.service}</p>
-                                                            </div>
-                                                            
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                                                                    <p className="text-sm text-gray-600">
-                                                                        {client.recurrence_type === 'weekly' ? 'Semanal' : 
-                                                                         client.recurrence_type === 'bi-weekly' ? 'Quinzenal' : 'Mensal'}
-                                                                    </p>
+                                                                <div className="text-right">
+                                                                    <p className="text-xs opacity-90">Preço</p>
+                                                                    <p className="text-lg font-extrabold">R$ {(client.price ?? 0).toFixed(2).replace('.', ',')}</p>
                                                                 </div>
-                                                                <p className="text-sm font-semibold text-green-600">
-                                                                    R$ {(client.price ?? 0).toFixed(2).replace('.', ',')}
-                                                                </p>
                                                             </div>
-                                                            
-                                                            {client.owner_address && (
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                                                                    <p className="text-xs text-gray-500 truncate">{client.owner_address}</p>
+                                                            <div className="space-y-2 text-sm">
+                                                                <div className="flex items-center gap-2 text-gray-600">
+                                                                    <span className="w-2 h-2 bg-pink-400 rounded-full"></span>
+                                                                    <span>{client.service}</span>
                                                                 </div>
-                                                            )}
+                                                                <div className="flex items-center gap-2 text-gray-600">
+                                                                    <span className="w-2 h-2 bg-purple-400 rounded-full"></span>
+                                                                    <span>{client.recurrence_type === 'weekly' ? 'Semanal' : client.recurrence_type === 'bi-weekly' ? 'Quinzenal' : 'Mensal'}</span>
+                                                                </div>
+                                                                {client.owner_address && (
+                                                                    <div className="flex items-center gap-2 text-gray-600">
+                                                                        <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                                                                        <span className="text-xs truncate">{client.owner_address}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="mt-4">
+                                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
+                                                                    <button 
+                                                                        onClick={(e) => { e.stopPropagation(); handleOpenAppointmentsModal(client); }}
+                                                                        className="w-full bg-gray-100 text-gray-700 py-1.5 px-2 rounded-md hover:bg-gray-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
+                                                                        title="Visualizar"
+                                                                    >
+                                                                        <EyeOutlineIcon className="w-4 h-4" />
+                                                                        <span>Visualizar</span>
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={(e) => { e.stopPropagation(); setSelectedForEdit(client); }} 
+                                                                        className="w-full bg-blue-100 text-blue-700 py-1.5 px-2 rounded-md hover:bg-blue-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
+                                                                        aria-label="Editar"
+                                                                    >
+                                                                        <EditIcon className="w-4 h-4" />
+                                                                        <span>Editar</span>
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={(e) => { e.stopPropagation(); setSelectedForDelete(client); }} 
+                                                                        className="w-full bg-red-50 text-red-600 py-1.5 px-2 rounded-md hover:bg-red-100 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
+                                                                        aria-label="Excluir"
+                                                                    >
+                                                                        <DeleteIcon className="w-4 h-4" />
+                                                                        <span>Excluir</span>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                ))}
+                                                    ))}
+                                                </div>
+                                                </div>
                                             </div>
-                                        </div>
                                     ))}
                                 </div>
                             )}
@@ -9510,7 +9512,7 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
                                                 enrollment={enrollment}
                                                 isDraggable={true}
                                                 onDragStart={(e) => handleDragStart(e, enrollment, sectionId)}
-                                                onClick={() => { setSelectedEnrollment(enrollment); setIsDetailsModalOpen(true); }}
+                                                onClick={() => { setSelectedEnrollment(enrollment); setIsDetailsModalOpen(true); /* fecha menu mobile se aberto */ setShowMobileMenu(false); }}
                                                 onEdit={() => { setSelectedEnrollment(enrollment); setIsEditModalOpen(true); }}
                                                 onDelete={() => setEnrollmentToDelete(enrollment)}
                                                 onAddExtraServices={handleAddExtraServices}
@@ -9747,6 +9749,34 @@ const AdminDashboard: React.FC<{
 
             {showMobileMenu && (
                  <div className="fixed inset-0 bg-gray-800 bg-opacity-50 z-30 md:hidden" onClick={() => setShowMobileMenu(false)}></div>
+            )}
+
+            {showMobileMenu && (
+                <div className="fixed left-0 top-0 h-full w-[85vw] max-w-sm bg-white shadow-2xl z-40 md:hidden overflow-y-auto p-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-gray-800">Menu</h3>
+                        <button onClick={() => setShowMobileMenu(false)} className="p-2 rounded-lg hover:bg-gray-100" aria-label="Fechar menu">
+                            <CloseIcon className="w-5 h-5 text-gray-600" />
+                        </button>
+                    </div>
+                    <NavMenu />
+                    <div className="mt-6 space-y-3">
+                        <button 
+                            onClick={() => { setIsScheduleOpen(!isScheduleOpen); setShowMobileMenu(false); }}
+                            className={`w-full flex items-center gap-3 text-sm font-semibold px-3 py-2 rounded-lg transition-all ${
+                                isScheduleOpen 
+                                    ? 'text-green-700 bg-green-50 hover:bg-green-100' 
+                                    : 'text-red-700 bg-red-50 hover:bg-red-100'
+                            }`}
+                        >
+                            {isScheduleOpen ? <LockOpenIcon /> : <LockClosedIcon />}
+                            {isScheduleOpen ? 'Fechar Agenda' : 'Abrir Agenda'}
+                        </button>
+                        <button onClick={() => { onLogout(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 text-base font-semibold text-gray-600 hover:text-pink-600 transition-colors p-2 rounded-lg hover:bg-gray-100">
+                            <LogoutIcon/> Sair
+                        </button>
+                    </div>
+                </div>
             )}
 
             <div className="w-full px-2 sm:px-3 md:px-4 py-4">
