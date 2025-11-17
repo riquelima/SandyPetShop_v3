@@ -5619,16 +5619,7 @@ const DaycareEnrollmentDetailsModal: React.FC<{
                             <DetailItem label="Castrado(a)" value={enrollment.is_neutered ? 'Sim' : 'Não'} />
                             <DetailItem label="Desconto Irmão" value={enrollment.has_sibling_discount ? 'Sim (10%)' : 'Não'} />
         </div>
-        <div className="mt-6 flex items-center justify-center gap-4 flex-wrap">
-          <a href="https://www.instagram.com/sandyspetmovelcrechehotel/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 hover:bg-pink-50 transition-colors">
-            <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" className="w-6 h-6" />
-            <span className="text-sm font-semibold text-gray-700">@sandyspetmovelcrechehotel</span>
-          </a>
-          <a href="https://wa.me/5511994580316?text=Ol%C3%A1%20Sandy%2C%20vim%20do%20site%20e%20gostaria%20de%20ajuda" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-50 border border-green-200 hover:bg-green-100 transition-colors">
-            <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" className="w-6 h-6" />
-            <span className="text-sm font-semibold text-green-700">(11) 99458-0316</span>
-          </a>
-        </div>
+        
       </section>
                      {/* Tutor Info */}
                     <section>
@@ -5640,8 +5631,16 @@ const DaycareEnrollmentDetailsModal: React.FC<{
                             <DetailItem label="Contato de Emergência" value={enrollment.emergency_contact_name} />
                             <DetailItem label="Telefone do Veterinário" value={enrollment.vet_phone} />
                             <DetailItem label="Endereço" value={enrollment.address} />
-                        </div>
-                    </section>
+          </div>
+          <div className="mt-4 flex items-center justify-center gap-4">
+            <a href="https://www.instagram.com/sandyspetmovelcrechehotel/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+              <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" className="w-7 h-7" />
+            </a>
+            <a href="https://wa.me/5511994580316?text=Ol%C3%A1%20Sandy%2C%20vim%20do%20site%20e%20gostaria%20de%20ajuda" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">
+              <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" className="w-7 h-7" />
+            </a>
+          </div>
+        </section>
                      {/* Health Info */}
                     <section>
                         <h3 className="text-lg font-semibold text-pink-700 border-b pb-2 mb-4">Saúde e Comportamento</h3>
@@ -10324,16 +10323,7 @@ const App: React.FC = () => {
                             <span className="text-lg">Hotel Pet</span>
                         </button>
                     </div>
-                    <div className="mt-6 flex items-center justify-center gap-4 flex-wrap">
-                        <a href="https://www.instagram.com/sandyspetmovelcrechehotel/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 hover:bg-pink-50 transition-colors">
-                            <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" className="w-6 h-6" />
-                            <span className="text-sm font-semibold text-gray-700">@sandyspetmovelcrechehotel</span>
-                        </a>
-                        <a href="https://wa.me/5511994580316?text=Ol%C3%A1%20Sandy%2C%20vim%20do%20site%20e%20gostaria%20de%20ajuda" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-50 border border-green-200 hover:bg-green-100 transition-colors">
-                            <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" className="w-6 h-6" />
-                            <span className="text-sm font-semibold text-green-700">(11) 99458-0316</span>
-                        </a>
-                    </div>
+                    
                     <div className="mt-6 text-center">
                         <button type="button" onClick={() => setViewWithLog('scheduler')} className="text-sm text-pink-600 hover:underline">← Voltar</button>
                     </div>
