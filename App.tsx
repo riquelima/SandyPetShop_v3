@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { CheckCircleIcon as CheckCircleOutlineIcon, XCircleIcon as XCircleOutlineIcon, EyeIcon as EyeOutlineIcon, PencilSquareIcon as PencilOutlineIcon, PlusIcon as PlusOutlineIcon, TrashIcon as TrashOutlineIcon } from '@heroicons/react/24/outline';
 // FIX: Moved AddonService from constants import to types import, as it's a type defined in types.ts.
 import { Appointment, ServiceType, PetWeight, AdminAppointment, Client, MonthlyClient, DaycareRegistration, PetMovelAppointment, AddonService, HotelRegistration } from './types';
@@ -836,6 +837,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                                 <div><label htmlFor="condominium" className="block text-base font-semibold text-gray-700">Condomínio</label><div className="relative mt-1"><span className="absolute inset-y-0 left-0 flex items-center pl-3"><AddressIcon/></span>
                                     <select name="condominium" id="condominium" value={formData.condominium} onChange={handleInputChange} className="block w-full pl-10 pr-5 py-4 bg-gray-50 border border-gray-300 rounded-lg">
                                         <option value="">Selecione um condomínio</option>
+                                        <option value="Nenhum Condomínio">Nenhum Condomínio</option>
                                         <option value="Vitta Parque">Vitta Parque</option>
                                         <option value="Max Haus">Max Haus</option>
                                         <option value="Paseo">Paseo</option>
@@ -3390,27 +3392,19 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
         } else {
             // Filter clients by specific condominiums for Pet Móvel
             const petMovelCondominiums = [
-                'Vitta Parque', 'Paseo', 'Max Haus'
+                'Vitta Parque', 'Paseo', 'Max Haus', 'Nenhum Condomínio'
             ];
             
             const petMovelClients = (data as MonthlyClient[]).filter(client => {
-                if (!client.condominium) return false;
-                
-                // Normalize condominium name for comparison
-                const condominium = String(client.condominium).trim().toLowerCase();
-                
-                // Check if the client's condominium matches any of the Pet Móvel condominiums
-                return petMovelCondominiums.some(targetCondo => {
-                    const normalizedTarget = targetCondo.toLowerCase();
-                    return condominium.includes(normalizedTarget) || 
-                           normalizedTarget.includes(condominium) ||
-                           condominium === normalizedTarget;
-                });
+                const raw = client.condominium ? String(client.condominium).trim() : '';
+                if (!raw) return true;
+                const condominium = raw.toLowerCase();
+                return petMovelCondominiums.some(targetCondo => targetCondo.toLowerCase() === condominium);
             });
             
             setMonthlyClients(petMovelClients);
             if (petMovelClients && petMovelClients.length > 0) {
-                setExpandedCondos([petMovelClients[0].condominium || 'Sem Condomínio']);
+                setExpandedCondos([petMovelClients[0].condominium || 'Nenhum Condomínio']);
             }
         }
         setLoading(false);
@@ -3587,7 +3581,7 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
         });
         
         filteredClients.forEach(client => {
-            const condo = client.condominium || 'Sem Condomínio';
+            const condo = client.condominium || 'Nenhum Condomínio';
             const number = extractNumber(client.owner_address);
             if (!groups[condo]) groups[condo] = {};
             if (!groups[condo][number]) groups[condo][number] = [];
@@ -3637,7 +3631,7 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
             <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
                 <div className="flex flex-col lg:flex-row gap-4">
                     {/* Desktop: input mais comprido */}
-                    <div className="relative hidden md:block md:flex-1 md:max-w-6xl lg:max-w-7xl xl:max-w-full">
+                    <div className="relative hidden md:block md:flex-1 md:max-w-full">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <SearchIcon className="h-5 w-5 text-gray-400" />
                         </div>
@@ -4647,6 +4641,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
     const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
     // Filtro de status de pagamento: '' (Todos), 'Pendente' ou 'Pago'
     const [filterPaymentStatus, setFilterPaymentStatus] = useState<'' | 'Pendente' | 'Pago'>('');
+    const [monthlyMobileSearchOpen, setMonthlyMobileSearchOpen] = useState(false);
     
     // Estados para filtros
     const [showFilterPanel, setShowFilterPanel] = useState(false);
@@ -4920,18 +4915,66 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
             <div className="mb-6">
                 <h2 className="text-xl sm:text-3xl font-bold text-gray-800 truncate mb-4 text-center sm:text-left">Clientes Mensalistas</h2>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 mb-4">
-                    <div className="flex-1">
+                    {/* Desktop: input 3x maior */}
+                    <div className="relative hidden md:block md:flex-[3]">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M10 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></svg>
+                        </div>
                         <input
                             type="text"
                             placeholder="Buscar por nome do pet ou dono..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-white"
+                            className="block w-full pl-12 pr-12 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-base"
                         />
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm('')}
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                aria-label="Limpar"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Mobile: ícone de lupa que expande */}
+                    <div className="relative md:hidden w-full">
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                aria-label="Abrir busca"
+                                onClick={() => setMonthlyMobileSearchOpen((v) => !v)}
+                                className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100"
+                            >
+                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M10 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></svg>
+                            </button>
+                            <div className={`relative flex-1 transition-all duration-300 ${monthlyMobileSearchOpen ? 'max-w-full' : 'max-w-0'} overflow-hidden`}>
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M10 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="Buscar por nome do pet ou dono..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="block w-full pl-12 pr-10 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-base"
+                                />
+                                {searchTerm && (
+                                    <button
+                                        onClick={() => setSearchTerm('')}
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                        aria-label="Limpar"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
                     {/* Linha única no mobile: Toggle de Visualização + Grupo de Botões */}
-                    <div className="flex w-full items-center justify-between gap-2">
+                    <div className="flex w-full items-center justify-between gap-2 md:flex-[1]">
                         {/* Toggle de Visualização */}
                         <div className="flex flex-wrap bg-gray-100 rounded-lg p-1 flex-none">
                             <button
@@ -5462,19 +5505,23 @@ const DaycareEnrollmentCard: React.FC<{
             className={`bg-white rounded-2xl shadow-md overflow-hidden transition-transform transform hover:scale-[1.02] flex flex-col ${isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
         >
             <div className="p-5 flex-grow">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <div className="flex items-center text-sm font-semibold text-pink-600">
-                            <ClockIcon />
-                            <span>
-                                Solicitação em: {new Date(created_at!).toLocaleDateString('pt-BR')}
-                            </span>
+                <div className="rounded-xl mb-3 p-5 bg-gradient-to-r from-pink-500 to-purple-500 text-white flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <img src="https://cdn-icons-png.flaticon.com/512/11201/11201086.png" alt="Creche" className="w-10 h-10 rounded-full object-cover" />
+                        <div>
+                            <p className="text-2xl font-bold leading-none">{pet_name}</p>
+                            <p className="text-xs opacity-90">{tutor_name}</p>
                         </div>
-                        <p className="mt-1 text-3xl font-bold text-gray-900">{pet_name}</p>
-                        <p className="text-base text-gray-600">Tutor(a): {tutor_name}</p>
                     </div>
-                    <div className={`px-3 py-1 text-xs font-bold rounded-full ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`}>
-                        {status}
+                    <div className="text-right">
+                        <p className="text-xs opacity-90">Valor Total</p>
+                        <p className="text-lg font-extrabold">R$ {invoiceTotal.toFixed(2).replace('.', ',')}</p>
+                    </div>
+                </div>
+                <div className="flex items-center justify-between mb-3">
+                    <div className={`px-3 py-1 text-[11px] font-bold rounded-full whitespace-nowrap truncate ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`}>{status}</div>
+                    <div className="text-xs text-gray-500 hidden sm:block">
+                        Solicitação em: {new Date(created_at!).toLocaleDateString('pt-BR')}
                     </div>
                 </div>
                 
@@ -5484,9 +5531,15 @@ const DaycareEnrollmentCard: React.FC<{
                             <TagIcon />
                             <span className="font-semibold mr-2">Plano:</span> {contracted_plan ? planLabels[contracted_plan] : 'Não informado'}
                         </div>
-                        <div className="text-right">
-                            <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Valor Total</div>
-                            <div className="text-lg font-bold text-pink-600">R$ {invoiceTotal.toFixed(2).replace('.', ',')}</div>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2 text-gray-600">
+                            <WhatsAppIcon />
+                            <span>{enrollment.contact_phone || 'Sem telefone'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-600">
+                            <CalendarIcon />
+                            <span>Pagamento: {formatDateToBR(enrollment.payment_date || null)}</span>
                         </div>
                     </div>
                     
@@ -5520,31 +5573,36 @@ const DaycareEnrollmentCard: React.FC<{
                     )}
                 </div>
             </div>
-             <div className="p-2 bg-gray-50 border-t border-gray-100 flex justify-end items-center gap-1">
-                <button 
-                    onClick={(e) => { e.stopPropagation(); onAddExtraServices(enrollment); }}
-                    className="p-2 rounded-full text-green-600 hover:bg-green-100 transition-colors"
-                    title="Adicionar serviços extras"
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                </button>
-                <button 
-                    onClick={(e) => { e.stopPropagation(); onEdit(enrollment); }}
-                    className="p-2 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors"
-                    aria-label="Editar matrícula"
-                >
-                    <EditIcon />
-                </button>
-                <button 
-                    onClick={(e) => { e.stopPropagation(); onDelete(enrollment); }}
-                    className="p-2 rounded-full text-red-500 hover:bg-red-100 transition-colors"
-                    aria-label="Excluir matrícula"
-                >
-                    <DeleteIcon />
-                </button>
-            </div>
+             <div className="p-3 bg-gray-50 border-t border-gray-100">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onAddExtraServices(enrollment); }}
+                        className="w-full bg-green-100 text-green-700 py-1.5 px-2 rounded-md hover:bg-green-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
+                        title="Adicionar Serviços Extras"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        <span>Extras</span>
+                    </button>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onEdit(enrollment); }}
+                        className="w-full bg-blue-100 text-blue-700 py-1.5 px-2 rounded-md hover:bg-blue-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
+                        aria-label="Editar matrícula"
+                    >
+                        <EditIcon className="w-4 h-4" />
+                        <span>Editar</span>
+                    </button>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onDelete(enrollment); }}
+                        className="w-full bg-red-50 text-red-600 py-1.5 px-2 rounded-md hover:bg-red-100 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
+                        aria-label="Excluir matrícula"
+                    >
+                        <DeleteIcon className="w-4 h-4" />
+                        <span>Excluir</span>
+                    </button>
+                </div>
+             </div>
         </div>
     );
 };
@@ -5577,8 +5635,8 @@ const DaycareEnrollmentDetailsModal: React.FC<{
         '2x_week': '2x por Semana', '3x_week': '3x por Semana', '4x_week': '4x por Semana', '5x_week': '5x por Semana',
     };
 
-    return (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fadeIn">
+    return createPortal(
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fadeIn">
             <div className="bg-rose-50 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-scaleIn">
                 <div className="p-6 border-b border-gray-200">
                     <div className="flex justify-between items-center">
@@ -5633,8 +5691,8 @@ const DaycareEnrollmentDetailsModal: React.FC<{
                          <h3 className="text-lg font-semibold text-pink-700 border-b pb-2 mb-4">Plano, Pertences e Detalhes Financeiros</h3>
                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                              <DetailItem label="Plano Contratado" value={enrollment.contracted_plan ? planLabels[enrollment.contracted_plan] : 'N/A'} />
-                             <DetailItem label="Itens Entregues" value={enrollment.delivered_items.items.join(', ')} />
-                             <DetailItem label="Outros Itens" value={enrollment.delivered_items.other} />
+                            <DetailItem label="Itens Entregues" value={(enrollment.delivered_items?.items ?? []).join(', ')} />
+                            <DetailItem label="Outros Itens" value={enrollment.delivered_items?.other ?? ''} />
                              <DetailItem label="Valor Total" value={enrollment.total_price ? `R$ ${Number(enrollment.total_price).toFixed(2).replace('.', ',')}` : 'N/A'} />
                              <DetailItem label="Data Pagamento" value={formatDateToBR(enrollment.payment_date || null)} />
                          </div>
@@ -5694,8 +5752,9 @@ const DaycareEnrollmentDetailsModal: React.FC<{
                         )}
                     </div>
                 </div>
-            </div>
-        </div>
+                </div>
+        </div>,
+        document.body
     );
 };
 
@@ -7908,7 +7967,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
 };
 
 // Hotel View Component for managing hotel registrations
-const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show: boolean) => void }> = ({ refreshKey, setShowHotelStatistics }) => {
+    const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show: boolean) => void }> = ({ refreshKey, setShowHotelStatistics }) => {
     const [registrations, setRegistrations] = useState<HotelRegistration[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedRegistration, setSelectedRegistration] = useState<HotelRegistration | null>(null);
@@ -8002,11 +8061,9 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
             ));
             if (newStatus === 'checked_in') {
                 setExpandedHotelSections(prev => prev.includes('in_hotel') ? prev : [...prev, 'in_hotel']);
-                setHotelFilter('in_hotel');
             }
             if (newStatus === 'checked_out') {
                 setExpandedHotelSections(prev => prev.includes('archived') ? prev : [...prev, 'archived']);
-                setHotelFilter('archived');
             }
         }
         setUpdatingId(null);
@@ -8016,12 +8073,31 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
         if (!registrationToReject || !registrationToReject.id) return;
         const reason = rejectReason.trim();
         if (!reason) return;
+        const nowIso = new Date().toISOString();
         const { error } = await supabase
             .from('hotel_registrations')
-            .update({ approval_status: 'rejected' /* rejection_reason only used if column exists */ })
+            .update({ approval_status: 'rejected', check_in_status: 'checked_out', checked_out_at: nowIso, status: 'Concluído' })
             .eq('id', registrationToReject.id);
         if (!error) {
-            setRegistrations(prev => prev.map(r => r.id === registrationToReject.id ? { ...r, approval_status: 'rejected' } : r));
+            setRegistrations(prev => prev.map(r => r.id === registrationToReject.id ? { ...r, approval_status: 'rejected', check_in_status: 'checked_out', checked_out_at: nowIso, status: 'Concluído' } : r));
+            setExpandedHotelSections(prev => prev.includes('archived') ? prev : [...prev, 'archived']);
+            const formatPhone = (raw: string) => {
+                const digits = (raw || '').replace(/\D/g, '');
+                if (digits.startsWith('55')) return digits;
+                return `55${digits}`;
+            };
+            const body = {
+                tutor_nome: registrationToReject.tutor_name,
+                telefone: formatPhone(registrationToReject.tutor_phone || ''),
+                motivo: reason,
+            };
+            try {
+                await fetch('https://n8n.intelektus.tech/webhook/hospedagemCancelada', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+            } catch (_) {}
         }
         setRegistrationToReject(null);
         setRejectReason('');
@@ -8051,7 +8127,31 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
             }
             fetchRegistrations();
             setExpandedHotelSections(prev => prev.includes('approved') ? prev : [...prev, 'approved']);
-            setHotelFilter('approved');
+            const formatPhone = (raw: string) => {
+                const digits = (raw || '').replace(/\D/g, '');
+                if (digits.startsWith('55')) return digits;
+                return `55${digits}`;
+            };
+            const formatDateTime = (d?: string | null, t?: string | null) => {
+                if (!d) return '';
+                const date = new Date(d);
+                const dateStr = date.toLocaleDateString('pt-BR');
+                const timeStr = String(t || '').split(':').slice(0,2).join(':');
+                return `${dateStr} ${timeStr}`.trim();
+            };
+            const body = {
+                tutor_nome: registration.tutor_name,
+                telefone: formatPhone(registration.tutor_phone || ''),
+                checkin_previsto: formatDateTime(registration.check_in_date, registration.check_in_time),
+                checkout_previsto: formatDateTime(registration.check_out_date, registration.check_out_time),
+            };
+            try {
+                await fetch('https://n8n.intelektus.tech/webhook/hospedagemConfirmada', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+            } catch (e) {}
         }
         else {
             alert(`Falha ao aprovar hospedagem: ${error.message || 'Erro desconhecido'}`);
@@ -8079,13 +8179,34 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
         setSelectedRegistration(null);
     };
 
-    const handleHotelExtraServicesUpdated = (updatedRegistration: HotelRegistration) => {
-        setRegistrations(prev => prev.map(r => 
-            r.id === updatedRegistration.id ? updatedRegistration : r
-        ));
-        setIsHotelExtraServicesModalOpen(false);
-        setHotelRegistrationForExtraServices(null);
-    };
+        const handleHotelExtraServicesUpdated = (updatedRegistration: HotelRegistration) => {
+            setRegistrations(prev => prev.map(r => 
+                r.id === updatedRegistration.id ? updatedRegistration : r
+            ));
+            setIsHotelExtraServicesModalOpen(false);
+            setHotelRegistrationForExtraServices(null);
+        };
+
+        const handleRemoveExtraChip = async (registration: HotelRegistration, key: 'pernoite' | 'banho_tosa' | 'so_banho' | 'adestrador' | 'despesa_medica' | 'dias_extras') => {
+            if (!registration.extra_services) return;
+            const updatedExtras = { ...registration.extra_services } as any;
+            if (key === 'dias_extras') {
+                const current = updatedExtras.dias_extras || { quantity: 0, value: 0 };
+                updatedExtras.dias_extras = { ...current, quantity: 0 };
+            } else {
+                const current = updatedExtras[key] || { enabled: false, value: 0 };
+                updatedExtras[key] = { ...current, enabled: false };
+            }
+            const { data, error } = await supabase
+                .from('hotel_registrations')
+                .update({ extra_services: updatedExtras })
+                .eq('id', getDbId(registration.id))
+                .select()
+                .single();
+            if (!error) {
+                setRegistrations(prev => prev.map(r => r.id === registration.id ? { ...r, extra_services: updatedExtras } : r));
+            }
+        };
 
     const filteredRegistrations = registrations.filter(reg => {
         const pet = (reg.pet_name || '').toLowerCase();
@@ -8095,15 +8216,22 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
     });
 
     const currentInHotel = filteredRegistrations.filter(reg => reg.check_in_status === 'checked_in');
-    const archived: HotelRegistration[] = [];
+    const archived: HotelRegistration[] = filteredRegistrations.filter(reg => (reg.check_in_status === 'checked_out') || (reg.status === 'Concluído'));
     
+    const normalizeApproval = (s: any): 'approved' | 'pending' | 'rejected' => {
+        const v = String(s ?? '').trim().toLowerCase();
+        if (v === 'approved' || v === 'aprovado') return 'approved';
+        if (v === 'rejected' || v === 'rejeitado') return 'rejected';
+        return 'pending';
+    };
+
     const approved = filteredRegistrations
-        .filter(reg => (reg.approval_status || '').toLowerCase() === 'approved')
+        .filter(reg => normalizeApproval(reg.approval_status) === 'approved')
         .filter(reg => reg.check_in_status !== 'checked_in' && reg.check_in_status !== 'checked_out' && reg.status !== 'Concluído');
     
     const analysis = filteredRegistrations
         .filter(reg => reg.check_in_status !== 'checked_in' && reg.check_in_status !== 'checked_out' && reg.status !== 'Concluído')
-        .filter(reg => (reg.approval_status || '').toLowerCase() !== 'approved');
+        .filter(reg => normalizeApproval(reg.approval_status) !== 'approved');
 
     const handleHotelDragStart = (e: React.DragEvent<HTMLDivElement>, registration: HotelRegistration, source: 'analysis' | 'approved' | 'in_hotel' | 'archived') => {
         e.dataTransfer.effectAllowed = 'move';
@@ -8131,6 +8259,7 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
         if (target === 'approved') {
             payload = { approval_status: 'approved' };
             if (source === 'archived') payload = { ...payload, check_in_status: 'pending', checked_out_at: null, status: 'Ativo' };
+            if (source === 'in_hotel') payload = { ...payload, check_in_status: 'pending', checked_in_at: null, status: 'Ativo' };
         } else if (target === 'in_hotel') {
             payload = { check_in_status: 'checked_in', checked_in_at: new Date().toISOString(), status: 'Ativo' };
             if ((registration.approval_status || '').toLowerCase() !== 'approved') payload = { ...payload, approval_status: 'approved' };
@@ -8152,9 +8281,6 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                 fetchRegistrations();
             }, 100);
             setExpandedHotelSections(prev => prev.includes(target) ? prev : [...prev, target]);
-            if (target === 'approved') {
-                setHotelFilter('approved');
-            }
         } else {
             alert(`Falha ao mover hospedagem: ${error.message || 'Erro desconhecido'}`);
             console.error('Erro ao mover hospedagem:', error);
@@ -8176,7 +8302,7 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                         <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
                         <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">{items.length}</span>
                     </div>
-                    <button className="text-sm text-pink-600 hover:underline" onClick={(e) => { e.stopPropagation(); toggleHotelSection(sectionId); }}>{isExpanded ? 'Recolher' : 'Expandir'}</button>
+                    <button className="text-xs text-pink-600 hover:underline" onClick={(e) => { e.stopPropagation(); toggleHotelSection(sectionId); }}>{isExpanded ? 'Recolher' : 'Expandir'}</button>
                 </div>
                 {isExpanded && (
                     <div className="p-4 pt-0">
@@ -8184,8 +8310,8 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                             <div className="overflow-x-auto">
                                 <div className="flex gap-4 pb-2 snap-x snap-mandatory">
                                     {items.map(reg => (
-                                        <div key={reg.id} draggable onDragStart={(e) => handleHotelDragStart(e, reg, sectionId)} className="shrink-0 w-[320px] sm:w-[360px] snap-center">
-                                            <HotelRegistrationCard registration={reg} onAddExtraServices={handleAddHotelExtraServices} showCheckActions={sectionId==='approved'} />
+                                        <div key={reg.id} draggable onDragStart={(e) => handleHotelDragStart(e, reg, sectionId)} className="shrink-0 w-[360px] sm:w-[420px] lg:w-[460px] snap-center">
+                                            <HotelRegistrationCard registration={reg} onAddExtraServices={handleAddHotelExtraServices} showCheckActions={sectionId==='approved'} inHotel={sectionId==='in_hotel'} />
                                         </div>
                                     ))}
                                 </div>
@@ -8211,11 +8337,16 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
         registration: HotelRegistration;
         onAddExtraServices: (registration: HotelRegistration) => void;
         showCheckActions?: boolean;
-    }> = ({ registration, onAddExtraServices, showCheckActions = false }) => {
+        inHotel?: boolean;
+    }> = ({ registration, onAddExtraServices, showCheckActions = false, inHotel = false }) => {
         const invoiceTotal = calculateHotelInvoiceTotal(registration);
         const currentCheckInStatus = registration.check_in_status || 'pending';
         const isUpdating = updatingId === registration.id;
         const isApproving = approvingId === registration.id;
+        const [pendingChip, setPendingChip] = useState<string | null>(null);
+        const apRawHeader = (registration.approval_status ?? 'pending');
+        const apNormHeader = (typeof apRawHeader === 'string' ? apRawHeader.trim() : 'pending').toLowerCase();
+        const isAnalysisHeader = (registration.check_in_status !== 'checked_in' && registration.check_in_status !== 'checked_out' && registration.status !== 'Concluído' && apNormHeader !== 'approved');
         
         const getCheckInButtonStyle = () => {
             if (currentCheckInStatus === 'pending') {
@@ -8247,17 +8378,25 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
         const statusBadge = getStatusBadge();
         
         return (
-            <div className="bg-white rounded-2xl shadow-sm p-4 hover:shadow-md transition-shadow border border-gray-200">
-                <div className="flex justify-between items-start mb-3">
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-800">{registration.pet_name}</h3>
-                        <p className="text-base text-gray-600">{registration.pet_breed} • {registration.pet_age}</p>
-                        <p className="text-lg font-bold text-green-600 mt-1">R$ {invoiceTotal.toFixed(2).replace('.', ',')}</p>
+            <div className="bg-white rounded-2xl shadow-sm p-5 min-h-[360px] hover:shadow-md transition-shadow border border-gray-200">
+                <div className="rounded-xl mb-3 p-5 bg-gradient-to-r from-pink-500 to-purple-500 text-white flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <img src="https://cdn-icons-png.flaticon.com/512/3009/3009489.png" alt="Pet" className="w-10 h-10 rounded-full object-cover" />
+                        <div>
+                            <h3 className="text-lg font-bold leading-none">{registration.pet_name}</h3>
+                            <p className="text-xs opacity-90">{registration.tutor_name}</p>
+                        </div>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusBadge.bg} ${statusBadge.text}`}>
-                            {statusBadge.label}
-                        </span>
+                    <div className="text-right">
+                        <p className="text-xs opacity-90">Valor Total</p>
+                        <p className="text-lg font-extrabold">R$ {invoiceTotal.toFixed(2).replace('.', ',')}</p>
+                    </div>
+                </div>
+                <div className="flex items-center justify-between mb-3">
+                    <div className="flex flex-wrap gap-2">
+                        {!isAnalysisHeader && (
+                            <span className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap truncate ${statusBadge.bg} ${statusBadge.text}`}>{statusBadge.label}</span>
+                        )}
                         {(() => {
                             const apRaw = (registration.approval_status ?? 'pending');
                             const apNorm = (typeof apRaw === 'string' ? apRaw.trim() : 'pending').toLowerCase();
@@ -8269,10 +8408,17 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                                 'aprovado': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Aprovado' },
                                 'rejeitado': { bg: 'bg-red-100', text: 'text-red-800', label: 'Rejeitado' },
                             };
+                            if (currentCheckInStatus === 'checked_in') {
+                                return <span className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap truncate bg-green-100 text-green-800`}>Hospedagem Ativa</span>;
+                            }
+                            if (currentCheckInStatus === 'checked_out' || (registration.status || '') === 'Concluído') {
+                                return <span className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap truncate bg-red-100 text-red-800`}>Arquivado</span>;
+                            }
                             const b = map[apNorm] ?? map['pendente'];
-                            return <span className={`px-3 py-1 rounded-full text-xs font-semibold ${b.bg} ${b.text}`}>{b.label}</span>;
+                            return <span className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap truncate ${b.bg} ${b.text}`}>{b.label}</span>;
                         })()}
                     </div>
+                    
                 </div>
                 <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-3 text-gray-600">
@@ -8286,7 +8432,9 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                     {registration.check_in_date && (
                         <div className="flex items-center gap-3 text-gray-600">
                             <CalendarIcon />
-                            <span>Previsto: {new Date(registration.check_in_date).toLocaleDateString('pt-BR')} {registration.check_in_time}</span>
+                            <span>
+                                Previsto: {new Date(registration.check_in_date).toLocaleDateString('pt-BR')} {String(registration.check_in_time ?? '').split(':').slice(0,2).join(':')}
+                            </span>
                         </div>
                     )}
                     {registration.checked_in_at && (
@@ -8294,7 +8442,7 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <span>Check-in: {new Date(registration.checked_in_at).toLocaleString('pt-BR')}</span>
+                            <span>Check-in: {new Date(registration.checked_in_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                     )}
                     {registration.checked_out_at && (
@@ -8302,11 +8450,47 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <span>Check-out: {new Date(registration.checked_out_at).toLocaleString('pt-BR')}</span>
+                            <span>Check-out: {new Date(registration.checked_out_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                )}
+                {registration.extra_services && (
+                    <div className="pt-2">
+                        <div className="flex flex-wrap gap-2">
+                            {registration.extra_services.pernoite?.enabled && (
+                                <button onClick={() => pendingChip==='pernoite' ? handleRemoveExtraChip(registration, 'pernoite') : setPendingChip('pernoite')} className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full cursor-pointer hover:opacity-80 flex items-center gap-1">
+                                    <span>Pernoite</span>{pendingChip==='pernoite' && <CloseIcon className="w-3 h-3" />}
+                                </button>
+                            )}
+                            {registration.extra_services.banho_tosa?.enabled && (
+                                <button onClick={() => pendingChip==='banho_tosa' ? handleRemoveExtraChip(registration, 'banho_tosa') : setPendingChip('banho_tosa')} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full cursor-pointer hover:opacity-80 flex items-center gap-1">
+                                    <span>Banho & Tosa</span>{pendingChip==='banho_tosa' && <CloseIcon className="w-3 h-3" />}
+                                </button>
+                            )}
+                            {registration.extra_services.so_banho?.enabled && (
+                                <button onClick={() => pendingChip==='so_banho' ? handleRemoveExtraChip(registration, 'so_banho') : setPendingChip('so_banho')} className="px-2 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full cursor-pointer hover:opacity-80 flex items-center gap-1">
+                                    <span>Só banho</span>{pendingChip==='so_banho' && <CloseIcon className="w-3 h-3" />}
+                                </button>
+                            )}
+                            {registration.extra_services.adestrador?.enabled && (
+                                <button onClick={() => pendingChip==='adestrador' ? handleRemoveExtraChip(registration, 'adestrador') : setPendingChip('adestrador')} className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full cursor-pointer hover:opacity-80 flex items-center gap-1">
+                                    <span>Adestrador</span>{pendingChip==='adestrador' && <CloseIcon className="w-3 h-3" />}
+                                </button>
+                            )}
+                            {registration.extra_services.despesa_medica?.enabled && (
+                                <button onClick={() => pendingChip==='despesa_medica' ? handleRemoveExtraChip(registration, 'despesa_medica') : setPendingChip('despesa_medica')} className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full cursor-pointer hover:opacity-80 flex items-center gap-1">
+                                    <span>Despesa médica</span>{pendingChip==='despesa_medica' && <CloseIcon className="w-3 h-3" />}
+                                </button>
+                            )}
+                            {registration.extra_services.dias_extras?.quantity > 0 && (
+                                <button onClick={() => pendingChip==='dias_extras' ? handleRemoveExtraChip(registration, 'dias_extras') : setPendingChip('dias_extras')} className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full cursor-pointer hover:opacity-80 flex items-center gap-1">
+                                    <span>{registration.extra_services.dias_extras.quantity} dia{registration.extra_services.dias_extras.quantity > 1 ? 's' : ''} extra{registration.extra_services.dias_extras.quantity > 1 ? 's' : ''}</span>{pendingChip==='dias_extras' && <CloseIcon className="w-3 h-3" />}
+                                </button>
+                            )}
                         </div>
-                    )}
+                    </div>
+                )}
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 mt-4">
                     {(() => {
                         const apRaw = (registration.approval_status ?? 'pending');
                         const apNorm = (typeof apRaw === 'string' ? apRaw.trim() : 'pending').toLowerCase();
@@ -8317,15 +8501,65 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                                     <button
                                         onClick={() => handleApprove(registration)}
                                         disabled={isApproving}
-                                        className="w-full bg-green-100 text-green-700 py-3.5 px-4 rounded-lg hover:bg-green-200 transition-colors text-sm font-semibold flex items-center gap-2 justify-center"
+                                        className="w-full bg-green-100 text-green-700 py-1.5 px-2 rounded-md hover:bg-green-200 transition-colors text-xs font-medium flex items-center gap-1.5 justify-center"
                                     >
-                                        {isApproving ? (<div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-700"></div>) : (<><CheckCircleOutlineIcon className="w-5 h-5" /><span>Aprovar</span></>)}
+                                        {isApproving ? (<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-700"></div>) : (<><CheckCircleOutlineIcon className="w-4 h-4" /><span>Aprovar</span></>)}
                                     </button>
                                     <button
                                         onClick={() => { setRegistrationToReject(registration); setRejectReason(''); }}
-                                        className="w-full bg-red-100 text-red-700 py-3.5 px-4 rounded-lg hover:bg-red-200 transition-colors text-sm font-semibold flex items-center gap-2 justify-center"
+                                        className="w-full bg-red-100 text-red-700 py-1.5 px-2 rounded-md hover:bg-red-200 transition-colors text-xs font-medium flex items-center gap-1.5 justify-center"
                                     >
-                                        <XCircleOutlineIcon className="w-5 h-5" /><span>Rejeitar</span>
+                                        <XCircleOutlineIcon className="w-4 h-4" /><span>Rejeitar</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => setSelectedRegistration(registration)}
+                                        className="w-full bg-gray-100 text-gray-700 py-1.5 px-2 rounded-md hover:bg-gray-200 transition-colors flex items-center justify-center gap-1.5 text-xs font-medium"
+                                    >
+                                        <EyeOutlineIcon className="w-4 h-4" /><span>Visualizar</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setRegistrationToEdit(registration)}
+                                        className="w-full bg-blue-100 text-blue-700 py-1.5 px-2 rounded-md hover:bg-blue-200 transition-colors flex items-center justify-center gap-1.5 text-xs font-medium"
+                                    >
+                                        <PencilOutlineIcon className="w-4 h-4" /><span>Editar</span>
+                                    </button>
+                                </>
+                            );
+                        }
+                        if (inHotel) {
+                            return (
+                                <>
+                                    <button 
+                                        onClick={() => handleToggleCheckIn(registration)}
+                                        disabled={isUpdating}
+                                        className={`w-full py-1.5 px-2 rounded-md transition-colors ${getCheckInButtonStyle()} disabled:opacity-50 flex items-center justify-center gap-1.5 text-center whitespace-nowrap leading-none text-[11px] font-medium`}
+                                    >
+                                        {isUpdating ? (<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>) : (<><CheckCircleOutlineIcon className="w-4 h-4" /><span>Check-out</span></>)}
+                                    </button>
+                                    <button 
+                                        onClick={() => setSelectedRegistration(registration)}
+                                        className="w-full bg-gray-100 text-gray-700 py-1.5 px-2 rounded-md hover:bg-gray-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
+                                    >
+                                        <EyeOutlineIcon className="w-4 h-4" /><span>Visualizar</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setRegistrationToEdit(registration)}
+                                        className="w-full bg-blue-100 text-blue-700 py-1.5 px-2 rounded-md hover:bg-blue-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
+                                    >
+                                        <PencilOutlineIcon className="w-4 h-4" /><span>Editar</span>
+                                    </button>
+                                    <button
+                                        onClick={() => onAddExtraServices(registration)}
+                                        className="w-full bg-green-100 text-green-700 py-1.5 px-2 rounded-md hover:bg-green-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
+                                        title="Adicionar Serviços Extras"
+                                    >
+                                        <PlusOutlineIcon className="w-4 h-4" /><span>Extras</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setRegistrationToDelete(registration)}
+                                        className="w-full bg-red-50 text-red-600 py-1.5 px-2 rounded-md hover:bg-red-100 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
+                                    >
+                                        <TrashOutlineIcon className="w-4 h-4" /><span>Excluir</span>
                                     </button>
                                 </>
                             );
@@ -8336,48 +8570,44 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                                     <button 
                                         onClick={() => handleToggleCheckIn(registration)}
                                         disabled={isUpdating}
-                                        className={`w-full p-2.5 rounded-lg transition-colors ${getCheckInButtonStyle()} disabled:opacity-50 flex items-center justify-center text-sm font-bold`}
+                                        className={`w-full py-1.5 px-2 rounded-md transition-colors ${getCheckInButtonStyle()} disabled:opacity-50 flex items-center justify-center gap-1.5 text-center whitespace-nowrap leading-none text-[11px] font-medium`}
                                     >
-                                        {isUpdating ? (
-                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                        ) : (
-                                            'Check-in'
-                                        )}
+                                        {isUpdating ? (<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>) : (<><CheckCircleOutlineIcon className="w-4 h-4" /><span>Check-in</span></>)}
                                     </button>
                                 )}
                                 {!showCheckActions && (
                                     <button
                                         onClick={() => handleApprove(registration)}
                                         disabled={isApproving}
-                                        className="w-full bg-green-100 text-green-700 p-2.5 rounded-lg hover:bg-green-200 transition-colors flex items-center justify-center"
+                                        className="w-full bg-green-100 text-green-700 py-1.5 px-2 rounded-md hover:bg-green-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
                                     >
-                                        {isApproving ? (<div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-700"></div>) : (<CheckCircleOutlineIcon className="w-5 h-5" />)}
+                                        {isApproving ? (<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-700"></div>) : (<><CheckCircleOutlineIcon className="w-4 h-4" /><span>Aprovar</span></>)}
                                     </button>
                                 )}
                                 <button 
                                     onClick={() => setSelectedRegistration(registration)}
-                                    className="w-full bg-gray-100 text-gray-700 p-2.5 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center"
+                                    className="w-full bg-gray-100 text-gray-700 py-1.5 px-2 rounded-md hover:bg-gray-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
                                 >
-                                    <EyeOutlineIcon className="w-5 h-5" />
+                                    <EyeOutlineIcon className="w-4 h-4" /><span>Visualizar</span>
                                 </button>
                                 <button
                                     onClick={() => setRegistrationToEdit(registration)}
-                                    className="w-full bg-blue-100 text-blue-700 p-2.5 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center"
+                                    className="w-full bg-blue-100 text-blue-700 py-1.5 px-2 rounded-md hover:bg-blue-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
                                 >
-                                    <PencilOutlineIcon className="w-5 h-5" />
+                                    <PencilOutlineIcon className="w-4 h-4" /><span>Editar</span>
                                 </button>
                                 <button
                                     onClick={() => onAddExtraServices(registration)}
-                                    className="w-full bg-green-100 text-green-700 p-2.5 rounded-lg hover:bg-green-200 transition-colors flex items-center justify-center"
+                                    className="w-full bg-green-100 text-green-700 py-1.5 px-2 rounded-md hover:bg-green-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
                                     title="Adicionar Serviços Extras"
                                 >
-                                    <PlusOutlineIcon className="w-5 h-5" />
+                                    <PlusOutlineIcon className="w-4 h-4" /><span>Extras</span>
                                 </button>
                                 <button
                                     onClick={() => setRegistrationToDelete(registration)}
-                                    className="w-full bg-red-50 text-red-600 p-2.5 rounded-lg hover:bg-red-100 transition-colors flex items-center justify-center"
+                                    className="w-full bg-red-50 text-red-600 py-1.5 px-2 rounded-md hover:bg-red-100 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
                                 >
-                                    <TrashOutlineIcon className="w-5 h-5" />
+                                    <TrashOutlineIcon className="w-4 h-4" /><span>Excluir</span>
                                 </button>
                             </>
                         );
@@ -8395,26 +8625,26 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
             <h1 className="text-3xl font-bold text-gray-800 text-center sm:text-left">Hotel Pet</h1>
                         <p className="text-gray-600 mt-1">Gerencie os registros de hospedagem</p>
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex gap-2">
                         <button
                             onClick={() => setShowHotelStatistics?.(true)}
-                            className="bg-blue-600 text-white font-bold py-3.5 px-5 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                            className="bg-blue-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1.5 text-sm"
                         >
-                            <ChartBarIcon className="w-5 h-5" />
+                            <ChartBarIcon className="w-4 h-4" />
                             <span className="hidden sm:inline">Estatísticas</span>
                         </button>
                         <button
                             onClick={() => setShowHotelFilterPanel(prev => !prev)}
-                            className="bg-gray-100 text-gray-700 font-semibold py-3.5 px-4 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+                            className="bg-gray-100 text-gray-700 font-medium py-2 px-3 rounded-md hover:bg-gray-200 transition-colors flex items-center gap-1.5 text-sm"
                         >
-                            <FunnelIcon className="w-5 h-5" />
+                            <FunnelIcon className="w-4 h-4" />
                             <span className="hidden sm:inline">Filtrar</span>
                         </button>
                         <button
                             onClick={() => setIsAddFormOpen(true)}
-                            className="bg-pink-600 text-white font-bold py-3.5 px-5 rounded-lg hover:bg-pink-700 transition-colors flex items-center gap-2"
+                            className="bg-pink-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-pink-700 transition-colors flex items-center gap-1.5 text-sm"
                         >
-                            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                             </svg>
                             Novo Check-in
@@ -8434,12 +8664,12 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
 
                 {showHotelFilterPanel && (
                     <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
-                        <div className="flex flex-wrap gap-2">
-                            <button onClick={() => setHotelFilter('all')} className={`px-3 py-2 rounded-lg text-sm font-semibold ${hotelFilter==='all' ? 'bg-pink-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:border-pink-400'}`}>Todos</button>
-                            <button onClick={() => setHotelFilter('in_hotel')} className={`px-3 py-2 rounded-lg text-sm font-semibold ${hotelFilter==='in_hotel' ? 'bg-pink-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:border-pink-400'}`}>Pets no Hotel agora</button>
-                            <button onClick={() => setHotelFilter('approved')} className={`px-3 py-2 rounded-lg text-sm font-semibold ${hotelFilter==='approved' ? 'bg-pink-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:border-pink-400'}`}>Hospedagens Aprovadas</button>
-                            <button onClick={() => setHotelFilter('analysis')} className={`px-3 py-2 rounded-lg text-sm font-semibold ${hotelFilter==='analysis' ? 'bg-pink-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:border-pink-400'}`}>Hospedagens em Análise</button>
-                            <button onClick={() => setHotelFilter('archived')} className={`px-3 py-2 rounded-lg text-sm font-semibold ${hotelFilter==='archived' ? 'bg-pink-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:border-pink-400'}`}>Arquivados</button>
+                        <div className="flex flex-wrap gap-1.5">
+                            <button onClick={() => setHotelFilter('all')} className={`px-2.5 py-1.5 rounded-md text-xs font-semibold ${hotelFilter==='all' ? 'bg-pink-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:border-pink-400'}`}>Todos</button>
+                            <button onClick={() => setHotelFilter('in_hotel')} className={`px-2.5 py-1.5 rounded-md text-xs font-semibold ${hotelFilter==='in_hotel' ? 'bg-pink-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:border-pink-400'}`}>Pets no Hotel agora</button>
+                            <button onClick={() => setHotelFilter('approved')} className={`px-2.5 py-1.5 rounded-md text-xs font-semibold ${hotelFilter==='approved' ? 'bg-pink-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:border-pink-400'}`}>Hospedagens Aprovadas</button>
+                            <button onClick={() => setHotelFilter('analysis')} className={`px-2.5 py-1.5 rounded-md text-xs font-semibold ${hotelFilter==='analysis' ? 'bg-pink-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:border-pink-400'}`}>Hospedagens em Análise</button>
+                            <button onClick={() => setHotelFilter('archived')} className={`px-2.5 py-1.5 rounded-md text-xs font-semibold ${hotelFilter==='archived' ? 'bg-pink-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:border-pink-400'}`}>Arquivados</button>
                         </div>
                     </div>
                 )}
@@ -8473,17 +8703,17 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                         <p className="text-gray-600 mb-6">
                             Tem certeza que deseja excluir o registro de <strong>{registrationToDelete.pet_name}</strong>?
                         </p>
-                        <div className="flex gap-4 justify-end">
+                        <div className="flex gap-2 justify-end">
                             <button
                                 onClick={() => setRegistrationToDelete(null)}
-                                className="px-4 py-3.5 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-semibold"
+                                className="px-3 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors font-medium text-sm"
                             >
                                 Cancelar
                             </button>
                             <button
                                 onClick={handleConfirmDelete}
                                 disabled={isDeleting}
-                                className="px-4 py-3.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold disabled:opacity-50"
+                                className="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors font-semibold text-sm disabled:opacity-50"
                             >
                                 {isDeleting ? 'Excluindo...' : 'Excluir'}
                             </button>
@@ -8498,9 +8728,9 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                         <h3 className="text-2xl font-bold text-gray-800 mb-4">Rejeitar Hospedagem</h3>
                         <p className="text-gray-600 mb-4">Informe o motivo da rejeição para <strong>{registrationToReject.pet_name}</strong>:</p>
                         <textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500" rows={4} placeholder="Descreva o motivo"></textarea>
-                        <div className="flex gap-4 justify-end mt-4">
-                            <button onClick={() => { setRegistrationToReject(null); setRejectReason(''); }} className="px-4 py-3.5 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-semibold">Cancelar</button>
-                            <button onClick={handleConfirmReject} disabled={!rejectReason.trim()} className="px-4 py-3.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold disabled:opacity-50">Confirmar Rejeição</button>
+                        <div className="flex gap-2 justify-end mt-4">
+                            <button onClick={() => { setRegistrationToReject(null); setRejectReason(''); }} className="px-3 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors font-medium text-sm">Cancelar</button>
+                            <button onClick={handleConfirmReject} disabled={!rejectReason.trim()} className="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors font-semibold text-sm disabled:opacity-50">Confirmar Rejeição</button>
                         </div>
                     </div>
                 </div>
@@ -8601,6 +8831,97 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                                     </div>
                                 </div>
                             )}
+                            <div>
+                                <h4 className="font-semibold text-gray-700 mb-2">Status</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                    <div><span className="font-semibold">Aprovação:</span> {(selectedRegistration.approval_status ?? 'pending') === 'approved' ? 'Aprovado' : (selectedRegistration.approval_status ?? 'pending') === 'rejected' ? 'Rejeitado' : 'Em Análise'}</div>
+                                    <div><span className="font-semibold">Check-in:</span> {(selectedRegistration.check_in_status ?? 'pending') === 'checked_in' ? 'Ativo' : (selectedRegistration.check_in_status ?? 'pending') === 'checked_out' ? 'Finalizado' : 'Pendente'}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-gray-700 mb-2">Documentos</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                    <div><span className="font-semibold">RG:</span> {selectedRegistration.has_rg_document ? 'Sim' : 'Não'}</div>
+                                    <div><span className="font-semibold">Comprovante de residência:</span> {selectedRegistration.has_residence_proof ? 'Sim' : 'Não'}</div>
+                                    <div><span className="font-semibold">Carteira de vacinação:</span> {selectedRegistration.has_vaccination_card ? 'Sim' : 'Não'}</div>
+                                    <div><span className="font-semibold">Atestado veterinário:</span> {selectedRegistration.has_vet_certificate ? 'Sim' : 'Não'}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-gray-700 mb-2">Saúde</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                    <div><span className="font-semibold">Doenças pré-existentes:</span> {selectedRegistration.preexisting_disease || '—'}</div>
+                                    <div><span className="font-semibold">Alergias:</span> {selectedRegistration.allergies || '—'}</div>
+                                    <div><span className="font-semibold">Comportamento:</span> {selectedRegistration.behavior || '—'}</div>
+                                    <div><span className="font-semibold">Medos/Traumas:</span> {selectedRegistration.fears_traumas || '—'}</div>
+                                    <div><span className="font-semibold">Feridas/Marcas:</span> {selectedRegistration.wounds_marks || '—'}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-gray-700 mb-2">Pulgas e Carrapatos</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                    <div><span className="font-semibold">Remédio aplicado:</span> {selectedRegistration.has_flea_tick_remedy ? 'Sim' : 'Não'}</div>
+                                    <div><span className="font-semibold">Data do remédio:</span> {selectedRegistration.flea_tick_remedy_date ? new Date(selectedRegistration.flea_tick_remedy_date).toLocaleDateString('pt-BR') : '—'}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-gray-700 mb-2">Alimentação</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                    <div><span className="font-semibold">Marca:</span> {selectedRegistration.food_brand || '—'}</div>
+                                    <div><span className="font-semibold">Quantidade:</span> {selectedRegistration.food_quantity || '—'}</div>
+                                    <div><span className="font-semibold">Frequência:</span> {selectedRegistration.feeding_frequency || '—'}</div>
+                                    <div><span className="font-semibold">Aceita petiscos:</span> {selectedRegistration.accepts_treats || '—'}</div>
+                                    <div className="sm:col-span-2"><span className="font-semibold">Cuidados especiais:</span> {selectedRegistration.special_food_care || '—'}</div>
+                                    <div className="sm:col-span-2"><span className="font-semibold">Observações:</span> {selectedRegistration.food_observations || '—'}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-gray-700 mb-2">Contato de Emergência</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                    <div><span className="font-semibold">Nome:</span> {selectedRegistration.emergency_contact_name || '—'}</div>
+                                    <div><span className="font-semibold">Telefone:</span> {selectedRegistration.emergency_contact_phone || '—'}</div>
+                                    <div><span className="font-semibold">Relação:</span> {selectedRegistration.emergency_contact_relation || '—'}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-gray-700 mb-2">Autorizações</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                    <div><span className="font-semibold">Autoriza foto:</span> {selectedRegistration.photo_authorization ? 'Sim' : 'Não'}</div>
+                                    <div><span className="font-semibold">Retirar itens no check-out:</span> {selectedRegistration.retrieve_at_checkout ? 'Sim' : 'Não'}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-gray-700 mb-2">Serviços Selecionados</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                    <div><span className="font-semibold">Banho:</span> {selectedRegistration.service_bath ? 'Sim' : 'Não'}</div>
+                                    <div><span className="font-semibold">Transporte:</span> {selectedRegistration.service_transport ? 'Sim' : 'Não'}</div>
+                                    <div><span className="font-semibold">Diária:</span> {selectedRegistration.service_daily_rate ? 'Sim' : 'Não'}</div>
+                                    <div><span className="font-semibold">Hora extra:</span> {selectedRegistration.service_extra_hour ? 'Sim' : 'Não'}</div>
+                                    <div><span className="font-semibold">Veterinário:</span> {selectedRegistration.service_vet ? 'Sim' : 'Não'}</div>
+                                    <div><span className="font-semibold">Adestrador:</span> {selectedRegistration.service_training ? 'Sim' : 'Não'}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-gray-700 mb-2">Financeiro</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                    <div><span className="font-semibold">Total dos serviços:</span> R$ {(selectedRegistration.total_services_price ?? 0).toFixed(2).replace('.', ',')}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-gray-700 mb-2">Informações Adicionais</h4>
+                                <div className="text-sm">{selectedRegistration.additional_info || '—'}</div>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-gray-700 mb-2">Profissional e Assinaturas</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                    <div><span className="font-semibold">Profissional:</span> {selectedRegistration.professional_name || '—'}</div>
+                                    <div><span className="font-semibold">Data de registro:</span> {selectedRegistration.registration_date ? new Date(selectedRegistration.registration_date).toLocaleDateString('pt-BR') : '—'}</div>
+                                    <div><span className="font-semibold">Assinatura tutor:</span> {selectedRegistration.tutor_signature ? 'Registrada' : '—'}</div>
+                                    <div><span className="font-semibold">Assinatura check-in:</span> {selectedRegistration.tutor_check_in_signature ? 'Registrada' : '—'}</div>
+                                    <div><span className="font-semibold">Assinatura check-out:</span> {selectedRegistration.tutor_check_out_signature ? 'Registrada' : '—'}</div>
+                                    <div><span className="font-semibold">Declaração aceita:</span> {selectedRegistration.declaration_accepted ? 'Sim' : 'Não'}</div>
+                                </div>
+                            </div>
                         </div>
                         
                         <div className="flex justify-end mt-6">
@@ -9178,21 +9499,29 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
                         onDragOver={(e) => handleDragOver(e, sectionId)}
                         onDragLeave={handleDragLeave}
                         onDrop={(e) => handleDrop(e, sectionId)}
-                        className="p-4 space-y-6 min-h-[100px] animate-fadeIn"
+                        className="p-4 min-h-[100px] animate-fadeIn"
                     >
-                        {enrollments.map(enrollment => (
-                             <DaycareEnrollmentCard
-                                key={enrollment.id}
-                                enrollment={enrollment}
-                                isDraggable={true}
-                                onDragStart={(e) => handleDragStart(e, enrollment, sectionId)}
-                                onClick={() => { setSelectedEnrollment(enrollment); setIsDetailsModalOpen(true); }}
-                                onEdit={() => { setSelectedEnrollment(enrollment); setIsEditModalOpen(true); }}
-                                onDelete={() => setEnrollmentToDelete(enrollment)}
-                                onAddExtraServices={handleAddExtraServices}
-                            />
-                        ))}
-                        {count === 0 && <div className="text-center text-gray-500 py-6 sm:py-8"><p>Nenhuma matrícula aqui.</p></div>}
+                        {count > 0 ? (
+                            <div className="overflow-x-auto">
+                                <div className="flex gap-4 pb-2 snap-x snap-mandatory">
+                                    {enrollments.map(enrollment => (
+                                        <div key={enrollment.id} className="shrink-0 w-[360px] sm:w-[420px] lg:w-[460px] snap-center">
+                                            <DaycareEnrollmentCard
+                                                enrollment={enrollment}
+                                                isDraggable={true}
+                                                onDragStart={(e) => handleDragStart(e, enrollment, sectionId)}
+                                                onClick={() => { setSelectedEnrollment(enrollment); setIsDetailsModalOpen(true); }}
+                                                onEdit={() => { setSelectedEnrollment(enrollment); setIsEditModalOpen(true); }}
+                                                onDelete={() => setEnrollmentToDelete(enrollment)}
+                                                onAddExtraServices={handleAddExtraServices}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center text-gray-500 py-6 sm:py-8"><p>Nenhuma matrícula aqui.</p></div>
+                        )}
                     </div>
                 )}
             </div>
@@ -9420,14 +9749,12 @@ const AdminDashboard: React.FC<{
                  <div className="fixed inset-0 bg-gray-800 bg-opacity-50 z-30 md:hidden" onClick={() => setShowMobileMenu(false)}></div>
             )}
 
-            <div className="w-full px-2 py-6">
+            <div className="w-full px-2 sm:px-3 md:px-4 py-4">
                 <div className="flex flex-col md:flex-row gap-8">
                     <aside className={`
                         md:w-64 flex-shrink-0
-                        fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 bg-white p-4 z-40
-                        transform transition-transform md:transform-none 
-                        ${showMobileMenu ? 'translate-x-0 shadow-xl' : '-translate-x-full'}
-                        md:sticky md:top-24 md:h-auto md:bg-transparent md:p-0 md:z-0
+                        md:sticky md:top-24 md:h-[calc(100vh-6rem)] md:bg-transparent md:p-0 md:z-10
+                        hidden md:block
                     `}>
                         <NavMenu />
                         <div className="mt-6 md:hidden space-y-3">
@@ -9447,7 +9774,7 @@ const AdminDashboard: React.FC<{
                             </button>
                         </div>
                     </aside>
-                    <main className="flex-1">
+                    <main className="flex-1 overflow-y-auto">
                         {renderActiveView()}
                     </main>
                 </div>
