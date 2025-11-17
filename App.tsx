@@ -3611,7 +3611,7 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
             <div className="bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl p-6 text-white shadow-lg mb-6">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div>
-            <h2 className="text-3xl lg:text-4xl font-bold mb-2 text-center sm:text-left">Pet Móvel</h2>
+            <h2 className="text-3xl font-bold mb-2 text-center" style={{fontFamily: 'Inter, sans-serif'}}>Pet Móvel</h2>
                         <p className="text-pink-100">Gerencie seus clientes Pet Móvel</p>
                     </div>
                     <div className="flex flex-wrap gap-4">
@@ -3685,14 +3685,6 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                         </div>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
-                        {/* Botão de visualização - apenas Lista */}
-                        <div className="flex bg-gray-100 rounded-lg p-1 w-full sm:w-auto">
-                            <button 
-                                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-md font-medium transition-colors text-sm sm:text-base bg-white text-pink-700 shadow-sm"
-                            >
-                                Lista
-                            </button>
-                        </div>
                         
                         {viewMode === 'list' && (
                             <div className="flex gap-2 w-full sm:w-auto">
@@ -3773,12 +3765,12 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                                         <div key={number} className="p-6 border-b border-gray-100 last:border-b-0">
                                             <div className="overflow-x-auto">
                                                 <div className="flex gap-4 pb-2 snap-x snap-mandatory">
-                                                {clientList.map(client => (
-                                                    <div key={client.id} className="shrink-0 w-[360px] sm:w-[420px] lg:w-[460px] snap-center">
+                                    {clientList.map(client => (
+                                        <div key={client.id} className="shrink-0 w-[92vw] sm:w-[420px] lg:w-[460px] snap-center">
                                                         <div 
-                                                            className="bg-white rounded-2xl shadow-sm p-5 min-h-[300px] hover:shadow-md transition-shadow border border-gray-200 cursor-pointer"
-                                                            onClick={() => handleOpenAppointmentsModal(client)}
-                                                        >
+                                                            className="bg-white rounded-2xl shadow-sm p-6 min-h-[380px] hover:shadow-md transition-shadow border border-gray-200 cursor-pointer"
+                                                        onClick={() => handleOpenAppointmentsModal(client)}
+                                                    >
                                                             <div className="rounded-xl mb-3 p-5 bg-gradient-to-r from-pink-500 to-purple-500 text-white flex items-center justify-between">
                                                                 <div className="flex items-center gap-3">
                                                                     <img
@@ -3797,20 +3789,17 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                                                                 </div>
                                                             </div>
                                                             <div className="space-y-2 text-sm">
-                                                                <div className="flex items-center gap-2 text-gray-600">
-                                                                    <span className="w-2 h-2 bg-pink-400 rounded-full"></span>
-                                                                    <span>{client.service}</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="px-2 py-1 bg-pink-100 text-pink-700 text-xs rounded-full">{client.service}</span>
                                                                 </div>
                                                                 <div className="flex items-center gap-2 text-gray-600">
                                                                     <span className="w-2 h-2 bg-purple-400 rounded-full"></span>
                                                                     <span>{client.recurrence_type === 'weekly' ? 'Semanal' : client.recurrence_type === 'bi-weekly' ? 'Quinzenal' : 'Mensal'}</span>
                                                                 </div>
-                                                                {client.owner_address && (
-                                                                    <div className="flex items-center gap-2 text-gray-600">
-                                                                        <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
-                                                                        <span className="text-xs truncate">{client.owner_address}</span>
-                                                                    </div>
-                                                                )}
+                                                                <div className="flex items-center gap-2 text-gray-600">
+                                                                    <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                                                                    <span className="text-xs">Agendamentos: toque para ver datas</span>
+                                                                </div>
                                                             </div>
                                                             <div className="mt-4">
                                                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
@@ -4264,7 +4253,7 @@ const ClientsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
             </div>
             
             <div className="p-6 bg-white rounded-2xl shadow-sm">
-            <h2 className="text-2xl font-bold text-gray-700 mb-4 text-center sm:text-left">Lista de Clientes</h2>
+            <h2 className="text-3xl font-bold text-gray-800 mb-4 text-center" style={{fontFamily: 'Inter, sans-serif'}}>Lista de Clientes</h2>
                 {loading ? <div className="flex justify-center py-6 sm:py-8"><LoadingSpinner /></div> : (
                     <div className="divide-y divide-gray-200">
                         {clients.length > 0 ? clients.map(client => (
@@ -4915,7 +4904,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
             {deletingClient && <ConfirmationModal isOpen={!!deletingClient} onClose={() => setDeletingClient(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o mensalista ${deletingClient.pet_name}? Todos os seus agendamentos futuros também serão removidos.`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
             
             <div className="mb-6">
-                <h2 className="text-xl sm:text-3xl font-bold text-gray-800 truncate mb-4 text-center sm:text-left">Clientes Mensalistas</h2>
+                <h2 className="text-3xl font-bold text-gray-800 mb-4 text-center" style={{fontFamily: 'Inter, sans-serif'}}>Clientes Mensalistas</h2>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 mb-4">
                     {/* Desktop: input 3x maior */}
                     <div className="relative hidden md:block md:flex-[3]">
@@ -4992,19 +4981,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                                 </svg>
                                 Cards
                             </button>
-                            <button
-                                onClick={() => setViewMode('list')}
-                                className={`px-2.5 sm:px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
-                                    viewMode === 'list' 
-                                    ? 'bg-white text-pink-600 shadow-sm' 
-                                    : 'text-gray-600 hover:text-gray-800'
-                                }`}
-                            >
-                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                                </svg>
-                                Lista
-                            </button>
+                            {/* Removido botão Lista */}
                         </div>
 
                         {/* Grupo de botões (Filtro, Estatísticas, Adicionar) */}
@@ -5504,7 +5481,7 @@ const DaycareEnrollmentCard: React.FC<{
             draggable={isDraggable}
             onDragStart={isDraggable ? onDragStart : undefined}
             onClick={onClick}
-            className={`bg-white rounded-2xl shadow-md overflow-hidden transition-transform transform hover:scale-[1.02] flex flex-col ${isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+            className={`bg-white rounded-2xl shadow-md overflow-hidden transition-transform transform hover:scale-[1.02] flex flex-col min-h-[360px] ${isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
         >
             <div className="p-5 flex-grow">
                 <div className="rounded-xl mb-3 p-5 bg-gradient-to-r from-pink-500 to-purple-500 text-white flex items-center justify-between">
@@ -5850,8 +5827,8 @@ const EditDaycareEnrollmentModal: React.FC<{
         </div>
     );
     
-    return (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fadeIn">
+    return createPortal(
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fadeIn">
             <form onSubmit={handleUpdate} className="bg-rose-50 rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col animate-scaleIn">
                 <div className="p-6 border-b border-gray-200">
                     <h2 className="text-3xl font-bold text-gray-800">Editar Matrícula</h2>
@@ -6230,7 +6207,8 @@ const EditDaycareEnrollmentModal: React.FC<{
                     <button type="submit" disabled={isSubmitting} className="bg-pink-600 text-white font-bold py-3.5 px-4 rounded-lg disabled:bg-gray-400">{isSubmitting ? 'Salvando...' : 'Salvar Alterações'}</button>
                 </div>
             </form>
-        </div>
+        </div>,
+        document.body
     );
 };
 
@@ -8179,6 +8157,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
         setHotelRegistrationForExtraServices(registration);
         setIsHotelExtraServicesModalOpen(true);
         setSelectedRegistration(null);
+        setShowMobileMenu(false);
     };
 
         const handleHotelExtraServicesUpdated = (updatedRegistration: HotelRegistration) => {
@@ -8622,25 +8601,22 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
     return (
         <div className="space-y-6">
             <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-50">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-            <h1 className="text-3xl font-bold text-gray-800 text-center sm:text-left">Hotel Pet</h1>
-                        <p className="text-gray-600 mt-1">Gerencie os registros de hospedagem</p>
-                    </div>
-                    <div className="flex gap-2">
+                <div className="space-y-3">
+                    <h2 className="text-3xl font-bold text-gray-800 text-center" style={{fontFamily: 'Inter, sans-serif'}}>Hotel Pet</h2>
+                    <div className="flex gap-2 flex-wrap justify-center">
                         <button
                             onClick={() => setShowHotelStatistics?.(true)}
                             className="bg-blue-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1.5 text-sm"
                         >
                             <ChartBarIcon className="w-4 h-4" />
-                            <span className="hidden sm:inline">Estatísticas</span>
+                            <span>Estatísticas</span>
                         </button>
                         <button
                             onClick={() => setShowHotelFilterPanel(prev => !prev)}
                             className="bg-gray-100 text-gray-700 font-medium py-2 px-3 rounded-md hover:bg-gray-200 transition-colors flex items-center gap-1.5 text-sm"
                         >
                             <FunnelIcon className="w-4 h-4" />
-                            <span className="hidden sm:inline">Filtrar</span>
+                            <span>Filtrar</span>
                         </button>
                         <button
                             onClick={() => setIsAddFormOpen(true)}
@@ -9513,7 +9489,7 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
                                                 isDraggable={true}
                                                 onDragStart={(e) => handleDragStart(e, enrollment, sectionId)}
                                                 onClick={() => { setSelectedEnrollment(enrollment); setIsDetailsModalOpen(true); /* fecha menu mobile se aberto */ setShowMobileMenu(false); }}
-                                                onEdit={() => { setSelectedEnrollment(enrollment); setIsEditModalOpen(true); }}
+                                                onEdit={() => { setSelectedEnrollment(enrollment); setIsEditModalOpen(true); setShowMobileMenu(false); }}
                                                 onDelete={() => setEnrollmentToDelete(enrollment)}
                                                 onAddExtraServices={handleAddExtraServices}
                                             />
@@ -9539,7 +9515,7 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
             {isDetailsModalOpen && selectedEnrollment && (
                 <DaycareEnrollmentDetailsModal
                     enrollment={selectedEnrollment}
-                    onClose={() => { setIsDetailsModalOpen(false); setSelectedEnrollment(null); }}
+                    onClose={() => { setIsDetailsModalOpen(false); setSelectedEnrollment(null); setShowMobileMenu(false); }}
                     onUpdateStatus={handleUpdateStatus}
                     isUpdating={isUpdatingStatus}
                     onAddExtraServices={() => handleAddExtraServices(selectedEnrollment)}
@@ -9548,14 +9524,14 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
             {isEditModalOpen && selectedEnrollment && (
                 <EditDaycareEnrollmentModal
                     enrollment={selectedEnrollment}
-                    onClose={() => { setIsEditModalOpen(false); setSelectedEnrollment(null); }}
+                    onClose={() => { setIsEditModalOpen(false); setSelectedEnrollment(null); setShowMobileMenu(false); }}
                     onUpdated={handleEnrollmentUpdated}
                 />
             )}
             {isExtraServicesModalOpen && enrollmentForExtraServices && (
                 <ExtraServicesModal
                     isOpen={isExtraServicesModalOpen}
-                    onClose={() => { setIsExtraServicesModalOpen(false); setEnrollmentForExtraServices(null); }}
+                    onClose={() => { setIsExtraServicesModalOpen(false); setEnrollmentForExtraServices(null); setShowMobileMenu(false); }}
                     onSuccess={handleExtraServicesUpdated}
                     data={enrollmentForExtraServices}
                     type="daycare"
@@ -9576,7 +9552,7 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
             )}
             
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold text-gray-800">Matrículas da Creche</h2>
+                <h2 className="text-3xl font-bold text-gray-800 text-center" style={{fontFamily: 'Inter, sans-serif'}}>Matrículas da Creche</h2>
                 <div className="flex gap-3">
                     <button 
                         onClick={() => setShowDaycareStatistics?.(true)} 
@@ -9739,20 +9715,22 @@ const AdminDashboard: React.FC<{
                         </div>
                         <div className="md:hidden flex items-center gap-2">
                             <NotificationBell />
-                            <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="p-3 rounded-xl text-gray-500 hover:bg-pink-50 hover:text-pink-600 transition-colors" aria-label="Menu">
-                                {showMobileMenu ? <CloseIcon /> : <MenuIcon />}
-                            </button>
+                            {!showMobileMenu && (
+                                <button onClick={() => setShowMobileMenu(true)} className="p-3 rounded-xl text-gray-500 hover:bg-pink-50 hover:text-pink-600 transition-colors" aria-label="Menu">
+                                    <MenuIcon />
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
             </header>
 
             {showMobileMenu && (
-                 <div className="fixed inset-0 bg-gray-800 bg-opacity-50 z-30 md:hidden" onClick={() => setShowMobileMenu(false)}></div>
+                 <div className="fixed inset-0 bg-gray-800 bg-opacity-50 z-[9998] md:hidden" onClick={() => setShowMobileMenu(false)}></div>
             )}
 
             {showMobileMenu && (
-                <div className="fixed left-0 top-0 h-full w-[85vw] max-w-sm bg-white shadow-2xl z-40 md:hidden overflow-y-auto p-4">
+                <div className="fixed left-0 top-0 h-full w-[85vw] max-w-sm bg-white shadow-2xl z-[9999] md:hidden overflow-y-auto p-4">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold text-gray-800">Menu</h3>
                         <button onClick={() => setShowMobileMenu(false)} className="p-2 rounded-lg hover:bg-gray-100" aria-label="Fechar menu">
@@ -9931,6 +9909,7 @@ const App: React.FC = () => {
     const handleOpenExtraServicesModal = (appointment: AdminAppointment) => {
         setAppointmentForExtraServices(appointment);
         setIsAppointmentExtraServicesModalOpen(true);
+        setShowMobileMenu(false);
     };
 
     const handleCloseExtraServicesModal = () => {
