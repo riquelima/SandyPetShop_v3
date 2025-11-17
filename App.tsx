@@ -5618,8 +5618,18 @@ const DaycareEnrollmentDetailsModal: React.FC<{
                             <DetailItem label="Sexo" value={enrollment.pet_sex} />
                             <DetailItem label="Castrado(a)" value={enrollment.is_neutered ? 'Sim' : 'Não'} />
                             <DetailItem label="Desconto Irmão" value={enrollment.has_sibling_discount ? 'Sim (10%)' : 'Não'} />
-                        </div>
-                    </section>
+        </div>
+        <div className="mt-6 flex items-center justify-center gap-4 flex-wrap">
+          <a href="https://www.instagram.com/sandyspetmovelcrechehotel/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 hover:bg-pink-50 transition-colors">
+            <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" className="w-6 h-6" />
+            <span className="text-sm font-semibold text-gray-700">@sandyspetmovelcrechehotel</span>
+          </a>
+          <a href="https://wa.me/5511994580316?text=Ol%C3%A1%20Sandy%2C%20vim%20do%20site%20e%20gostaria%20de%20ajuda" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-50 border border-green-200 hover:bg-green-100 transition-colors">
+            <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" className="w-6 h-6" />
+            <span className="text-sm font-semibold text-green-700">(11) 99458-0316</span>
+          </a>
+        </div>
+      </section>
                      {/* Tutor Info */}
                     <section>
                         <h3 className="text-lg font-semibold text-pink-700 border-b pb-2 mb-4">Dados do Tutor</h3>
@@ -7306,7 +7316,7 @@ const TimeSlotPicker: React.FC<{
 const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegistration' | 'hotelRegistration') => void }> = ({ setView }) => {
   const [step, setStep] = useState(1);
   const [showWizard, setShowWizard] = useState(false);
-  const [directLaunch, setDirectLaunch] = useState(false);
+  
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [formData, setFormData] = useState({ petName: '', ownerName: '', whatsapp: '', petBreed: '', ownerAddress: '' });
   const [selectedService, setSelectedService] = useState<ServiceType | null>(null);
@@ -7592,37 +7602,47 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
           <p className="text-gray-600 text-xl font-medium">Agendamento Online</p>
       </header>
 
-      {!showWizard && (
+      {serviceStepView === 'main' && (
         <section className="w-full max-w-4xl bg-white rounded-3xl shadow-xl border border-pink-100/60 mb-6 p-6 sm:p-8 animate-fadeIn">
           <p className="text-lg sm:text-2xl md:text-3xl font-bold text-pink-700 mb-2 text-center whitespace-nowrap leading-none tracking-tight">🎉 Bem-vindo a Sandy Pet! 🐶💗</p>
           <p className="text-gray-700 text-base sm:text-lg mb-3 text-center">Estamos muito felizes em receber você e seu pet por aqui!</p>
           <p className="text-gray-700 text-base sm:text-lg text-center">Escolha abaixo o serviço ideal para o seu melhor amigo e faça seu agendamento de forma simples e rápida:</p>
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <button type="button" onClick={() => { setShowWizard(true); setDirectLaunch(true); setServiceStepView('bath_groom'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
-              <span className="text-2xl">✨</span>
+          <div className="mt-5 -mx-4 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-3">
+            <div className="flex-none min-w-[75%] sm:min-w-0 sm:w-auto snap-start">
+            <button type="button" onClick={() => { setServiceStepView('bath_groom'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
+              <img src="https://cdn-icons-png.flaticon.com/512/14969/14969909.png" alt="Banho & Tosa" className="w-12 h-12 rounded-full object-contain mb-2" />
               <span className="text-lg">Banho & Tosa</span>
             </button>
-            <button type="button" onClick={() => { setShowWizard(true); setDirectLaunch(true); setServiceStepView('pet_movel_condo'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
-              <span className="text-2xl">🚐</span>
+            </div>
+            <div className="flex-none min-w-[75%] sm:min-w-0 sm:w-auto snap-start">
+            <button type="button" onClick={() => { setServiceStepView('pet_movel_condo'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
+              <img src="https://cdn-icons-png.flaticon.com/512/10754/10754045.png" alt="Pet Móvel" className="w-12 h-12 rounded-full object-contain mb-2" />
               <span className="text-lg">Pet Móvel</span>
             </button>
-            <button type="button" onClick={() => { setShowWizard(true); setDirectLaunch(true); setServiceStepView('daycare_options'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
-              <span className="text-2xl">🎈</span>
+            </div>
+            <div className="flex-none min-w-[75%] sm:min-w-0 sm:w-auto snap-start">
+            <button type="button" onClick={() => { setSelectedService(null); setView('daycareRegistration'); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
+              <img src="https://cdn-icons-png.flaticon.com/512/11201/11201086.png" alt="Creche Pet" className="w-12 h-12 rounded-full object-contain mb-2" />
               <span className="text-lg">Creche Pet</span>
             </button>
-            <button type="button" onClick={() => { setShowWizard(true); setDirectLaunch(true); setServiceStepView('hotel_options'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
-              <span className="text-2xl">🏨</span>
+            </div>
+            <div className="flex-none min-w-[75%] sm:min-w-0 sm:w-auto snap-start">
+            <button type="button" onClick={() => { setSelectedService(null); setView('hotelRegistration'); }} className="p-6 rounded-2xl text_center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
+              <img src="https://cdn-icons-png.flaticon.com/512/1131/1131938.png" alt="Hotel Pet" className="w-12 h-12 rounded-full object-contain mb-2" />
               <span className="text-lg">Hotel Pet</span>
             </button>
-            <button type="button" onClick={() => { setShowWizard(true); setDirectLaunch(true); setServiceStepView('daycare_options'); setSelectedService(ServiceType.VISIT_DAYCARE); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
-              <span className="text-2xl">👀</span>
+            </div>
+            <div className="flex-none min-w-[75%] sm:min-w-0 sm:w-auto snap-start">
+            <button type="button" onClick={() => { setView('visitSelector'); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
+              <img src="https://cdn-icons-png.flaticon.com/512/2196/2196747.png" alt="Visita" className="w-12 h-12 rounded-full object-contain mb-2" />
               <span className="text-lg">Visita</span>
             </button>
-        </div>
+            </div>
+          </div>
       </section>
       )}
 
-      {showWizard && (
+      {serviceStepView !== 'main' && (
       <main className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-pink-100/40 backdrop-blur-sm">
         <div className="px-8 py-6 bg-gradient-to-r from-pink-50 to-rose-50 border-b-2 border-pink-100">
             <div className="flex justify-between items-center relative">
@@ -7644,7 +7664,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
         <form onSubmit={handleSubmit} className={`relative p-6 sm:p-8 transition-all duration-300 ${isAnimating ? 'animate-slideOutToLeft' : 'animate-slideInFromRight'}`}>
           {step === 1 && (
             <div className="space-y-7">
-              <h2 className="text-3xl font-bold text-gray-800">Informações do Pet e Dono</h2>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 whitespace-nowrap leading-none tracking-tight">Informações do Pet e Dono</h2>
               <div>
                   <label htmlFor="petName" className="block text-base font-semibold text-gray-700">Nome do Pet</label>
                   <div className="relative mt-1"><span className="absolute inset-y-0 left-0 flex items-center pl-3"><PawIcon/></span><input type="text" name="petName" id="petName" value={formData.petName} onChange={handleInputChange} required className="block w-full pl-10 pr-5 py-4 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-gray-900"/></div>
@@ -7670,13 +7690,13 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
           
           {step === 2 && (
             <div className="space-y-6">
-                {serviceStepView === 'main' && !directLaunch ? (
+                {serviceStepView === 'main' ? (
                     <h2 className="text-3xl font-bold text-gray-800">Escolha os Serviços</h2>
                 ) : (
                     <h2 className="text-3xl font-bold text-gray-800">Detalhes do Serviço</h2>
                 )}
                 
-                {serviceStepView === 'main' && !directLaunch && (
+                {serviceStepView === 'main' && (
                     <div>
                         <h3 className="text-md font-semibold text-gray-700 mb-2">1. Selecione a Categoria</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -7714,7 +7734,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                                 </button>
                             ))}
                         </div>
-                        <button type="button" onClick={() => { if (directLaunch) { setShowWizard(false); setDirectLaunch(false); setServiceStepView('main'); setSelectedCondo(null); setSelectedService(null); changeStep(1); } else { setServiceStepView('main'); } }} className="text-sm text-pink-600 hover:underline">← Voltar</button>
+                        <button type="button" onClick={() => { setServiceStepView('main'); setSelectedCondo(null); setSelectedService(null); changeStep(1); }} className="text-sm text-pink-600 hover:underline">← Voltar</button>
                     </div>
                 )}
                 
@@ -7729,7 +7749,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                                 <span className="text-lg">{SERVICES[ServiceType.BATH_AND_GROOMING].label}</span>
                             </button>
                         </div>
-                        <button type="button" onClick={() => { if (directLaunch) { setShowWizard(false); setDirectLaunch(false); setServiceStepView('main'); setSelectedCondo(null); setSelectedService(null); changeStep(1); } else { setServiceStepView('main'); setSelectedService(null); } }} className="text-sm text-pink-600 hover:underline">← Voltar</button>
+                        <button type="button" onClick={() => { setServiceStepView('main'); setSelectedCondo(null); setSelectedService(null); changeStep(1); }} className="text-sm text-pink-600 hover:underline">← Voltar</button>
                     </div>
                 )}
                 
@@ -7757,7 +7777,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                         <button type="button" onClick={() => { console.log('Clicou em Preencher Formulário de Hotel Pet'); setView('hotelRegistration'); }} className="w-full bg-pink-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-pink-700 transition-colors">
                             Preencher Formulário de Hotel Pet
                         </button>
-                        <button type="button" onClick={() => { if (directLaunch) { setShowWizard(false); setDirectLaunch(false); setServiceStepView('main'); setSelectedCondo(null); setSelectedService(null); changeStep(1); } else { setServiceStepView('main'); } }} className="text-sm text-pink-600 hover:underline">← Voltar</button>
+                        <button type="button" onClick={() => { setServiceStepView('main'); setSelectedCondo(null); setSelectedService(null); changeStep(1); }} className="text-sm text-pink-600 hover:underline">← Voltar</button>
                     </div>
                 )}
 
@@ -7777,7 +7797,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                                 <span className="text-sm text-gray-600 mt-1">Fazer matrícula na creche</span>
                             </button>
                         </div>
-                        <button type="button" onClick={() => { if (directLaunch) { setShowWizard(false); setDirectLaunch(false); setServiceStepView('main'); setSelectedCondo(null); setSelectedService(null); changeStep(1); } else { setServiceStepView('main'); } }} className="text-sm text-pink-600 hover:underline">← Voltar</button>
+                        <button type="button" onClick={() => { setServiceStepView('main'); setSelectedCondo(null); setSelectedService(null); changeStep(1); }} className="text-sm text-pink-600 hover:underline">← Voltar</button>
                     </div>
                 )}
 
@@ -9980,7 +10000,8 @@ const App: React.FC = () => {
             handleCloseObservationModal();
         }
     };
-    const [view, setView] = useState<'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration'>('scheduler');
+    const [view, setView] = useState<'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration' | 'visitSelector' | 'visitAppointment'>('scheduler');
+    const [visitServiceType, setVisitServiceType] = useState<'Creche Pet' | 'Hotel Pet' | null>(null);
     
     // Debug: Log mudanças de view
     const setViewWithLog = (newView: 'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration') => {
@@ -10001,6 +10022,61 @@ const App: React.FC = () => {
             return true;
         }
     });
+
+    // iPhone-like swipe-back gesture (from left edge)
+    useEffect(() => {
+        let startX = 0;
+        let startY = 0;
+        let tracking = false;
+
+        const EDGE_THRESHOLD = 24; // px from left edge
+        const SWIPE_DISTANCE = 60; // minimal horizontal delta
+        const VERTICAL_TOLERANCE = 40; // ignore large vertical drags
+
+        const onTouchStart = (e: TouchEvent) => {
+            if (!e.touches || e.touches.length !== 1) return;
+            const t = e.touches[0];
+            // Only start tracking if touch begins near the left edge
+            if (t.clientX <= EDGE_THRESHOLD) {
+                startX = t.clientX;
+                startY = t.clientY;
+                tracking = true;
+            } else {
+                tracking = false;
+            }
+        };
+
+        const onTouchMove = (e: TouchEvent) => {
+            if (!tracking || !e.touches || e.touches.length !== 1) return;
+            const t = e.touches[0];
+            const dx = t.clientX - startX;
+            const dy = Math.abs(t.clientY - startY);
+            if (dx > SWIPE_DISTANCE && dy < VERTICAL_TOLERANCE) {
+                // Trigger back navigation once and stop tracking
+                tracking = false;
+                // Prioridade: voltar para tela inicial ou retroceder passo
+                if (view !== 'scheduler') {
+                    setViewWithLog('scheduler');
+                    return;
+                }
+                // Caso já esteja na tela inicial, não faz nada
+            }
+        };
+
+        const onTouchEnd = () => {
+            tracking = false;
+        };
+
+        window.addEventListener('touchstart', onTouchStart, { passive: true });
+        window.addEventListener('touchmove', onTouchMove, { passive: true });
+        window.addEventListener('touchend', onTouchEnd, { passive: true });
+
+        return () => {
+            window.removeEventListener('touchstart', onTouchStart);
+            window.removeEventListener('touchmove', onTouchMove);
+            window.removeEventListener('touchend', onTouchEnd);
+        };
+    }, [view]);
 
     useEffect(() => {
         let isMounted = true;
@@ -10228,6 +10304,38 @@ const App: React.FC = () => {
         return <HotelRegistrationForm setView={setViewWithLog} />;
     }
 
+    if (view === 'visitSelector') {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-pink-50 via-white to-rose-50">
+                <div className="text-center mb-8">
+                    <img src="https://i.imgur.com/M3Gt3OA.png" alt="Sandy's Pet Shop" className="h-20 w-20 mx-auto mb-2"/>
+                    <h1 className="font-brand text-4xl text-pink-800">Sandy's Pet Shop</h1>
+                    <p className="text-gray-600 text-lg">Agendamento de Visita</p>
+                </div>
+                <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-pink-100">
+                    <h2 className="text-2xl font-bold text-gray-800 text-center mb-4">Escolha o local da visita</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button type="button" onClick={() => { setVisitServiceType('Creche Pet'); setViewWithLog('visitAppointment'); }} className="p-5 rounded-xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200">
+                            <span className="text-2xl">🎈</span>
+                            <span className="text-lg">Creche Pet</span>
+                        </button>
+                        <button type="button" onClick={() => { setVisitServiceType('Hotel Pet'); setViewWithLog('visitAppointment'); }} className="p-5 rounded-xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200">
+                            <span className="text-2xl">🏨</span>
+                            <span className="text-lg">Hotel Pet</span>
+                        </button>
+                    </div>
+                    <div className="mt-6 text-center">
+                        <button type="button" onClick={() => setViewWithLog('scheduler')} className="text-sm text-pink-600 hover:underline">← Voltar</button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (view === 'visitAppointment') {
+        return <VisitAppointmentForm serviceLabel={visitServiceType || 'Visita'} onBack={() => setViewWithLog('visitSelector')} onDone={() => setViewWithLog('scheduler')} />;
+    }
+
     if (!isScheduleOpen) {
         return <ScheduleClosedPage setView={setViewWithLog} />;
     }
@@ -10283,3 +10391,59 @@ const ObservationModal: React.FC<{
 };
 
 export default App;
+const VisitAppointmentForm: React.FC<{ serviceLabel: string; onBack: () => void; onDone: () => void }> = ({ serviceLabel, onBack, onDone }) => {
+    const [petName, setPetName] = useState('');
+    const [petBreed, setPetBreed] = useState('');
+    const [ownerName, setOwnerName] = useState('');
+    const [whatsapp, setWhatsapp] = useState('');
+    const [ownerAddress, setOwnerAddress] = useState('');
+    const [date, setDate] = useState('');
+    const [time, setTime] = useState<number | ''>('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!date || time === '' || !petName || !ownerName || !whatsapp) return;
+        setIsSubmitting(true);
+        const d = new Date(date);
+        const appt = toSaoPauloUTC(d.getFullYear(), d.getMonth(), d.getDate(), Number(time));
+        const payload = {
+            appointment_time: appt.toISOString(),
+            pet_name: petName,
+            pet_breed: petBreed || null,
+            owner_name: ownerName,
+            whatsapp,
+            service: serviceLabel,
+            weight: 'N/A',
+            price: 0,
+            status: 'pending',
+            owner_address: ownerAddress || null,
+        };
+        const { error } = await supabase.from('appointments').insert([payload]);
+        setIsSubmitting(false);
+        if (!error) onDone();
+    };
+
+    return (
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-pink-50 via-white to-rose-50">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden border border-pink-100">
+                <div className="p-6 border-b">
+                    <h2 className="text-2xl font-bold text-gray-800 text-center">Agendar Visita — {serviceLabel}</h2>
+                </div>
+                <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="sm:col-span-2"><label className="block text-sm font-semibold text-gray-700">Nome do Pet</label><input value={petName} onChange={e => setPetName(e.target.value)} className="mt-1 block w-full p-3 bg-gray-50 border rounded-md" required/></div>
+                    <div><label className="block text-sm font-semibold text-gray-700">Raça</label><input value={petBreed} onChange={e => setPetBreed(e.target.value)} className="mt-1 block w-full p-3 bg-gray-50 border rounded-md"/></div>
+                    <div><label className="block text-sm font-semibold text-gray-700">Nome do Tutor</label><input value={ownerName} onChange={e => setOwnerName(e.target.value)} className="mt-1 block w-full p-3 bg-gray-50 border rounded-md" required/></div>
+                    <div><label className="block text-sm font-semibold text-gray-700">WhatsApp</label><input value={whatsapp} onChange={e => setWhatsapp(formatWhatsapp(e.target.value))} className="mt-1 block w-full p-3 bg-gray-50 border rounded-md" placeholder="(XX) XXXXX-XXXX" maxLength={15} required/></div>
+                    <div className="sm:col-span-2"><label className="block text-sm font-semibold text-gray-700">Endereço</label><input value={ownerAddress} onChange={e => setOwnerAddress(e.target.value)} className="mt-1 block w-full p-3 bg-gray-50 border rounded-md"/></div>
+                    <div><label className="block text_sm font-semibold text-gray-700">Data</label><input type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-1 block w-full p-3 bg-gray-50 border rounded-md" required/></div>
+                    <div><label className="block text-sm font-semibold text-gray-700">Horário</label><select value={time} onChange={e => setTime(Number(e.target.value))} className="mt-1 block w-full p-3 bg-gray-50 border rounded-md" required><option value="" disabled>Selecione</option>{VISIT_WORKING_HOURS.map(h => (<option key={h} value={h}>{String(h).padStart(2,'0')}:00</option>))}</select></div>
+                    <div className="sm:col-span-2 flex justify-between items-center pt-2">
+                        <button type="button" onClick={onBack} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">← Voltar</button>
+                        <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-gray-400">Agendar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
