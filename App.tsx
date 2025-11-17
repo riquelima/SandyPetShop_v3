@@ -7609,31 +7609,31 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
           <p className="text-gray-700 text-base sm:text-lg text-center">Escolha abaixo o serviço ideal para o seu melhor amigo e faça seu agendamento de forma simples e rápida:</p>
           <div className="mt-5 -mx-4 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-3">
             <div className="flex-none min-w-[75%] sm:min-w-0 sm:w-auto snap-start">
-            <button type="button" onClick={() => { setServiceStepView('bath_groom'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
+            <button type="button" onClick={() => { setServiceStepView('bath_groom'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 w-full min-h-[140px] md:min-h-[160px]">
               <img src="https://cdn-icons-png.flaticon.com/512/14969/14969909.png" alt="Banho & Tosa" className="w-12 h-12 rounded-full object-contain mb-2" />
               <span className="text-lg">Banho & Tosa</span>
             </button>
             </div>
-            <div className="flex-none min-w-[75%] sm:min-w-0 sm:w-auto snap-start">
-            <button type="button" onClick={() => { setServiceStepView('pet_movel_condo'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
+            <div className="flex-none min-w-[75%] sm:min-w-0 sm:w-auto snap-start sm:contents">
+            <button type="button" onClick={() => { setServiceStepView('pet_movel_condo'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 w-full min-h-[140px] md:min-h-[160px]">
               <img src="https://cdn-icons-png.flaticon.com/512/10754/10754045.png" alt="Pet Móvel" className="w-12 h-12 rounded-full object-contain mb-2" />
               <span className="text-lg">Pet Móvel</span>
             </button>
             </div>
-            <div className="flex-none min-w-[75%] sm:min-w-0 sm:w-auto snap-start">
-            <button type="button" onClick={() => { setSelectedService(null); setView('daycareRegistration'); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
+            <div className="flex-none min-w-[75%] sm:min-w-0 sm:w-auto snap-start sm:contents">
+            <button type="button" onClick={() => { setSelectedService(null); setView('daycareRegistration'); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 w-full min-h-[140px] md:min-h-[160px]">
               <img src="https://cdn-icons-png.flaticon.com/512/11201/11201086.png" alt="Creche Pet" className="w-12 h-12 rounded-full object-contain mb-2" />
               <span className="text-lg">Creche Pet</span>
             </button>
             </div>
-            <div className="flex-none min-w-[75%] sm:min-w-0 sm:w-auto snap-start">
-            <button type="button" onClick={() => { setSelectedService(null); setView('hotelRegistration'); }} className="p-6 rounded-2xl text_center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
+            <div className="flex-none min-w-[75%] sm:min-w-0 sm:w-auto snap-start sm:contents">
+            <button type="button" onClick={() => { setSelectedService(null); setView('hotelRegistration'); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 w-full min-h-[140px] md:min-h-[160px]">
               <img src="https://cdn-icons-png.flaticon.com/512/1131/1131938.png" alt="Hotel Pet" className="w-12 h-12 rounded-full object-contain mb-2" />
               <span className="text-lg">Hotel Pet</span>
             </button>
             </div>
-            <div className="flex-none min-w-[75%] sm:min-w-0 sm:w-auto snap-start">
-            <button type="button" onClick={() => { setView('visitSelector'); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
+            <div className="flex-none min-w-[75%] sm:min-w-0 sm:w-auto snap-start sm:contents">
+            <button type="button" onClick={() => { setView('visitSelector'); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 w-full min-h-[140px] md:min-h-[160px]">
               <img src="https://cdn-icons-png.flaticon.com/512/2196/2196747.png" alt="Visita" className="w-12 h-12 rounded-full object-contain mb-2" />
               <span className="text-lg">Visita</span>
             </button>
