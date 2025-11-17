@@ -7305,6 +7305,8 @@ const TimeSlotPicker: React.FC<{
 // --- MAIN APP COMPONENT ---
 const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegistration' | 'hotelRegistration') => void }> = ({ setView }) => {
   const [step, setStep] = useState(1);
+  const [showWizard, setShowWizard] = useState(false);
+  const [directLaunch, setDirectLaunch] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [formData, setFormData] = useState({ petName: '', ownerName: '', whatsapp: '', petBreed: '', ownerAddress: '' });
   const [selectedService, setSelectedService] = useState<ServiceType | null>(null);
@@ -7584,12 +7586,43 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-pink-50 via-white to-rose-50">
-      <header className="text-center mb-8 animate-fadeInUp">
+      <header className="text-center mb-6 animate-fadeInUp">
           <img src="https://i.imgur.com/M3Gt3OA.png" alt="Sandy's Pet Shop Logo" className="h-24 w-24 mx-auto mb-4 drop-shadow-lg"/>
           <h1 className="font-brand text-6xl text-pink-800 mb-2">Sandy's Pet Shop</h1>
           <p className="text-gray-600 text-xl font-medium">Agendamento Online</p>
       </header>
 
+      {!showWizard && (
+        <section className="w-full max-w-4xl bg-white rounded-3xl shadow-xl border border-pink-100/60 mb-6 p-6 sm:p-8 animate-fadeIn">
+          <p className="text-lg sm:text-2xl md:text-3xl font-bold text-pink-700 mb-2 text-center whitespace-nowrap leading-none tracking-tight">🎉 Bem-vindo a Sandy Pet! 🐶💗</p>
+          <p className="text-gray-700 text-base sm:text-lg mb-3 text-center">Estamos muito felizes em receber você e seu pet por aqui!</p>
+          <p className="text-gray-700 text-base sm:text-lg text-center">Escolha abaixo o serviço ideal para o seu melhor amigo e faça seu agendamento de forma simples e rápida:</p>
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <button type="button" onClick={() => { setShowWizard(true); setDirectLaunch(true); setServiceStepView('bath_groom'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
+              <span className="text-2xl">✨</span>
+              <span className="text-lg">Banho & Tosa</span>
+            </button>
+            <button type="button" onClick={() => { setShowWizard(true); setDirectLaunch(true); setServiceStepView('pet_movel_condo'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
+              <span className="text-2xl">🚐</span>
+              <span className="text-lg">Pet Móvel</span>
+            </button>
+            <button type="button" onClick={() => { setShowWizard(true); setDirectLaunch(true); setServiceStepView('daycare_options'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
+              <span className="text-2xl">🎈</span>
+              <span className="text-lg">Creche Pet</span>
+            </button>
+            <button type="button" onClick={() => { setShowWizard(true); setDirectLaunch(true); setServiceStepView('hotel_options'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
+              <span className="text-2xl">🏨</span>
+              <span className="text-lg">Hotel Pet</span>
+            </button>
+            <button type="button" onClick={() => { setShowWizard(true); setDirectLaunch(true); setServiceStepView('daycare_options'); setSelectedService(ServiceType.VISIT_DAYCARE); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[120px]">
+              <span className="text-2xl">👀</span>
+              <span className="text-lg">Visita</span>
+            </button>
+        </div>
+      </section>
+      )}
+
+      {showWizard && (
       <main className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-pink-100/40 backdrop-blur-sm">
         <div className="px-8 py-6 bg-gradient-to-r from-pink-50 to-rose-50 border-b-2 border-pink-100">
             <div className="flex justify-between items-center relative">
@@ -7637,9 +7670,13 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
           
           {step === 2 && (
             <div className="space-y-6">
-                <h2 className="text-3xl font-bold text-gray-800">Escolha os Serviços</h2>
+                {serviceStepView === 'main' && !directLaunch ? (
+                    <h2 className="text-3xl font-bold text-gray-800">Escolha os Serviços</h2>
+                ) : (
+                    <h2 className="text-3xl font-bold text-gray-800">Detalhes do Serviço</h2>
+                )}
                 
-                {serviceStepView === 'main' && (
+                {serviceStepView === 'main' && !directLaunch && (
                     <div>
                         <h3 className="text-md font-semibold text-gray-700 mb-2">1. Selecione a Categoria</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -7677,7 +7714,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                                 </button>
                             ))}
                         </div>
-                        <button type="button" onClick={() => { setServiceStepView('main'); setSelectedCondo(null); }} className="text-sm text-pink-600 hover:underline">← Voltar</button>
+                        <button type="button" onClick={() => { if (directLaunch) { setShowWizard(false); setDirectLaunch(false); setServiceStepView('main'); setSelectedCondo(null); setSelectedService(null); changeStep(1); } else { setServiceStepView('main'); } }} className="text-sm text-pink-600 hover:underline">← Voltar</button>
                     </div>
                 )}
                 
@@ -7692,7 +7729,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                                 <span className="text-lg">{SERVICES[ServiceType.BATH_AND_GROOMING].label}</span>
                             </button>
                         </div>
-                        <button type="button" onClick={() => { setServiceStepView('main'); setSelectedService(null); }} className="text-sm text-pink-600 hover:underline">← Voltar</button>
+                        <button type="button" onClick={() => { if (directLaunch) { setShowWizard(false); setDirectLaunch(false); setServiceStepView('main'); setSelectedCondo(null); setSelectedService(null); changeStep(1); } else { setServiceStepView('main'); setSelectedService(null); } }} className="text-sm text-pink-600 hover:underline">← Voltar</button>
                     </div>
                 )}
                 
@@ -7720,7 +7757,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                         <button type="button" onClick={() => { console.log('Clicou em Preencher Formulário de Hotel Pet'); setView('hotelRegistration'); }} className="w-full bg-pink-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-pink-700 transition-colors">
                             Preencher Formulário de Hotel Pet
                         </button>
-                        <button type="button" onClick={() => setServiceStepView('main')} className="text-sm text-pink-600 hover:underline">← Voltar</button>
+                        <button type="button" onClick={() => { if (directLaunch) { setShowWizard(false); setDirectLaunch(false); setServiceStepView('main'); setSelectedCondo(null); setSelectedService(null); changeStep(1); } else { setServiceStepView('main'); } }} className="text-sm text-pink-600 hover:underline">← Voltar</button>
                     </div>
                 )}
 
@@ -7740,7 +7777,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                                 <span className="text-sm text-gray-600 mt-1">Fazer matrícula na creche</span>
                             </button>
                         </div>
-                        <button type="button" onClick={() => setServiceStepView('main')} className="text-sm text-pink-600 hover:underline">← Voltar</button>
+                        <button type="button" onClick={() => { if (directLaunch) { setShowWizard(false); setDirectLaunch(false); setServiceStepView('main'); setSelectedCondo(null); setSelectedService(null); changeStep(1); } else { setServiceStepView('main'); } }} className="text-sm text-pink-600 hover:underline">← Voltar</button>
                     </div>
                 )}
 
@@ -7908,6 +7945,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
           </div>
         </form>
       </main>
+      )}
 
       <footer className="text-center mt-8 text-base">
         <button onClick={() => setView('login')} className="text-gray-500 hover:text-pink-600 font-medium transition-colors underline-offset-4 hover:underline">Acesso Administrativo</button>
