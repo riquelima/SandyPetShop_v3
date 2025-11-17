@@ -764,16 +764,16 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                 if (isPetMovelService) {
                     // For Pet Móvel services, create specific payloads for pet_movel_appointments
                     const petMovelPayloads = appointmentsToCreate.map(app => ({
-                        client_name: formData.ownerName,
+                        owner_name: formData.ownerName,
                         pet_name: formData.petName,
+                        pet_breed: formData.petBreed,
                         service: serviceString,
                         appointment_time: app.appointment_time,
                         status: 'AGENDADO',
                         price: appointmentsToCreate.length > 0 ? finalPrice / appointmentsToCreate.length : finalPrice,
-                        phone: formData.whatsapp,
-                        notes: `Pet: ${formData.petName}, Raça: ${formData.petBreed}, Peso: ${PET_WEIGHT_OPTIONS[selectedWeight!]}, Endereço: ${formData.ownerAddress}`,
-                        address: formData.ownerAddress,
-                        condo: formData.condominium,
+                        whatsapp: formData.whatsapp,
+                        owner_address: formData.ownerAddress,
+                        condominium: formData.condominium,
                         monthly_client_id: newClient.id
                     }));
                     
@@ -3881,7 +3881,7 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                                                 <p><span className="font-medium">Dono:</span> {appointment.owner_name}</p>
                                                 <p><span className="font-medium">Serviço:</span> {appointment.service}</p>
                                                 <p><span className="font-medium">Horário:</span> {new Date(appointment.appointment_time).toLocaleString('pt-BR')}</p>
-                                                <p><span className="font-medium">Endereço:</span> {appointment.address}</p>
+                                                <p><span className="font-medium">Endereço:</span> {appointment.owner_address}</p>
                                                 {appointment.condominium && (
                                                     <p><span className="font-medium">Condomínio:</span> {appointment.condominium}</p>
                                                 )}
@@ -4093,9 +4093,9 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                                 {selectedAppointment.pet_movel_appointments && (
                                     <div>
                                         <h4 className="font-medium text-gray-900 mb-2">Pet Móvel</h4>
-                                        <p className="text-sm text-gray-600">Endereço: {selectedAppointment.pet_movel_appointments.address}</p>
-                                        {selectedAppointment.pet_movel_appointments.condo && (
-                                            <p className="text-sm text-gray-600">Condomínio: {selectedAppointment.pet_movel_appointments.condo}</p>
+                                        <p className="text-sm text-gray-600">Endereço: {selectedAppointment.pet_movel_appointments.owner_address}</p>
+                                        {selectedAppointment.pet_movel_appointments.condominium && (
+                                            <p className="text-sm text-gray-600">Condomínio: {selectedAppointment.pet_movel_appointments.condominium}</p>
                                         )}
                                     </div>
                                 )}
@@ -4500,16 +4500,16 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
                 if (isPetMovelSelected || looksLikePetMovel) {
                     // Montar payloads para pet_movel_appointments com nomenclatura do módulo Pet Móvel
                     const petMovelPayloads = appointmentsToCreate.map(app => ({
-                        client_name: formData.ownerName,
+                        owner_name: formData.ownerName,
                         pet_name: formData.petName,
+                        pet_breed: formData.petBreed,
                         service: SERVICES[selectedService!].label,
                         appointment_time: app.appointment_time,
                         status: 'AGENDADO',
                         price: price / appointmentsToCreate.length,
-                        phone: formData.whatsapp,
-                        notes: `Pet: ${formData.petName}, Raça: ${formData.petBreed}, Peso: ${PET_WEIGHT_OPTIONS[selectedWeight!]}, Endereço: ${formData.ownerAddress}`,
-                        address: formData.ownerAddress,
-                        condo: formData.condominium,
+                        whatsapp: formData.whatsapp,
+                        owner_address: formData.ownerAddress,
+                        condominium: formData.condominium,
                         monthly_client_id: client.id,
                     }));
 
