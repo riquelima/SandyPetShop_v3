@@ -7595,7 +7595,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
   const isStep3Valid = selectedTime !== null;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-pink-50 via-white to-rose-50">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-pink-50 via-pink-100 to-rose-100">
       <header className="text-center mb-6 animate-fadeInUp">
           <img src="https://i.imgur.com/M3Gt3OA.png" alt="Sandy's Pet Shop Logo" className="h-24 w-24 mx-auto mb-4 drop-shadow-lg"/>
           <h1 className="font-brand text-6xl text-pink-800 mb-2">Sandy's Pet Shop</h1>
@@ -7603,37 +7603,37 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
       </header>
 
       {serviceStepView === 'main' && (
-        <section className="w-full max-w-4xl bg-white rounded-3xl shadow-xl border border-pink-100/60 mb-6 p-6 sm:p-8 animate-fadeIn">
+        <section className="w-full max-w-4xl bg-gradient-to-br from-pink-50 via-pink-100 to-rose-100 rounded-3xl shadow-xl border border-pink-200/60 mb-6 p-6 sm:p-8 animate-fadeIn">
           <p className="text-lg sm:text-2xl md:text-3xl font-bold text-pink-700 mb-2 text-center whitespace-nowrap leading-none tracking-tight">🎉 Bem-vindo a Sandy Pet! 🐶💗</p>
           <p className="text-gray-700 text-base sm:text-lg mb-3 text-center">Estamos muito felizes em receber você e seu pet por aqui!</p>
           <p className="text-gray-700 text-base sm:text-lg text-center">Escolha abaixo o serviço ideal para o seu melhor amigo e faça seu agendamento de forma simples e rápida:</p>
           <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             
-            <button type="button" onClick={() => { setServiceStepView('bath_groom'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 w-full min-h-[140px] md:min-h-[160px]">
+            <button type="button" onClick={() => { setServiceStepView('bath_groom'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-colors border-2 flex flex-col items-center justify-center bg-pink-50 hover:bg-pink-100 text-gray-800 border-gray-300 w-full min-h-[140px] md:min-h-[160px]">
               <img src="https://cdn-icons-png.flaticon.com/512/14969/14969909.png" alt="Banho & Tosa" className="w-12 h-12 rounded-full object-contain mb-2" />
               <span className="text-lg">Banho & Tosa</span>
             </button>
             
             
-            <button type="button" onClick={() => { setServiceStepView('pet_movel_condo'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 w-full min-h-[140px] md:min-h-[160px]">
+            <button type="button" onClick={() => { setServiceStepView('pet_movel_condo'); setSelectedService(null); changeStep(1); }} className="p-6 rounded-2xl text-center font-semibold transition-colors border-2 flex flex-col items-center justify-center bg-pink-50 hover:bg-pink-100 text-gray-800 border-gray-300 w-full min-h-[140px] md:min-h-[160px]">
               <img src="https://cdn-icons-png.flaticon.com/512/10754/10754045.png" alt="Pet Móvel" className="w-12 h-12 rounded-full object-contain mb-2" />
               <span className="text-lg">Pet Móvel</span>
             </button>
             
             
-            <button type="button" onClick={() => { setSelectedService(null); setView('daycareRegistration'); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 w-full min-h-[140px] md:min-h-[160px]">
+            <button type="button" onClick={() => { setSelectedService(null); setView('daycareRegistration'); }} className="p-6 rounded-2xl text-center font-semibold transition-colors border-2 flex flex-col items-center justify-center bg-pink-50 hover:bg-pink-100 text-gray-800 border-gray-300 w-full min-h-[140px] md:min-h-[160px]">
               <img src="https://cdn-icons-png.flaticon.com/512/11201/11201086.png" alt="Creche Pet" className="w-12 h-12 rounded-full object-contain mb-2" />
               <span className="text-lg">Creche Pet</span>
             </button>
             
             
-            <button type="button" onClick={() => { setSelectedService(null); setView('hotelRegistration'); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 w-full min-h-[140px] md:min-h-[160px]">
+            <button type="button" onClick={() => { setSelectedService(null); setView('hotelRegistration'); }} className="p-6 rounded-2xl text-center font-semibold transition-colors border-2 flex flex-col items-center justify-center bg-pink-50 hover:bg-pink-100 text-gray-800 border-gray-300 w-full min-h-[140px] md:min-h-[160px]">
               <img src="https://cdn-icons-png.flaticon.com/512/1131/1131938.png" alt="Hotel Pet" className="w-12 h-12 rounded-full object-contain mb-2" />
               <span className="text-lg">Hotel Pet</span>
             </button>
             
             
-            <button type="button" onClick={() => { setView('visitSelector'); }} className="p-6 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 w-full min-h-[140px] md:min-h-[160px]">
+            <button type="button" onClick={() => { setView('visitSelector'); }} className="p-6 rounded-2xl text-center font-semibold transition-colors border-2 flex flex-col items-center justify-center bg-pink-50 hover:bg-pink-100 text-gray-800 border-gray-300 w-full min-h-[140px] md:min-h-[160px]">
               <img src="https://cdn-icons-png.flaticon.com/512/2196/2196747.png" alt="Visita" className="w-12 h-12 rounded-full object-contain mb-2" />
               <span className="text-lg">Visita</span>
             </button>
