@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { CheckCircleIcon as CheckCircleOutlineIcon, XCircleIcon as XCircleOutlineIcon, EyeIcon as EyeOutlineIcon, PencilSquareIcon as PencilOutlineIcon, PlusIcon as PlusOutlineIcon, TrashIcon as TrashOutlineIcon } from '@heroicons/react/24/outline';
 // FIX: Moved AddonService from constants import to types import, as it's a type defined in types.ts.
 import { Appointment, ServiceType, PetWeight, AdminAppointment, Client, MonthlyClient, DaycareRegistration, PetMovelAppointment, AddonService, HotelRegistration } from './types';
 import { SERVICES, WORKING_HOURS, MAX_CAPACITY_PER_SLOT, LUNCH_HOUR, PET_WEIGHT_OPTIONS, SERVICE_PRICES, ADDON_SERVICES, VISIT_WORKING_HOURS, DAYCARE_PLAN_PRICES, DAYCARE_EXTRA_SERVICES_PRICES, HOTEL_BASE_PRICE, HOTEL_EXTRA_SERVICES_PRICES } from './constants';
@@ -278,6 +279,7 @@ const UserIcon = () => <img src="https://static.thenounproject.com/png/profile-i
 const WhatsAppIcon = () => <img src="https://static.thenounproject.com/png/whatsapp-icon-6592278-512.png" alt="WhatsApp Icon" className="h-7 w-7 opacity-60" />;
 const SuccessIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="min-h-[64px] w-24 text-green-500 mx-auto mb-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>;
 const ChartBarIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>;
+const FunnelIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M3 4.5A1.5 1.5 0 014.5 3h15a1.5 1.5 0 011.2 2.4l-6.3 8.4v4.2a1.5 1.5 0 01-.9 1.37l-3 1.5A1.5 1.5 0 018 19.5v-5.7L1.3 5.4A1.5 1.5 0 013 4.5z"/></svg>;
 const BreedIcon = () => <img src="https://static.thenounproject.com/png/pet-icon-7326432-512.png" alt="Breed Icon" className="h-7 w-7 opacity-60" />;
 const AddressIcon = () => <img src="https://static.thenounproject.com/png/location-icon-7979305-512.png" alt="Address Icon" className="h-7 w-7 opacity-60" />;
 const LogoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V5h10a1 1 0 100-2H3zm12.293 4.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L16.586 13H9a1 1 0 110-2h7.586l-1.293-1.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>;
@@ -7727,13 +7729,11 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                             <p className="text-base text-gray-600 mt-1">Escolha entre agendar uma visita ou fazer a matrícula</p>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <button type="button" onClick={() => { console.log('Clicou em Visita - Hotel Pet'); setSelectedService(ServiceType.VISIT_HOTEL); setView('appointment'); }} className="p-6 rounded-xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[80px] bg-white hover:bg-pink-50 border-gray-200">
+                            <button type="button" onClick={() => { console.log('Clicou em Visita - Hotel Pet'); setSelectedService(ServiceType.VISIT_HOTEL); setView('appointment'); }} className="p-6 rounded-xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
                                 <span className="text-lg">🏨 Visita</span>
-                                <span className="text-sm text-gray-600 mt-1">Agendar visita ao hotel</span>
                             </button>
-                            <button type="button" onClick={() => { console.log('Clicou em Matrícula - Hotel Pet'); setView('hotelRegistration'); }} className="p-6 rounded-xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[80px] bg-white hover:bg-pink-50 border-gray-200">
+                            <button type="button" onClick={() => { console.log('Clicou em Matrícula - Hotel Pet'); setView('hotelRegistration'); }} className="p-6 rounded-xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center min-h-[64px] bg-white hover:bg-pink-50 border-gray-200">
                                 <span className="text-lg">📝 Matrícula</span>
-                                <span className="text-sm text-gray-600 mt-1">Fazer matrícula no hotel</span>
                             </button>
                         </div>
                         <button type="button" onClick={() => setServiceStepView('main')} className="text-sm text-pink-600 hover:underline">← Voltar</button>
@@ -7920,6 +7920,18 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
     const [registrationToEdit, setRegistrationToEdit] = useState<HotelRegistration | null>(null);
     const [isHotelExtraServicesModalOpen, setIsHotelExtraServicesModalOpen] = useState(false);
     const [hotelRegistrationForExtraServices, setHotelRegistrationForExtraServices] = useState<HotelRegistration | null>(null);
+    const [approvingId, setApprovingId] = useState<string | null>(null);
+    const [registrationToReject, setRegistrationToReject] = useState<HotelRegistration | null>(null);
+    const [rejectReason, setRejectReason] = useState<string>('');
+    const [hotelFilter, setHotelFilter] = useState<'all' | 'in_hotel' | 'approved' | 'analysis' | 'archived'>('all');
+    const [showHotelFilterPanel, setShowHotelFilterPanel] = useState(false);
+    const [expandedHotelSections, setExpandedHotelSections] = useState<string[]>(['in_hotel','approved','analysis','archived']);
+    const [draggingOverHotel, setDraggingOverHotel] = useState<'in_hotel' | 'approved' | 'analysis' | 'archived' | null>(null);
+
+    const getDbId = (id: any) => {
+        const s = String(id ?? '');
+        return /^\d+$/.test(s) ? Number(s) : id;
+    };
 
     const fetchRegistrations = useCallback(async () => {
         setLoading(true);
@@ -7928,7 +7940,8 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
             console.error('Error fetching hotel registrations:', error);
             alert('Falha ao buscar registros de hotel.');
         } else {
-            setRegistrations(data as HotelRegistration[]);
+            const normalized = (data as HotelRegistration[]).map(r => ({ ...r, id: r.id !== undefined && r.id !== null ? String(r.id) : r.id }));
+            setRegistrations(normalized);
         }
         setLoading(false);
     }, []);
@@ -7937,7 +7950,12 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
         fetchRegistrations();
     }, [fetchRegistrations, refreshKey]);
 
+    
+
     const handleToggleCheckIn = async (registration: HotelRegistration) => {
+        if ((registration.approval_status || '').toLowerCase() === 'rejeitado') {
+            return;
+        }
         if (!registration.id) return;
         setUpdatingId(registration.id);
         
@@ -7960,19 +7978,18 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                 status: 'Concluído'
             };
         } else {
-            newStatus = 'pending';
+            newStatus = 'checked_out';
             updateData = {
                 check_in_status: newStatus,
-                checked_in_at: null,
-                checked_out_at: null,
-                status: 'Ativo'
+                checked_out_at: registration.checked_out_at || new Date().toISOString(),
+                status: 'Concluído'
             };
         }
         
         const { data, error } = await supabase
             .from('hotel_registrations')
             .update(updateData)
-            .eq('id', registration.id)
+            .eq('id', getDbId(registration.id))
             .select()
             .single();
             
@@ -7983,8 +8000,64 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
             setRegistrations(prev => prev.map(r => 
                 r.id === registration.id ? { ...r, ...updateData } : r
             ));
+            if (newStatus === 'checked_in') {
+                setExpandedHotelSections(prev => prev.includes('in_hotel') ? prev : [...prev, 'in_hotel']);
+                setHotelFilter('in_hotel');
+            }
+            if (newStatus === 'checked_out') {
+                setExpandedHotelSections(prev => prev.includes('archived') ? prev : [...prev, 'archived']);
+                setHotelFilter('archived');
+            }
         }
         setUpdatingId(null);
+    };
+
+    const handleConfirmReject = async () => {
+        if (!registrationToReject || !registrationToReject.id) return;
+        const reason = rejectReason.trim();
+        if (!reason) return;
+        const { error } = await supabase
+            .from('hotel_registrations')
+            .update({ approval_status: 'rejected' /* rejection_reason only used if column exists */ })
+            .eq('id', registrationToReject.id);
+        if (!error) {
+            setRegistrations(prev => prev.map(r => r.id === registrationToReject.id ? { ...r, approval_status: 'rejected' } : r));
+        }
+        setRegistrationToReject(null);
+        setRejectReason('');
+    };
+
+    const handleApprove = async (registration: HotelRegistration) => {
+        if (!registration.id) return;
+        setApprovingId(registration.id);
+        const payload: any = { approval_status: 'approved' };
+        if (registration.check_in_status === 'checked_out') {
+            payload.check_in_status = 'pending';
+            payload.checked_out_at = null;
+            payload.status = 'Ativo';
+        }
+        const { data, error } = await supabase
+            .from('hotel_registrations')
+            .update(payload)
+            .eq('id', getDbId(registration.id))
+            .select()
+            .single();
+        if (!error) {
+            if (data && (data as any).id !== undefined) {
+                const updatedId = String((data as any).id);
+                setRegistrations(prev => prev.map(r => String(r.id) === updatedId ? { ...r, ...payload } : r));
+            } else {
+                setRegistrations(prev => prev.map(r => r.id === registration.id ? { ...r, ...payload } : r));
+            }
+            fetchRegistrations();
+            setExpandedHotelSections(prev => prev.includes('approved') ? prev : [...prev, 'approved']);
+            setHotelFilter('approved');
+        }
+        else {
+            alert(`Falha ao aprovar hospedagem: ${error.message || 'Erro desconhecido'}`);
+            console.error('Erro ao aprovar:', error);
+        }
+        setApprovingId(null);
     };
 
     const handleConfirmDelete = async () => {
@@ -8014,10 +8087,117 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
         setHotelRegistrationForExtraServices(null);
     };
 
-    const filteredRegistrations = registrations.filter(reg => 
-        reg.pet_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        reg.tutor_name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredRegistrations = registrations.filter(reg => {
+        const pet = (reg.pet_name || '').toLowerCase();
+        const tutor = (reg.tutor_name || '').toLowerCase();
+        const term = (searchTerm || '').toLowerCase();
+        return pet.includes(term) || tutor.includes(term);
+    });
+
+    const currentInHotel = filteredRegistrations.filter(reg => reg.check_in_status === 'checked_in');
+    const archived: HotelRegistration[] = [];
+    
+    const approved = filteredRegistrations
+        .filter(reg => (reg.approval_status || '').toLowerCase() === 'approved')
+        .filter(reg => reg.check_in_status !== 'checked_in' && reg.check_in_status !== 'checked_out' && reg.status !== 'Concluído');
+    
+    const analysis = filteredRegistrations
+        .filter(reg => reg.check_in_status !== 'checked_in' && reg.check_in_status !== 'checked_out' && reg.status !== 'Concluído')
+        .filter(reg => (reg.approval_status || '').toLowerCase() !== 'approved');
+
+    const handleHotelDragStart = (e: React.DragEvent<HTMLDivElement>, registration: HotelRegistration, source: 'analysis' | 'approved' | 'in_hotel' | 'archived') => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('application/json', JSON.stringify({ id: registration.id, source }));
+    };
+
+    const handleHotelDragOver = (e: React.DragEvent<HTMLDivElement>, target: 'analysis' | 'approved' | 'in_hotel' | 'archived') => {
+        e.preventDefault();
+        setDraggingOverHotel(target);
+    };
+
+    const handleHotelDragLeave = () => setDraggingOverHotel(null);
+
+    const handleHotelDrop = async (e: React.DragEvent<HTMLDivElement>, target: 'analysis' | 'approved' | 'in_hotel' | 'archived') => {
+        e.preventDefault();
+        setDraggingOverHotel(null);
+        const draggedDataRaw = e.dataTransfer.getData('application/json');
+        if (!draggedDataRaw) return;
+        const draggedData = JSON.parse(draggedDataRaw);
+        const { id, source } = draggedData as { id: string, source: 'analysis' | 'approved' | 'in_hotel' | 'archived' };
+        if (!id || source === target) return;
+        const registration = registrations.find(r => String(r.id) === String(id));
+        if (!registration) return;
+        let payload: any = {};
+        if (target === 'approved') {
+            payload = { approval_status: 'approved' };
+            if (source === 'archived') payload = { ...payload, check_in_status: 'pending', checked_out_at: null, status: 'Ativo' };
+        } else if (target === 'in_hotel') {
+            payload = { check_in_status: 'checked_in', checked_in_at: new Date().toISOString(), status: 'Ativo' };
+            if ((registration.approval_status || '').toLowerCase() !== 'approved') payload = { ...payload, approval_status: 'approved' };
+        } else if (target === 'archived') {
+            payload = { check_in_status: 'checked_out', checked_out_at: new Date().toISOString(), status: 'Concluído' };
+        } else if (target === 'analysis') {
+            payload = { approval_status: 'pending', check_in_status: 'pending', checked_in_at: null, checked_out_at: null, status: 'Ativo' };
+        }
+        const { data, error } = await supabase
+            .from('hotel_registrations')
+            .update(payload)
+            .eq('id', getDbId(registration.id))
+            .select()
+            .single();
+        if (!error) {
+            const updatedId = data && (data as any).id !== undefined ? String((data as any).id) : String(registration.id);
+            setRegistrations(prev => prev.map(r => String(r.id) === updatedId ? { ...r, ...payload } : r));
+            setTimeout(() => {
+                fetchRegistrations();
+            }, 100);
+            setExpandedHotelSections(prev => prev.includes(target) ? prev : [...prev, target]);
+            if (target === 'approved') {
+                setHotelFilter('approved');
+            }
+        } else {
+            alert(`Falha ao mover hospedagem: ${error.message || 'Erro desconhecido'}`);
+            console.error('Erro ao mover hospedagem:', error);
+        }
+    };
+
+    const toggleHotelSection = (sectionId: 'in_hotel' | 'approved' | 'analysis' | 'archived') => {
+        setExpandedHotelSections(prev => prev.includes(sectionId) ? prev.filter(s => s !== sectionId) : [...prev, sectionId]);
+    };
+
+    const HotelAccordionSection: React.FC<{ title: string; items: HotelRegistration[]; sectionId: 'in_hotel' | 'approved' | 'analysis' | 'archived'; }>
+        = ({ title, items, sectionId }) => {
+        const isExpanded = expandedHotelSections.includes(sectionId);
+        return (
+            <div className={`relative z-0 bg-white rounded-2xl shadow-sm ${draggingOverHotel === sectionId ? 'ring-2 ring-pink-400 ring-offset-2' : ''}`} onDragOver={(e) => handleHotelDragOver(e, sectionId)} onDrop={(e) => handleHotelDrop(e, sectionId)} onDragLeave={handleHotelDragLeave}>
+                <div className="flex justify-between items-center p-4 cursor-pointer" onClick={() => toggleHotelSection(sectionId)}>
+                    <div className="flex items-center gap-3">
+                        <ChevronRightIcon className={`h-8 w-8 text-gray-500 transform transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                        <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+                        <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">{items.length}</span>
+                    </div>
+                    <button className="text-sm text-pink-600 hover:underline" onClick={(e) => { e.stopPropagation(); toggleHotelSection(sectionId); }}>{isExpanded ? 'Recolher' : 'Expandir'}</button>
+                </div>
+                {isExpanded && (
+                    <div className="p-4 pt-0">
+                        {items.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <div className="flex gap-4 pb-2 snap-x snap-mandatory">
+                                    {items.map(reg => (
+                                        <div key={reg.id} draggable onDragStart={(e) => handleHotelDragStart(e, reg, sectionId)} className="shrink-0 w-[320px] sm:w-[360px] snap-center">
+                                            <HotelRegistrationCard registration={reg} onAddExtraServices={handleAddHotelExtraServices} showCheckActions={sectionId==='approved'} />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-gray-500">Sem itens nesta sessão</div>
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     if (loading) {
         return <div className="flex items-center justify-center min-h-[400px]"><LoadingSpinner /></div>;
@@ -8030,10 +8210,12 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
     const HotelRegistrationCard: React.FC<{ 
         registration: HotelRegistration;
         onAddExtraServices: (registration: HotelRegistration) => void;
-    }> = ({ registration, onAddExtraServices }) => {
+        showCheckActions?: boolean;
+    }> = ({ registration, onAddExtraServices, showCheckActions = false }) => {
         const invoiceTotal = calculateHotelInvoiceTotal(registration);
         const currentCheckInStatus = registration.check_in_status || 'pending';
         const isUpdating = updatingId === registration.id;
+        const isApproving = approvingId === registration.id;
         
         const getCheckInButtonStyle = () => {
             if (currentCheckInStatus === 'pending') {
@@ -8049,7 +8231,7 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
             if (isUpdating) return 'Atualizando...';
             if (currentCheckInStatus === 'pending') return 'Check-in';
             if (currentCheckInStatus === 'checked_in') return 'Check-out';
-            return 'Resetar';
+            return 'Arquivar';
         };
         
         const getStatusBadge = () => {
@@ -8072,9 +8254,25 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                         <p className="text-base text-gray-600">{registration.pet_breed} • {registration.pet_age}</p>
                         <p className="text-lg font-bold text-green-600 mt-1">R$ {invoiceTotal.toFixed(2).replace('.', ',')}</p>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusBadge.bg} ${statusBadge.text}`}>
-                        {statusBadge.label}
-                    </span>
+                    <div className="flex flex-col items-end gap-2">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusBadge.bg} ${statusBadge.text}`}>
+                            {statusBadge.label}
+                        </span>
+                        {(() => {
+                            const apRaw = (registration.approval_status ?? 'pending');
+                            const apNorm = (typeof apRaw === 'string' ? apRaw.trim() : 'pending').toLowerCase();
+                            const map: Record<string, { bg: string; text: string; label: string }> = {
+                                'pending': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Em Análise' },
+                                'approved': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Aprovado' },
+                                'rejected': { bg: 'bg-red-100', text: 'text-red-800', label: 'Rejeitado' },
+                                'pendente': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Em Análise' },
+                                'aprovado': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Aprovado' },
+                                'rejeitado': { bg: 'bg-red-100', text: 'text-red-800', label: 'Rejeitado' },
+                            };
+                            const b = map[apNorm] ?? map['pendente'];
+                            return <span className={`px-3 py-1 rounded-full text-xs font-semibold ${b.bg} ${b.text}`}>{b.label}</span>;
+                        })()}
+                    </div>
                 </div>
                 <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-3 text-gray-600">
@@ -8108,39 +8306,82 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                         </div>
                     )}
                 </div>
-                <div className="flex gap-3 mt-4">
-                    <button 
-                        onClick={() => handleToggleCheckIn(registration)}
-                        disabled={isUpdating}
-                        className={`flex-1 py-3.5 px-3 rounded-lg transition-colors text-sm font-bold ${getCheckInButtonStyle()} disabled:opacity-50`}
-                    >
-                        {getCheckInButtonText()}
-                    </button>
-                    <button 
-                        onClick={() => setSelectedRegistration(registration)}
-                        className="bg-gray-100 text-gray-700 py-3.5 px-3 rounded-lg hover:bg-gray-200 transition-colors text-sm font-semibold"
-                    >
-                        Detalhes
-                    </button>
-                    <button
-                        onClick={() => setRegistrationToEdit(registration)}
-                        className="bg-blue-100 text-blue-700 py-3.5 px-3 rounded-lg hover:bg-blue-200 transition-colors text-sm font-semibold"
-                    >
-                        Editar
-                    </button>
-                    <button
-                        onClick={() => onAddExtraServices(registration)}
-                        className="bg-green-100 text-green-700 py-3.5 px-3 rounded-lg hover:bg-green-200 transition-colors text-sm font-semibold"
-                        title="Adicionar Serviços Extras"
-                    >
-                        +
-                    </button>
-                    <button
-                        onClick={() => setRegistrationToDelete(registration)}
-                        className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
-                    >
-                        <DeleteIcon />
-                    </button>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
+                    {(() => {
+                        const apRaw = (registration.approval_status ?? 'pending');
+                        const apNorm = (typeof apRaw === 'string' ? apRaw.trim() : 'pending').toLowerCase();
+                        const isAnalysis = (registration.check_in_status !== 'checked_in' && registration.check_in_status !== 'checked_out' && registration.status !== 'Concluído' && apNorm !== 'approved');
+                        if (isAnalysis) {
+                            return (
+                                <>
+                                    <button
+                                        onClick={() => handleApprove(registration)}
+                                        disabled={isApproving}
+                                        className="w-full bg-green-100 text-green-700 py-3.5 px-4 rounded-lg hover:bg-green-200 transition-colors text-sm font-semibold flex items-center gap-2 justify-center"
+                                    >
+                                        {isApproving ? (<div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-700"></div>) : (<><CheckCircleOutlineIcon className="w-5 h-5" /><span>Aprovar</span></>)}
+                                    </button>
+                                    <button
+                                        onClick={() => { setRegistrationToReject(registration); setRejectReason(''); }}
+                                        className="w-full bg-red-100 text-red-700 py-3.5 px-4 rounded-lg hover:bg-red-200 transition-colors text-sm font-semibold flex items-center gap-2 justify-center"
+                                    >
+                                        <XCircleOutlineIcon className="w-5 h-5" /><span>Rejeitar</span>
+                                    </button>
+                                </>
+                            );
+                        }
+                        return (
+                            <>
+                                {showCheckActions && (
+                                    <button 
+                                        onClick={() => handleToggleCheckIn(registration)}
+                                        disabled={isUpdating}
+                                        className={`w-full p-2.5 rounded-lg transition-colors ${getCheckInButtonStyle()} disabled:opacity-50 flex items-center justify-center text-sm font-bold`}
+                                    >
+                                        {isUpdating ? (
+                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                        ) : (
+                                            'Check-in'
+                                        )}
+                                    </button>
+                                )}
+                                {!showCheckActions && (
+                                    <button
+                                        onClick={() => handleApprove(registration)}
+                                        disabled={isApproving}
+                                        className="w-full bg-green-100 text-green-700 p-2.5 rounded-lg hover:bg-green-200 transition-colors flex items-center justify-center"
+                                    >
+                                        {isApproving ? (<div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-700"></div>) : (<CheckCircleOutlineIcon className="w-5 h-5" />)}
+                                    </button>
+                                )}
+                                <button 
+                                    onClick={() => setSelectedRegistration(registration)}
+                                    className="w-full bg-gray-100 text-gray-700 p-2.5 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center"
+                                >
+                                    <EyeOutlineIcon className="w-5 h-5" />
+                                </button>
+                                <button
+                                    onClick={() => setRegistrationToEdit(registration)}
+                                    className="w-full bg-blue-100 text-blue-700 p-2.5 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center"
+                                >
+                                    <PencilOutlineIcon className="w-5 h-5" />
+                                </button>
+                                <button
+                                    onClick={() => onAddExtraServices(registration)}
+                                    className="w-full bg-green-100 text-green-700 p-2.5 rounded-lg hover:bg-green-200 transition-colors flex items-center justify-center"
+                                    title="Adicionar Serviços Extras"
+                                >
+                                    <PlusOutlineIcon className="w-5 h-5" />
+                                </button>
+                                <button
+                                    onClick={() => setRegistrationToDelete(registration)}
+                                    className="w-full bg-red-50 text-red-600 p-2.5 rounded-lg hover:bg-red-100 transition-colors flex items-center justify-center"
+                                >
+                                    <TrashOutlineIcon className="w-5 h-5" />
+                                </button>
+                            </>
+                        );
+                    })()}
                 </div>
             </div>
         );
@@ -8148,7 +8389,7 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
 
     return (
         <div className="space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm p-6">
+            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-50">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
             <h1 className="text-3xl font-bold text-gray-800 text-center sm:text-left">Hotel Pet</h1>
@@ -8161,6 +8402,13 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                         >
                             <ChartBarIcon className="w-5 h-5" />
                             <span className="hidden sm:inline">Estatísticas</span>
+                        </button>
+                        <button
+                            onClick={() => setShowHotelFilterPanel(prev => !prev)}
+                            className="bg-gray-100 text-gray-700 font-semibold py-3.5 px-4 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+                        >
+                            <FunnelIcon className="w-5 h-5" />
+                            <span className="hidden sm:inline">Filtrar</span>
                         </button>
                         <button
                             onClick={() => setIsAddFormOpen(true)}
@@ -8183,22 +8431,34 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                         className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                     />
                 </div>
+
+                {showHotelFilterPanel && (
+                    <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <div className="flex flex-wrap gap-2">
+                            <button onClick={() => setHotelFilter('all')} className={`px-3 py-2 rounded-lg text-sm font-semibold ${hotelFilter==='all' ? 'bg-pink-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:border-pink-400'}`}>Todos</button>
+                            <button onClick={() => setHotelFilter('in_hotel')} className={`px-3 py-2 rounded-lg text-sm font-semibold ${hotelFilter==='in_hotel' ? 'bg-pink-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:border-pink-400'}`}>Pets no Hotel agora</button>
+                            <button onClick={() => setHotelFilter('approved')} className={`px-3 py-2 rounded-lg text-sm font-semibold ${hotelFilter==='approved' ? 'bg-pink-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:border-pink-400'}`}>Hospedagens Aprovadas</button>
+                            <button onClick={() => setHotelFilter('analysis')} className={`px-3 py-2 rounded-lg text-sm font-semibold ${hotelFilter==='analysis' ? 'bg-pink-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:border-pink-400'}`}>Hospedagens em Análise</button>
+                            <button onClick={() => setHotelFilter('archived')} className={`px-3 py-2 rounded-lg text-sm font-semibold ${hotelFilter==='archived' ? 'bg-pink-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:border-pink-400'}`}>Arquivados</button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {filteredRegistrations.length > 0 ? (
-                <div>
-                    <h2 className="text-lg font-semibold text-gray-700 mb-3">
-                        Pets Cadastrados ({filteredRegistrations.length})
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {filteredRegistrations.map(reg => (
-                            <HotelRegistrationCard 
-                                key={reg.id} 
-                                registration={reg} 
-                                onAddExtraServices={handleAddHotelExtraServices}
-                            />
-                        ))}
-                    </div>
+                <div className="space-y-6">
+                    {(hotelFilter === 'all' || hotelFilter === 'in_hotel') && (
+                        <HotelAccordionSection title="Pets no Hotel agora" items={currentInHotel} sectionId="in_hotel" />
+                    )}
+                    {(hotelFilter === 'all' || hotelFilter === 'approved') && (
+                        <HotelAccordionSection title="Hospedagens Aprovadas" items={approved} sectionId="approved" />
+                    )}
+                    {(hotelFilter === 'all' || hotelFilter === 'analysis') && (
+                        <HotelAccordionSection title="Hospedagens em Análise" items={analysis} sectionId="analysis" />
+                    )}
+                    {(hotelFilter === 'all' || hotelFilter === 'archived') && (
+                        <HotelAccordionSection title="Arquivados" items={archived} sectionId="archived" />
+                    )}
                 </div>
             ) : (
                 <div className="text-center py-12 bg-white rounded-2xl">
@@ -8227,6 +8487,20 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                             >
                                 {isDeleting ? 'Excluindo...' : 'Excluir'}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {registrationToReject && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl p-6 max-w-full sm:max-w-md w-full">
+                        <h3 className="text-2xl font-bold text-gray-800 mb-4">Rejeitar Hospedagem</h3>
+                        <p className="text-gray-600 mb-4">Informe o motivo da rejeição para <strong>{registrationToReject.pet_name}</strong>:</p>
+                        <textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500" rows={4} placeholder="Descreva o motivo"></textarea>
+                        <div className="flex gap-4 justify-end mt-4">
+                            <button onClick={() => { setRegistrationToReject(null); setRejectReason(''); }} className="px-4 py-3.5 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-semibold">Cancelar</button>
+                            <button onClick={handleConfirmReject} disabled={!rejectReason.trim()} className="px-4 py-3.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold disabled:opacity-50">Confirmar Rejeição</button>
                         </div>
                     </div>
                 </div>
@@ -9106,7 +9380,7 @@ const AdminDashboard: React.FC<{
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-pink-50/20 to-gray-100">
             <header className="bg-white border-b-2 border-pink-100 shadow-lg sticky top-0 z-40 backdrop-blur-sm bg-white/95">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="w-full px-2">
                     <div className="flex justify-between items-center h-20">
                         <div className="flex items-center gap-4">
                              <img src="https://i.imgur.com/M3Gt3OA.png" alt="Logo" className="h-12 w-12 drop-shadow-md"/>
@@ -9146,7 +9420,7 @@ const AdminDashboard: React.FC<{
                  <div className="fixed inset-0 bg-gray-800 bg-opacity-50 z-30 md:hidden" onClick={() => setShowMobileMenu(false)}></div>
             )}
 
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+            <div className="w-full px-2 py-6">
                 <div className="flex flex-col md:flex-row gap-8">
                     <aside className={`
                         md:w-64 flex-shrink-0

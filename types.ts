@@ -221,6 +221,8 @@ export interface HotelRegistration {
     checked_in_at?: string;
     checked_out_at?: string;
     check_in_status?: 'pending' | 'checked_in' | 'checked_out';
+    approval_status?: 'Pendente' | 'Aprovado' | 'Rejeitado' | 'pendente' | 'aprovado' | 'rejeitado';
+    rejection_reason?: string | null;
     extra_services?: {
         pernoite: { enabled: boolean; value: number };
         banho_tosa: { enabled: boolean; value: number };
