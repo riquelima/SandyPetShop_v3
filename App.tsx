@@ -10315,14 +10315,24 @@ const App: React.FC = () => {
                 <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-pink-100">
                     <h2 className="text-2xl font-bold text-gray-800 text-center mb-4">Escolha o local da visita</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <button type="button" onClick={() => { setVisitServiceType('Creche Pet'); setViewWithLog('visitAppointment'); }} className="p-5 rounded-xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200">
-                            <span className="text-2xl">🎈</span>
+                        <button type="button" onClick={() => { setVisitServiceType('Creche Pet'); setViewWithLog('visitAppointment'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200">
+                            <img src="https://cdn-icons-png.flaticon.com/512/11201/11201086.png" alt="Creche Pet" className="w-12 h-12 rounded-full object-contain mb-2" />
                             <span className="text-lg">Creche Pet</span>
                         </button>
-                        <button type="button" onClick={() => { setVisitServiceType('Hotel Pet'); setViewWithLog('visitAppointment'); }} className="p-5 rounded-xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200">
-                            <span className="text-2xl">🏨</span>
+                        <button type="button" onClick={() => { setVisitServiceType('Hotel Pet'); setViewWithLog('visitAppointment'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200">
+                            <img src="https://cdn-icons-png.flaticon.com/512/1131/1131938.png" alt="Hotel Pet" className="w-12 h-12 rounded-full object-contain mb-2" />
                             <span className="text-lg">Hotel Pet</span>
                         </button>
+                    </div>
+                    <div className="mt-6 flex items-center justify-center gap-4 flex-wrap">
+                        <a href="https://www.instagram.com/sandyspetmovelcrechehotel/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 hover:bg-pink-50 transition-colors">
+                            <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" className="w-6 h-6" />
+                            <span className="text-sm font-semibold text-gray-700">@sandyspetmovelcrechehotel</span>
+                        </a>
+                        <a href="https://wa.me/5511994580316?text=Ol%C3%A1%20Sandy%2C%20vim%20do%20site%20e%20gostaria%20de%20ajuda" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-50 border border-green-200 hover:bg-green-100 transition-colors">
+                            <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" className="w-6 h-6" />
+                            <span className="text-sm font-semibold text-green-700">(11) 99458-0316</span>
+                        </a>
                     </div>
                     <div className="mt-6 text-center">
                         <button type="button" onClick={() => setViewWithLog('scheduler')} className="text-sm text-pink-600 hover:underline">← Voltar</button>
