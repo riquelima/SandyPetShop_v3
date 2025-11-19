@@ -6412,18 +6412,7 @@ const HotelRegistrationForm: React.FC<{
 
     return (
         <div className="w-full max-w-3xl mx-auto bg-rose-50 rounded-2xl shadow-xl overflow-hidden animate-fadeIn">
-            <div className="px-6 py-4 border-b border-gray-200">
-                <div className="flex justify-between items-center text-xs font-semibold text-gray-500">
-                    {['Pet/Tutor', 'Documentos', 'Alimentação', 'Hospedagem', 'Serviços', 'Assinatura'].map((name, index) => (
-                        <div key={name} className={`flex items-center gap-1 ${step > index + 1 ? 'text-pink-600' : ''} ${step === index + 1 ? 'text-pink-600 font-bold' : ''}`}>
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${step >= index + 1 ? 'bg-pink-600 text-white' : 'bg-gray-200 text-gray-500'} text-xs`}>
-                                {step > index + 1 ? '✓' : index + 1}
-                            </div>
-                            <span className="hidden sm:inline">{name}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
+            {/* Barra de etapas removida */}
 
             <form onSubmit={handleSubmit} className="relative p-6 sm:p-8">
                 {/* Seção 1: Dados do Pet e Tutor */}
@@ -6620,13 +6609,13 @@ const HotelRegistrationForm: React.FC<{
 
                         <div className="space-y-3">
                             <div className="flex items-start space-x-3">
-                                <input type="checkbox" name="declaration_accepted" checked={formData.declaration_accepted || false} onChange={(e) => setFormData(prev => ({...prev, declaration_accepted: e.target.checked}))} className="w-5 h-5 text-blue-600 mt-1" required />
+                                <input type="checkbox" name="declaration_accepted" checked={formData.declaration_accepted || false} onChange={(e) => setFormData(prev => ({...prev, declaration_accepted: e.target.checked}))} className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" required />
                                 <label className="text-sm text-gray-700">
                                     Declaro que todas as informações fornecidas são verdadeiras e autorizo o hotel pet a cuidar do meu animal de acordo com as instruções fornecidas. *
                                 </label>
                             </div>
                             <div className="flex items-start space-x-3">
-                                <input type="checkbox" name="photo_authorization" checked={formData.photo_authorization || false} onChange={(e) => setFormData(prev => ({...prev, photo_authorization: e.target.checked}))} className="w-5 h-5 text-blue-600 mt-1" />
+                                <input type="checkbox" name="photo_authorization" checked={formData.photo_authorization || false} onChange={(e) => setFormData(prev => ({...prev, photo_authorization: e.target.checked}))} className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" />
                                 <label className="text-sm text-gray-700">
                                     Autorizo o uso de fotos do meu pet para divulgação nas redes sociais do estabelecimento.
                                 </label>
