@@ -171,6 +171,8 @@ export interface HotelRegistration {
     is_neutered: boolean | null;
     pet_age: string;
     pet_weight?: PetWeight | null;
+    pet_photo_url?: string | null;
+    contract_accepted?: boolean;
     tutor_name: string;
     tutor_rg: string;
     tutor_address: string;
