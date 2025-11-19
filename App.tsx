@@ -348,7 +348,6 @@ const AlertModal: React.FC<{
     );
 };
 
-
 const ConfirmationModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
@@ -394,6 +393,141 @@ const ConfirmationModal: React.FC<{
                         ) : (
                             confirmText
                         )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const ViewHotelRegistrationModal: React.FC<{
+    registration: HotelRegistration;
+    onClose: () => void;
+    onAddExtraServices: (reg: HotelRegistration) => void;
+    onChangePhoto: (reg: HotelRegistration) => void;
+}> = ({ registration, onClose, onAddExtraServices, onChangePhoto }) => {
+    const buildWhatsAppLink = (phone: string) => {
+        const digits = String(phone || '').replace(/\D/g, '');
+        const withCountry = digits ? (digits.startsWith('55') ? digits : `55${digits}`) : '';
+        return withCountry ? `https://wa.me/${withCountry}` : '#';
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+            <div className="bg-white rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-2xl font-bold text-gray-800">Detalhes do Registro</h3>
+                    <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg">
+                        <CloseIcon />
+                    </button>
+                </div>
+
+                <div className="space-y-6">
+                    <div>
+                        <h4 className="font-semibold text-gray-700 mb-2">Informações do Pet</h4>
+                        <div className="flex items-start gap-4">
+                            <div className="flex flex-col items-center gap-2">
+                                <img src={registration.pet_photo_url || "https://cdn-icons-png.flaticon.com/512/3009/3009489.png"} alt="Foto do Pet" className="w-24 h-24 rounded-full object-cover" />
+                                <button
+                                    onClick={() => onChangePhoto(registration)}
+                                    className="w-full bg-gray-100 text-gray-700 py-1.5 px-2 rounded-md hover:bg-gray-200 transition-colors text-xs font-medium"
+                                >
+                                    Atualizar foto
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm flex-1">
+                                <div><span className="font-semibold">Nome:</span> {registration.pet_name}</div>
+                                <div><span className="font-semibold">Raça:</span> {registration.pet_breed || '—'}</div>
+                                <div><span className="font-semibold">Idade:</span> {registration.pet_age || '—'}</div>
+                                <div><span className="font-semibold">Sexo:</span> {registration.pet_sex || '—'}</div>
+                                <div className="sm:col-span-2"><span className="font-semibold">Peso:</span> {registration.pet_weight ? PET_WEIGHT_OPTIONS[registration.pet_weight as PetWeight] : '—'}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 className="font-semibold text-gray-700 mb-2">Informações do Tutor</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <div><span className="font-semibold">Nome:</span> {registration.tutor_name}</div>
+                            <div className="flex items-center gap-2"><span className="font-semibold">Telefone:</span> <a href={buildWhatsAppLink(registration.tutor_phone || '')} target="_blank" rel="noopener noreferrer" className="text-green-700 hover:underline">{registration.tutor_phone || '—'}</a></div>
+                            <div><span className="font-semibold">Email:</span> {registration.tutor_email || '—'}</div>
+                            <div className="sm:col-span-2"><span className="font-semibold">Endereço:</span> {registration.tutor_address || '—'}</div>
+                        </div>
+                    </div>
+
+                    {(registration.check_in_date || registration.check_out_date) && (
+                        <div>
+                            <h4 className="font-semibold text-gray-700 mb-2">Hospedagem</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                {registration.check_in_date && <div><span className="font-semibold">Check-in:</span> {new Date(registration.check_in_date).toLocaleDateString('pt-BR')} {String(registration.check_in_time ?? '').split(':').slice(0,2).join(':')}</div>}
+                                {registration.check_out_date && <div><span className="font-semibold">Check-out:</span> {new Date(registration.check_out_date).toLocaleDateString('pt-BR')} {String(registration.check_out_time ?? '').split(':').slice(0,2).join(':')}</div>}
+                            </div>
+                        </div>
+                    )}
+
+                    {registration.extra_services && (
+                        <div>
+                            <h4 className="font-semibold text-gray-700 mb-2">Serviços Extras</h4>
+                            <div className="flex flex-wrap gap-2">
+                                {registration.extra_services.pernoite && (
+                                    <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">Pernoite</span>
+                                )}
+                                {registration.extra_services.banho_tosa && (
+                                    <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">Banho & Tosa</span>
+                                )}
+                                {registration.extra_services.so_banho && (
+                                    <span className="px-2 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full">Só banho</span>
+                                )}
+                                {registration.extra_services.adestrador && (
+                                    <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Adestrador</span>
+                                )}
+                                {registration.extra_services.despesa_medica && (
+                                    <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">Despesa médica</span>
+                                )}
+                                {registration.extra_services.dia_extra && registration.extra_services.dia_extra > 0 && (
+                                    <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">{registration.extra_services.dia_extra} dia{registration.extra_services.dia_extra > 1 ? 's' : ''} extra{registration.extra_services.dia_extra > 1 ? 's' : ''}</span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    <div>
+                        <h4 className="font-semibold text-gray-700 mb-2">Status</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <div><span className="font-semibold">Aprovação:</span> {(registration.approval_status ?? 'pending') === 'approved' ? 'Aprovado' : (registration.approval_status ?? 'pending') === 'rejected' ? 'Rejeitado' : 'Em Análise'}</div>
+                            <div><span className="font-semibold">Check-in:</span> {(registration.check_in_status ?? 'pending') === 'checked_in' ? 'Ativo' : (registration.check_in_status ?? 'pending') === 'checked_out' ? 'Finalizado' : 'Pendente'}</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 className="font-semibold text-gray-700 mb-2">Documentos</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <div><span className="font-semibold">RG:</span> {registration.has_rg_document ? 'Sim' : 'Não'}</div>
+                            <div><span className="font-semibold">Comprovante de residência:</span> {registration.has_residence_proof ? 'Sim' : 'Não'}</div>
+                            <div><span className="font-semibold">Carteira de vacinação:</span> {registration.has_vaccination_card ? 'Sim' : 'Não'}</div>
+                            <div><span className="font-semibold">Atestado veterinário:</span> {registration.has_vet_certificate ? 'Sim' : 'Não'}</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 className="font-semibold text-gray-700 mb-2">Financeiro</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <div><span className="font-semibold">Total dos serviços:</span> R$ {(registration.total_services_price ?? 0).toFixed(2).replace('.', ',')}</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 className="font-semibold text-gray-700 mb-2">Informações Adicionais</h4>
+                        <div className="text-sm">{registration.additional_info || '—'}</div>
+                    </div>
+                </div>
+
+                <div className="flex justify-end mt-6">
+                    <button
+                        onClick={() => { onClose(); onAddExtraServices(registration); }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                        Adicionar Serviços Extras
                     </button>
                 </div>
             </div>
@@ -8286,6 +8420,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
     const [uploadTargetRegistration, setUploadTargetRegistration] = useState<HotelRegistration | null>(null);
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
+    const [selectedPhotoName, setSelectedPhotoName] = useState<string>('');
 
     const handlePetPhotoUpload = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -8311,6 +8446,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
             setUploadError(err.message || 'Falha ao enviar');
         } finally {
             setIsUploadingPhoto(false);
+            setSelectedPhotoName('');
         }
     };
 
@@ -9098,7 +9234,34 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                 />
             )}
 
-            
+            {selectedRegistration && (
+                <ViewHotelRegistrationModal
+                    registration={selectedRegistration}
+                    onClose={() => setSelectedRegistration(null)}
+                    onAddExtraServices={(reg) => handleAddHotelExtraServices(reg)}
+                    onChangePhoto={(reg) => { setUploadTargetRegistration(reg); setIsUploadPhotoModalOpen(true); }}
+                />
+            )}
+
+            {isUploadPhotoModalOpen && uploadTargetRegistration && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+                        <h3 className="text-xl font-bold text-gray-800 mb-4">Trocar foto do pet</h3>
+                        <form onSubmit={handlePetPhotoUpload}>
+                            <input id="pet_photo_input" type="file" name="pet_photo" accept="image/*" className="sr-only" onChange={(e) => setSelectedPhotoName(e.target.files?.[0]?.name || '')} />
+                            <div className="flex items-center gap-3 mb-4">
+                                <label htmlFor="pet_photo_input" className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 cursor-pointer">Escolher arquivo</label>
+                                <span className="text-sm text-gray-600">{selectedPhotoName || 'Nenhum arquivo selecionado'}</span>
+                            </div>
+                            {uploadError && <p className="text-red-600 text-sm mb-2">{uploadError}</p>}
+                            <div className="flex justify-end gap-2">
+                                <button type="button" onClick={() => { setIsUploadPhotoModalOpen(false); setUploadTargetRegistration(null); setSelectedPhotoName(''); }} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">Cancelar</button>
+                                <button type="submit" disabled={isUploadingPhoto} className="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 disabled:opacity-50">{isUploadingPhoto ? 'Enviando...' : 'Salvar'}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
