@@ -170,6 +170,7 @@ export interface HotelRegistration {
     pet_breed: string;
     is_neutered: boolean | null;
     pet_age: string;
+    pet_weight?: PetWeight | null;
     tutor_name: string;
     tutor_rg: string;
     tutor_address: string;

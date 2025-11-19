@@ -6211,6 +6211,7 @@ const HotelRegistrationForm: React.FC<{
 }> = ({ setView, onSuccess }) => {
     const [formData, setFormData] = useState<HotelRegistration>({
         pet_name: '', pet_sex: null, pet_breed: '', is_neutered: null, pet_age: '',
+        pet_weight: null,
         tutor_name: '', tutor_rg: '', tutor_address: '', tutor_phone: '', tutor_email: '', tutor_social_media: '',
         vet_phone: '', emergency_contact_name: '', emergency_contact_phone: '', emergency_contact_relation: '',
         has_rg_document: null, has_residence_proof: null, has_vaccination_card: null, has_vet_certificate: null,
@@ -6431,6 +6432,15 @@ const HotelRegistrationForm: React.FC<{
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Nome do Pet *</label>
                             <input type="text" name="pet_name" value={formData.pet_name} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Peso do Pet</label>
+                            <select name="pet_weight" value={formData.pet_weight || ''} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Selecione o peso</option>
+                                {(Object.keys(PET_WEIGHT_OPTIONS) as PetWeight[]).map(key => (
+                                    <option key={key} value={key}>{PET_WEIGHT_OPTIONS[key]}</option>
+                                ))}
+                            </select>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Raça</label>
