@@ -459,8 +459,8 @@ const ViewHotelRegistrationModal: React.FC<{
                         <div>
                             <h4 className="font-semibold text-gray-700 mb-2">Hospedagem</h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                                {registration.check_in_date && <div><span className="font-semibold">Check-in:</span> {new Date(registration.check_in_date).toLocaleDateString('pt-BR')} {String(registration.check_in_time ?? '').split(':').slice(0,2).join(':')}</div>}
-                                {registration.check_out_date && <div><span className="font-semibold">Check-out:</span> {new Date(registration.check_out_date).toLocaleDateString('pt-BR')} {String(registration.check_out_time ?? '').split(':').slice(0,2).join(':')}</div>}
+                                {registration.check_in_date && <div><span className="font-semibold">Check-in:</span> {formatDateToBR(registration.check_in_date)} {String(registration.check_in_time ?? '').split(':').slice(0,2).join(':')}</div>}
+                                {registration.check_out_date && <div><span className="font-semibold">Check-out:</span> {formatDateToBR(registration.check_out_date)} {String(registration.check_out_time ?? '').split(':').slice(0,2).join(':')}</div>}
                             </div>
                         </div>
                     )}
@@ -5635,7 +5635,8 @@ const DaycareEnrollmentCard: React.FC<{
     onAddExtraServices: (enrollment: DaycareRegistration) => void;
     isDraggable?: boolean;
     onDragStart?: (e: React.DragEvent<HTMLDivElement>) => void;
-}> = ({ enrollment, onClick, onEdit, onDelete, onAddExtraServices, isDraggable = false, onDragStart }) => {
+    onChangePhoto: (enrollment: DaycareRegistration) => void;
+}> = ({ enrollment, onClick, onEdit, onDelete, onAddExtraServices, isDraggable = false, onDragStart, onChangePhoto }) => {
     const { created_at, pet_name, tutor_name, contracted_plan, status } = enrollment;
 
     const statusStyles: Record<string, string> = {
@@ -5664,7 +5665,7 @@ const DaycareEnrollmentCard: React.FC<{
             <div className="p-5 flex-grow">
                 <div className="rounded-xl mb-3 p-5 bg-gradient-to-r from-pink-500 to-purple-500 text-white flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <img src="https://cdn-icons-png.flaticon.com/512/11201/11201086.png" alt="Creche" className="w-10 h-10 rounded-full object-cover" />
+                        <img src={enrollment.pet_photo_url || 'https://cdn-icons-png.flaticon.com/512/3009/3009489.png'} alt={enrollment.pet_name} className="w-10 h-10 rounded-full object-cover cursor-pointer" onClick={(e) => { e.stopPropagation(); onChangePhoto(enrollment); }} />
                         <div>
                             <p className="text-2xl font-bold leading-none">{pet_name}</p>
                             <p className="text-xs opacity-90">{tutor_name}</p>
@@ -6474,11 +6475,13 @@ const HotelRegistrationForm: React.FC<{
     const priceHoliday = { UP_TO_5: 120, KG_10: 140, KG_20: 160 } as const;
     function calculateTotal(ci: string | null, co: string | null, w: any) {
         if (!ci || !co) return { total: 0, nDiarias: 0, holidayDates: [] as Date[] };
-        const startRaw = new Date(ci);
-        const endRaw = new Date(co);
-        if (isNaN(startRaw.getTime()) || isNaN(endRaw.getTime())) return { total: 0, nDiarias: 0, holidayDates: [] as Date[] };
-        const start = new Date(startRaw.getFullYear(), startRaw.getMonth(), startRaw.getDate());
-        const end = new Date(endRaw.getFullYear(), endRaw.getMonth(), endRaw.getDate());
+        const ciPart = (ci || '').split('T')[0];
+        const coPart = (co || '').split('T')[0];
+        const ciParts = ciPart.split('-').map(Number);
+        const coParts = coPart.split('-').map(Number);
+        if (ciParts.length !== 3 || coParts.length !== 3) return { total: 0, nDiarias: 0, holidayDates: [] as Date[] };
+        const start = new Date(ciParts[0], ciParts[1] - 1, ciParts[2]);
+        const end = new Date(coParts[0], coParts[1] - 1, coParts[2]);
         const days: Date[] = [];
         const cur = new Date(start);
         while (cur < end) {
@@ -6995,8 +6998,8 @@ const HotelRegistrationForm: React.FC<{
                                             <div><span className="font-semibold">Peso:</span> {pesoLabel}</div>
                                             <div><span className="font-semibold">Tutor:</span> {formData.tutor_name || '—'}</div>
                                             <div><span className="font-semibold">Telefone:</span> {formData.tutor_phone || '—'}</div>
-                                            <div><span className="font-semibold">Check-in:</span> {ciDate ? new Date(ciDate).toLocaleDateString('pt-BR') : '—'} {ciTime ? `às ${ciTime}` : ''}</div>
-                                            <div><span className="font-semibold">Check-out:</span> {coDate ? new Date(coDate).toLocaleDateString('pt-BR') : '—'} {coTime ? `às ${coTime}` : ''}</div>
+                                            <div><span className="font-semibold">Check-in:</span> {ciDate ? formatDateToBR(ciDate) : '—'} {ciTime ? `às ${ciTime}` : ''}</div>
+                                            <div><span className="font-semibold">Check-out:</span> {coDate ? formatDateToBR(coDate) : '—'} {coTime ? `às ${coTime}` : ''}</div>
                                             <div><span className="font-semibold">Diárias:</span> {nDiarias || 0}</div>
                                             <div><span className="font-semibold">Feriados:</span> {feriados || '—'}</div>
                                         </div>
@@ -8656,8 +8659,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
             };
             const formatDateTime = (d?: string | null, t?: string | null) => {
                 if (!d) return '';
-                const date = new Date(d);
-                const dateStr = date.toLocaleDateString('pt-BR');
+                const dateStr = formatDateToBR(d);
                 const timeStr = String(t || '').split(':').slice(0,2).join(':');
                 return `${dateStr} ${timeStr}`.trim();
             };
@@ -8960,7 +8962,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                         <div className="flex items-center gap-3 text-gray-600">
                             <img src="https://cdn-icons-png.flaticon.com/512/9576/9576046.png" alt="Check-in Icon" className="h-7 w-7" />
                             <span>
-                                Check-in: {new Date(registration.check_in_date).toLocaleDateString('pt-BR')} {String(registration.check_in_time ?? '').split(':').slice(0,2).join(':')}
+                                Check-in: {formatDateToBR(registration.check_in_date)} {String(registration.check_in_time ?? '').split(':').slice(0,2).join(':')}
                             </span>
                         </div>
                     )}
@@ -8968,7 +8970,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                         <div className="flex items-center gap-3 text-gray-600">
                             <img src="https://cdn-icons-png.flaticon.com/512/9576/9576053.png" alt="Check-out Icon" className="h-7 w-7" />
                             <span>
-                                Check-out: {new Date(registration.check_out_date).toLocaleDateString('pt-BR')} {String(registration.check_out_time ?? '').split(':').slice(0,2).join(':')}
+                                Check-out: {formatDateToBR(registration.check_out_date)} {String(registration.check_out_time ?? '').split(':').slice(0,2).join(':')}
                             </span>
                         </div>
                     )}
@@ -9998,6 +10000,7 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
                                                 onEdit={() => { setSelectedEnrollment(enrollment); setIsEditModalOpen(true); setShowMobileMenu(false); }}
                                                 onDelete={() => setEnrollmentToDelete(enrollment)}
                                                 onAddExtraServices={handleAddExtraServices}
+                                                onChangePhoto={(enr) => { setUploadTargetDaycareEnrollment(enr); setIsUploadDaycarePhotoModalOpen(true); }}
                                             />
                                         </div>
                                     ))}
