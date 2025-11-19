@@ -4769,6 +4769,11 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
     // Filtro de status de pagamento: '' (Todos), 'Pendente' ou 'Pago'
     const [filterPaymentStatus, setFilterPaymentStatus] = useState<'' | 'Pendente' | 'Pago'>('');
     const [monthlyMobileSearchOpen, setMonthlyMobileSearchOpen] = useState(false);
+    const [isUploadMonthlyPhotoModalOpen, setIsUploadMonthlyPhotoModalOpen] = useState(false);
+    const [uploadTargetMonthlyClient, setUploadTargetMonthlyClient] = useState<MonthlyClient | null>(null);
+    const [isUploadingMonthlyPhoto, setIsUploadingMonthlyPhoto] = useState(false);
+    const [monthlyUploadError, setMonthlyUploadError] = useState<string | null>(null);
+    const [selectedMonthlyPhotoName, setSelectedMonthlyPhotoName] = useState<string>('');
     
     // Estados para filtros
     const [showFilterPanel, setShowFilterPanel] = useState(false);
@@ -5033,6 +5038,39 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
         onDataChanged();
     };
 
+    const getMonthlyDbId = (id: any) => {
+        const s = String(id ?? '');
+        return /^\d+$/.test(s) ? Number(s) : id;
+    };
+
+    const handleMonthlyPetPhotoUpload = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setMonthlyUploadError(null);
+        const input = (e.currentTarget.elements.namedItem('monthly_pet_photo') as HTMLInputElement);
+        const file = input?.files?.[0];
+        if (!file) { setMonthlyUploadError('Selecione uma imagem'); return; }
+        setIsUploadingMonthlyPhoto(true);
+        try {
+            const mc = uploadTargetMonthlyClient as MonthlyClient;
+            const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+            const path = `${(mc.id || mc.pet_name.replace(/\s+/g,'_'))}.${ext}`;
+            const { error: upErr } = await supabase.storage.from('monthly_pet_photos').upload(path, file, { upsert: true, contentType: file.type });
+            if (upErr) throw upErr;
+            const { data } = supabase.storage.from('monthly_pet_photos').getPublicUrl(path);
+            const publicUrl = data.publicUrl;
+            const { error: dbErr } = await supabase.from('monthly_clients').update({ pet_photo_url: publicUrl }).eq('id', getMonthlyDbId(mc.id)).select().single();
+            if (dbErr) throw dbErr;
+            setMonthlyClients(prev => prev.map(c => c.id === mc.id ? { ...c, pet_photo_url: publicUrl } : c));
+            setIsUploadMonthlyPhotoModalOpen(false);
+            setUploadTargetMonthlyClient(null);
+        } catch (err: any) {
+            setMonthlyUploadError(err.message || 'Falha ao enviar');
+        } finally {
+            setIsUploadingMonthlyPhoto(false);
+            setSelectedMonthlyPhotoName('');
+        }
+    };
+
     return (
         <>
             {alertInfo && <AlertModal isOpen={!!alertInfo} onClose={() => setAlertInfo(null)} title={alertInfo.title} message={alertInfo.message} variant={alertInfo.variant} />}
@@ -5241,6 +5279,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                                         onAddExtraServices={() => handleAddExtraServices(client)}
                                         onTogglePaymentStatus={(e) => handleTogglePaymentStatus(client, e)}
                                         isClientInDaycare={isClientInDaycare(client)}
+                                        onChangePhoto={(mc) => { setUploadTargetMonthlyClient(mc); setIsUploadMonthlyPhotoModalOpen(true); }}
                                     />
                                 </div>
                             ))}
@@ -5331,6 +5370,26 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                 isOpen={showStatisticsModal}
                 onClose={() => setShowStatisticsModal(false)}
             />
+
+            {isUploadMonthlyPhotoModalOpen && uploadTargetMonthlyClient && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+                        <h3 className="text-xl font-bold text-gray-800 mb-4">Trocar foto do pet</h3>
+                        <form onSubmit={handleMonthlyPetPhotoUpload}>
+                            <input id="monthly_pet_photo_input" type="file" name="monthly_pet_photo" accept="image/*" className="sr-only" onChange={(e) => setSelectedMonthlyPhotoName(e.target.files?.[0]?.name || '')} />
+                            <div className="flex items-center gap-3 mb-4">
+                                <label htmlFor="monthly_pet_photo_input" className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 cursor-pointer">Escolher arquivo</label>
+                                <span className="text-sm text-gray-600">{selectedMonthlyPhotoName || 'Nenhum arquivo selecionado'}</span>
+                            </div>
+                            {monthlyUploadError && <p className="text-red-600 text-sm mb-2">{monthlyUploadError}</p>}
+                            <div className="flex justify-end gap-2">
+                                <button type="button" onClick={() => { setIsUploadMonthlyPhotoModalOpen(false); setUploadTargetMonthlyClient(null); setSelectedMonthlyPhotoName(''); }} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">Cancelar</button>
+                                <button type="submit" disabled={isUploadingMonthlyPhoto} className="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 disabled:opacity-50">{isUploadingMonthlyPhoto ? 'Enviando...' : 'Salvar'}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </>
     );
 };
@@ -5345,7 +5404,8 @@ const MonthlyClientCard: React.FC<{
     onAddExtraServices: (client: MonthlyClient) => void;
     onTogglePaymentStatus: (client: MonthlyClient, e: React.MouseEvent) => void;
     isClientInDaycare?: boolean;
-}> = ({ client, onClick, onEdit, onDelete, onAddExtraServices, onTogglePaymentStatus, isClientInDaycare = false }) => {
+    onChangePhoto: (client: MonthlyClient) => void;
+}> = ({ client, onClick, onEdit, onDelete, onAddExtraServices, onTogglePaymentStatus, isClientInDaycare = false, onChangePhoto }) => {
     
     const getRecurrenceText = (client: MonthlyClient) => {
         if (client.recurrence_type === 'weekly') return 'Semanal';
@@ -5412,13 +5472,12 @@ const MonthlyClientCard: React.FC<{
             <div className="bg-gradient-to-r from-pink-500 to-purple-600 p-3 sm:p-4 text-white">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                            <img
-                                src="https://cdn-icons-png.flaticon.com/512/2171/2171990.png"
-                                alt="Ícone de pet"
-                                className="w-6 h-6 sm:w-7 sm:h-7 object-contain"
-                            />
-                        </div>
+                        <img
+                            src={client.pet_photo_url || 'https://cdn-icons-png.flaticon.com/512/3009/3009489.png'}
+                            alt={client.pet_name}
+                            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover cursor-pointer"
+                            onClick={(e) => { e.stopPropagation(); onChangePhoto(client); }}
+                        />
                         <div className="flex-1">
                             <div className="flex items-center gap-2">
                                 <h3 className="text-lg sm:text-xl font-bold truncate">{client.pet_name}</h3>
