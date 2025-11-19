@@ -8850,7 +8850,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
             <div className="bg-white rounded-2xl shadow-sm p-5 min-h-[360px] hover:shadow-md transition-shadow border border-gray-200">
                 <div className="rounded-xl mb-3 p-5 bg-gradient-to-r from-pink-500 to-purple-500 text-white flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <img src={registration.pet_photo_url || "https://cdn-icons-png.flaticon.com/512/3009/3009489.png"} alt="Pet" className="w-10 h-10 rounded-full object-cover cursor-pointer" onClick={() => onChangePhoto && onChangePhoto(registration)} />
+                        <img src={registration.pet_photo_url || "https://cdn-icons-png.flaticon.com/512/3009/3009489.png"} alt="Pet" className="w-12 h-12 rounded-full object-cover cursor-pointer" onClick={() => onChangePhoto && onChangePhoto(registration)} />
                         <div>
                             <h3 className="text-lg font-bold leading-none">{registration.pet_name}</h3>
                         </div>
