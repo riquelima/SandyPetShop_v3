@@ -6297,6 +6297,7 @@ const HotelRegistrationForm: React.FC<{
                 pet_breed: formData.pet_breed || '',
                 is_neutered: formData.is_neutered,
                 pet_age: formData.pet_age || '',
+                pet_weight: formData.pet_weight || null,
                 tutor_name: formData.tutor_name || '',
                 tutor_rg: formData.tutor_rg || '',
                 tutor_address: formData.tutor_address || '',
@@ -6594,19 +6595,7 @@ const HotelRegistrationForm: React.FC<{
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Hora Extra (quantidade de horas)</label>
                                     <input type="number" name="extra_hour" value={formData.extra_services.extra_hour} onChange={(e) => setFormData(prev => ({...prev, extra_services: {...prev.extra_services, extra_hour: e.target.value === '' ? 0 : parseInt(e.target.value)}}))} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" min="0" />
                                 </div>
-                                <div className="md:col-span-2 lg:col-span-1">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Total dos Serviços</label>
-                                    <input 
-                                        type="number" 
-                                        name="total_services_price" 
-                                        value={formData.total_services_price || ''} 
-                                        onChange={(e) => setFormData(prev => ({...prev, total_services_price: e.target.value === '' ? 0 : parseFloat(e.target.value)}))}
-                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                                        placeholder="0.00"
-                                        step="0.01"
-                                        min="0"
-                                    />
-                                </div>
+                                {/* Campo "Total dos Serviços" removido conforme solicitado */}
                             </div>
                         </div>
                     )}
@@ -6653,10 +6642,10 @@ const HotelRegistrationForm: React.FC<{
                     </div>
                 </div>
 
-                <div className="mt-8 flex justify-between items-center">
-                    <button type="button" onClick={onBack} className="bg-gray-200 text-gray-800 font-bold py-3.5 px-5 rounded-lg hover:bg-gray-300 transition-colors">Voltar</button>
+                <div className="mt-8 flex justify_between items-center">
+                    <button type="button" onClick={onBack} className="bg-gray-200 text-gray-800 font-bold py-3.5 px-5 rounded-lg hover:bg_gray-300 transition-colors">Voltar</button>
                     <div className="flex-grow"></div>
-                    <button type="submit" disabled={isSubmitting || !formData.declaration_accepted} className="w-full md:w-auto bg-green-500 text-white font-bold py-3.5 px-5 rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-300">{isSubmitting ? 'Salvando...' : 'Finalizar Check-in'}</button>
+                    <button type="submit" disabled={isSubmitting || !formData.declaration_accepted} className="w-full md:w-auto bg-green-500 text-white font-bold py-3.5 px-5 rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-300">{isSubmitting ? 'Salvando...' : 'Solicitar Check-in'}</button>
                 </div>
             </form>
         </div>
@@ -8805,12 +8794,13 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                         <div className="space-y-6">
                             <div>
                                 <h4 className="font-semibold text-gray-700 mb-2">Informações do Pet</h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                                    <div><span className="font-semibold">Nome:</span> {selectedRegistration.pet_name}</div>
-                                    <div><span className="font-semibold">Raça:</span> {selectedRegistration.pet_breed}</div>
-                                    <div><span className="font-semibold">Idade:</span> {selectedRegistration.pet_age}</div>
-                                    <div><span className="font-semibold">Sexo:</span> {selectedRegistration.pet_sex}</div>
-                                </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <div><span className="font-semibold">Nome:</span> {selectedRegistration.pet_name}</div>
+                            <div><span className="font-semibold">Raça:</span> {selectedRegistration.pet_breed}</div>
+                            <div><span className="font-semibold">Idade:</span> {selectedRegistration.pet_age}</div>
+                            <div><span className="font-semibold">Sexo:</span> {selectedRegistration.pet_sex}</div>
+                            <div className="sm:col-span-2"><span className="font-semibold">Peso:</span> {selectedRegistration.pet_weight ? PET_WEIGHT_OPTIONS[selectedRegistration.pet_weight as PetWeight] : '—'}</div>
+                        </div>
                             </div>
                             <div>
                                 <h4 className="font-semibold text-gray-700 mb-2">Informações do Tutor</h4>
