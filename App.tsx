@@ -9826,6 +9826,20 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
     const [expandedSections, setExpandedSections] = useState<string[]>(['inDaycare', 'approved', 'pending']);
     const [isExtraServicesModalOpen, setIsExtraServicesModalOpen] = useState(false);
     const [enrollmentForExtraServices, setEnrollmentForExtraServices] = useState<DaycareRegistration | null>(null);
+    const [isUploadDaycarePhotoModalOpen, setIsUploadDaycarePhotoModalOpen] = useState(false);
+    const [uploadTargetDaycareEnrollment, setUploadTargetDaycareEnrollment] = useState<DaycareRegistration | null>(null);
+    const [isUploadingDaycarePhoto, setIsUploadingDaycarePhoto] = useState(false);
+    const [daycareUploadError, setDaycareUploadError] = useState<string | null>(null);
+    const [selectedDaycarePhotoName, setSelectedDaycarePhotoName] = useState<string>('');
+
+    useEffect(() => {
+        if (isUploadDaycarePhotoModalOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [isUploadDaycarePhotoModalOpen]);
 
 
     const fetchEnrollments = useCallback(async () => {
@@ -9890,6 +9904,34 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
         setEnrollments(prev => prev.map(e => e.id === updated.id ? updated : e));
         setIsExtraServicesModalOpen(false);
         setEnrollmentForExtraServices(null);
+    };
+
+    const handleDaycarePetPhotoUpload = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setDaycareUploadError(null);
+        const input = (e.currentTarget.elements.namedItem('daycare_pet_photo') as HTMLInputElement);
+        const file = input?.files?.[0];
+        if (!file) { setDaycareUploadError('Selecione uma imagem'); return; }
+        setIsUploadingDaycarePhoto(true);
+        try {
+            const enr = uploadTargetDaycareEnrollment as DaycareRegistration;
+            const ext = (file.name.split('.')?.pop() || 'jpg').toLowerCase();
+            const path = `${(enr.id || enr.pet_name.replace(/\s+/g,'_'))}.${ext}`;
+            const { error: upErr } = await supabase.storage.from('daycare_pet_photos').upload(path, file, { upsert: true, contentType: file.type });
+            if (upErr) throw upErr;
+            const { data } = supabase.storage.from('daycare_pet_photos').getPublicUrl(path);
+            const publicUrl = data.publicUrl;
+            const { data: updated, error: dbErr } = await supabase.from('daycare_enrollments').update({ pet_photo_url: publicUrl }).eq('id', enr.id as string).select().single();
+            if (dbErr) throw dbErr;
+            setEnrollments(prev => prev.map(e => e.id === enr.id ? (updated as DaycareRegistration) : e));
+            setIsUploadDaycarePhotoModalOpen(false);
+            setUploadTargetDaycareEnrollment(null);
+        } catch (err: any) {
+            setDaycareUploadError(err.message || 'Falha ao enviar');
+        } finally {
+            setIsUploadingDaycarePhoto(false);
+            setSelectedDaycarePhotoName('');
+        }
     };
     
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>, enrollment: DaycareRegistration, source: 'pending' | 'approved' | 'inDaycare') => {
@@ -10021,6 +10063,29 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
     
     return (
         <div className="animate-fadeIn">
+            {isUploadDaycarePhotoModalOpen && uploadTargetDaycareEnrollment && (
+                createPortal(
+                    <div className="fixed inset-0 z-[10000] flex items-center justify-center">
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-2xl backdrop-brightness-50 backdrop-saturate-0" aria-hidden="true"></div>
+                        <div role="dialog" aria-modal="true" className="relative bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+                            <h3 className="text-xl font-bold text-gray-800 mb-4">Trocar foto do pet (Creche)</h3>
+                            <form onSubmit={handleDaycarePetPhotoUpload}>
+                                <input id="daycare_pet_photo_input" type="file" name="daycare_pet_photo" accept="image/*" className="sr-only" onChange={(e) => setSelectedDaycarePhotoName(e.target.files?.[0]?.name || '')} />
+                                <div className="flex items-center gap-3 mb-4">
+                                    <button type="button" onClick={() => document.getElementById('daycare_pet_photo_input')?.click()} className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">Escolher arquivo</button>
+                                    <span className="text-sm text-gray-600">{selectedDaycarePhotoName || 'Nenhum arquivo selecionado'}</span>
+                                </div>
+                                {daycareUploadError && <div className="text-red-600 text-sm mb-3">{daycareUploadError}</div>}
+                                <div className="flex justify-end gap-2">
+                                    <button type="button" onClick={() => { setIsUploadDaycarePhotoModalOpen(false); setUploadTargetDaycareEnrollment(null); setSelectedDaycarePhotoName(''); setDaycareUploadError(null); }} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">Cancelar</button>
+                                    <button type="submit" disabled={isUploadingDaycarePhoto} className="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 disabled:opacity-50">{isUploadingDaycarePhoto ? 'Enviando...' : 'Salvar'}</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>,
+                    document.body
+                )
+            )}
             {isDetailsModalOpen && selectedEnrollment && (
                 <DaycareEnrollmentDetailsModal
                     enrollment={selectedEnrollment}
