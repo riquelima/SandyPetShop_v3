@@ -6357,7 +6357,17 @@ const HotelRegistrationForm: React.FC<{
             
             console.log('Payload completo:', payload);
             
-            const { error } = await supabase.from('hotel_registrations').insert(payload);
+            let { error } = await supabase.from('hotel_registrations').insert(payload);
+            if (error) {
+                const msg = String(error.message || '');
+                if (msg.includes("pet_weight") && msg.includes("schema cache")) {
+                    const fallback = { ...payload } as any;
+                    delete fallback.pet_weight;
+                    fallback.additional_info = `${fallback.additional_info ? fallback.additional_info + '\n' : ''}Peso do Pet: ${fallback.pet_weight ? PET_WEIGHT_OPTIONS[fallback.pet_weight as PetWeight] : 'N/A'}`;
+                    const retry = await supabase.from('hotel_registrations').insert(fallback);
+                    error = retry.error;
+                }
+            }
             if (error) throw error;
             setIsSuccess(true);
             if (onSuccess) onSuccess();
@@ -6449,6 +6459,10 @@ const HotelRegistrationForm: React.FC<{
                             </select>
                         </div>
                         <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">RG</label>
+                            <input type="text" name="tutor_rg" value={formData.tutor_rg} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        </div>
+                        <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Nome do Tutor *</label>
                             <input type="text" name="tutor_name" value={formData.tutor_name} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
                         </div>
@@ -6459,6 +6473,28 @@ const HotelRegistrationForm: React.FC<{
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                             <input type="email" name="tutor_email" value={formData.tutor_email} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Endereço</label>
+                            <input type="text" name="tutor_address" value={formData.tutor_address} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Rede Social</label>
+                            <input type="text" name="tutor_social_media" value={formData.tutor_social_media || ''} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="@perfil" />
+                        </div>
+                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Contato Emergência - Nome</label>
+                                <input type="text" name="emergency_contact_name" value={formData.emergency_contact_name} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Contato Emergência - Telefone</label>
+                                <input type="tel" name="emergency_contact_phone" value={formData.emergency_contact_phone} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Contato Emergência - Relação</label>
+                                <input type="text" name="emergency_contact_relation" value={formData.emergency_contact_relation} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -6474,6 +6510,32 @@ const HotelRegistrationForm: React.FC<{
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Telefone do Veterinário</label>
                             <input type="tel" name="vet_phone" value={formData.vet_phone || ''} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <input type="checkbox" checked={!!formData.has_vet_certificate} onChange={(e) => setFormData(prev => ({...prev, has_vet_certificate: e.target.checked}))} className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" />
+                            <label className="text-sm font-medium text-gray-700">Atestado médico veterinário</label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <input type="checkbox" checked={hasPreexistingDisease} onChange={(e) => { setHasPreexistingDisease(e.target.checked); if (!e.target.checked) setFormData(prev => ({...prev, preexisting_disease: null})); }} className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" />
+                            <label className="text-sm font-medium text-gray-700">Doença pré-existente</label>
+                        </div>
+                        {hasPreexistingDisease && (
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Descreva a doença pré-existente</label>
+                                <textarea name="preexisting_disease" value={formData.preexisting_disease || ''} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} />
+                            </div>
+                        )}
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Comportamento (descreva)</label>
+                            <textarea name="behavior" value={formData.behavior || ''} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Medos/Traumas (descreva)</label>
+                            <textarea name="fears_traumas" value={formData.fears_traumas || ''} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Feridas/Marcas — marque na foto</label>
+                            <textarea name="wounds_marks" value={formData.wounds_marks || ''} onChange={handleInputChange} placeholder="Descreva e marque na foto durante o check-in" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={2} />
                         </div>
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Alergias</label>
@@ -6504,6 +6566,20 @@ const HotelRegistrationForm: React.FC<{
                                 <option value="Livre demanda">Livre demanda</option>
                             </select>
                         </div>
+                        <div className="flex items-center gap-3">
+                            <input type="checkbox" checked={(formData.accepts_treats || '') === 'Sim'} onChange={(e) => setFormData(prev => ({...prev, accepts_treats: e.target.checked ? 'Sim' : 'Não'}))} className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" />
+                            <label className="text-sm font-medium text-gray-700">Aceita petiscos</label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <input type="checkbox" checked={needsSpecialFoodCare} onChange={(e) => { setNeedsSpecialFoodCare(e.target.checked); if (!e.target.checked) setFormData(prev => ({...prev, special_food_care: null})); }} className="h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" />
+                            <label className="text-sm font-medium text-gray-700">Cuidado especial</label>
+                        </div>
+                        {needsSpecialFoodCare && (
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Descreva o cuidado especial</label>
+                                <textarea name="special_food_care" value={formData.special_food_care || ''} onChange={handleInputChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} />
+                            </div>
+                        )}
 
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Observações sobre Alimentação</label>
@@ -8783,13 +8859,20 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                         <div className="space-y-6">
                             <div>
                                 <h4 className="font-semibold text-gray-700 mb-2">Informações do Pet</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                            <div><span className="font-semibold">Nome:</span> {selectedRegistration.pet_name}</div>
-                            <div><span className="font-semibold">Raça:</span> {selectedRegistration.pet_breed}</div>
-                            <div><span className="font-semibold">Idade:</span> {selectedRegistration.pet_age}</div>
-                            <div><span className="font-semibold">Sexo:</span> {selectedRegistration.pet_sex}</div>
-                            <div className="sm:col-span-2"><span className="font-semibold">Peso:</span> {selectedRegistration.pet_weight ? PET_WEIGHT_OPTIONS[selectedRegistration.pet_weight as PetWeight] : '—'}</div>
-                        </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                        <div><span className="font-semibold">Nome:</span> {selectedRegistration.pet_name}</div>
+                                        <div><span className="font-semibold">Raça:</span> {selectedRegistration.pet_breed}</div>
+                                        <div><span className="font-semibold">Idade:</span> {selectedRegistration.pet_age}</div>
+                                        <div><span className="font-semibold">Sexo:</span> {selectedRegistration.pet_sex}</div>
+                                        <div className="sm:col-span-2"><span className="font-semibold">Peso:</span> {(() => {
+                                            if (selectedRegistration.pet_weight) {
+                                                return PET_WEIGHT_OPTIONS[selectedRegistration.pet_weight as PetWeight];
+                                            }
+                                            const info = selectedRegistration.additional_info || '';
+                                            const m = info.match(/Peso do Pet:\s*([^\n]+)/);
+                                            return m ? m[1] : '—';
+                                        })()}</div>
+                                    </div>
                             </div>
                             <div>
                                 <h4 className="font-semibold text-gray-700 mb-2">Informações do Tutor</h4>
