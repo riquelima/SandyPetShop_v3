@@ -3516,34 +3516,49 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
 
     const fetchMonthlyClients = useCallback(async () => {
         setLoading(true);
-        
-        const { data, error } = await supabase
-            .from('monthly_clients')
-            .select('*')
-            .order('condominium', { ascending: true })
-            .order('owner_name', { ascending: true });
-
-        if (error) {
-            console.error('Error fetching monthly clients:', error);
-        } else {
-            // Filter clients by specific condominiums for Pet Móvel
-            const petMovelCondominiums = [
-                'Vitta Parque', 'Paseo', 'Max Haus', 'Nenhum Condomínio'
-            ];
-            
-            const petMovelClients = (data as MonthlyClient[]).filter(client => {
-                const raw = client.condominium ? String(client.condominium).trim() : '';
-                if (!raw) return true;
-                const condominium = raw.toLowerCase();
-                return petMovelCondominiums.some(targetCondo => targetCondo.toLowerCase() === condominium);
-            });
-            
-            setMonthlyClients(petMovelClients);
-            if (petMovelClients && petMovelClients.length > 0) {
-                setExpandedCondos([petMovelClients[0].condominium || 'Nenhum Condomínio']);
+        try {
+            const { data, error } = await supabase
+                .from('monthly_clients')
+                .select('*')
+                .order('condominium', { ascending: true })
+                .order('owner_name', { ascending: true });
+            if (error) {
+                const cached = localStorage.getItem('cached_monthly_clients');
+                if (cached) {
+                    const parsed = JSON.parse(cached) as MonthlyClient[];
+                    setMonthlyClients(parsed);
+                    if (parsed && parsed.length > 0) {
+                        setExpandedCondos([parsed[0].condominium || 'Nenhum Condomínio']);
+                    }
+                }
+            } else {
+                const petMovelCondominiums = [
+                    'Vitta Parque', 'Paseo', 'Max Haus', 'Nenhum Condomínio'
+                ];
+                const petMovelClients = (data as MonthlyClient[]).filter(client => {
+                    const raw = client.condominium ? String(client.condominium).trim() : '';
+                    if (!raw) return true;
+                    const condominium = raw.toLowerCase();
+                    return petMovelCondominiums.some(targetCondo => targetCondo.toLowerCase() === condominium);
+                });
+                setMonthlyClients(petMovelClients);
+                if (petMovelClients && petMovelClients.length > 0) {
+                    setExpandedCondos([petMovelClients[0].condominium || 'Nenhum Condomínio']);
+                }
+                try { localStorage.setItem('cached_monthly_clients', JSON.stringify(data || [])); } catch {}
             }
+        } catch (_) {
+            const cached = localStorage.getItem('cached_monthly_clients');
+            if (cached) {
+                const parsed = JSON.parse(cached) as MonthlyClient[];
+                setMonthlyClients(parsed);
+                if (parsed && parsed.length > 0) {
+                    setExpandedCondos([parsed[0].condominium || 'Nenhum Condomínio']);
+                }
+            }
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }, []);
 
     useEffect(() => {
@@ -3686,14 +3701,24 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
     const handleConfirmDelete = async () => {
         if (!selectedForDelete) return;
         setIsDeleting(true);
-        const { error } = await supabase.from('monthly_clients').delete().eq('id', selectedForDelete.id);
-        if (error) {
-            alert('Falha ao excluir o mensalista.');
-        } else {
-            setMonthlyClients(prev => prev.filter(client => client.id !== selectedForDelete.id));
+        const getDbId = (id: any) => { const s = String(id ?? ''); return /^\d+$/.test(s) ? Number(s) : id; };
+        const dbId = getDbId(selectedForDelete.id);
+
+        try {
+            await Promise.all([
+                supabase.from('appointments').delete().eq('monthly_client_id', dbId),
+                supabase.from('pet_movel_appointments').delete().eq('monthly_client_id', dbId)
+            ]);
+            const { error: delErr } = await supabase.from('monthly_clients').delete().eq('id', dbId);
+            if (delErr) {
+                alert('Falha ao excluir o mensalista.');
+            } else {
+                setMonthlyClients(prev => prev.filter(client => client.id !== selectedForDelete.id));
+            }
+        } finally {
+            setIsDeleting(false);
+            setSelectedForDelete(null);
         }
-        setIsDeleting(false);
-        setSelectedForDelete(null);
     };
 
     const groupedClients = useMemo(() => {
@@ -3899,8 +3924,8 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                                 <div className="border-t border-gray-100 bg-gray-50/50 animate-fadeIn">
                                     {Object.entries(clients).map(([number, clientList]) => (
                                         <div key={number} className="p-6 border-b border-gray-100 last:border-b-0">
-                                            <div className="overflow-x-auto">
-                                                <div className="flex gap-4 pb-2 snap-x snap-mandatory">
+                                            <div className="overflow-x-auto snap-x snap-mandatory scroll-px-4">
+                                                <div className="flex gap-4 pb-2">
                                     {clientList.map(client => (
                                         <div key={client.id} className="shrink-0 w-[92vw] sm:w-[420px] lg:w-[460px] snap-center">
                                                         <div 
@@ -4320,10 +4345,21 @@ const ClientsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
 
     const fetchClients = useCallback(async () => {
         setLoading(true);
-        const { data, error } = await supabase.from('clients').select('*').order('name');
-        if (error) console.error('Error fetching clients:', error);
-        else setClients(data as Client[]);
-        setLoading(false);
+        try {
+            const { data, error } = await supabase.from('clients').select('*').order('name');
+            if (error) {
+                const cached = localStorage.getItem('cached_clients');
+                if (cached) setClients(JSON.parse(cached));
+            } else {
+                setClients(data as Client[]);
+                try { localStorage.setItem('cached_clients', JSON.stringify(data || [])); } catch {}
+            }
+        } catch (_) {
+            const cached = localStorage.getItem('cached_clients');
+            if (cached) setClients(JSON.parse(cached));
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
     useEffect(() => {
@@ -4841,35 +4877,44 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
 
     const fetchMonthlyClients = useCallback(async () => {
         setLoading(true);
-        // The database's default text sort is often case-sensitive ('Z' before 'a').
-        // Sorting on the client-side with localeCompare ensures a natural, case-insensitive alphabetical order.
-        const { data, error } = await supabase.from('monthly_clients').select('*');
-        if (error) {
-            console.error('Error fetching monthly clients:', error);
-        } else {
-            let sortedData = (data as MonthlyClient[]).sort((a, b) => a.owner_name.localeCompare(b.owner_name));
-            
-            // Se não há dados, criar dados de teste
-            if (!data || data.length === 0) {
-                await createTestData();
-                // Buscar novamente após criar dados de teste
-                const { data: newData, error: newError } = await supabase.from('monthly_clients').select('*');
-                if (!newError && newData) {
-                    sortedData = (newData as MonthlyClient[]).sort((a, b) => a.owner_name.localeCompare(b.owner_name));
+        try {
+            const { data, error } = await supabase.from('monthly_clients').select('*');
+            if (error) {
+                const cached = localStorage.getItem('cached_monthly_clients');
+                if (cached) setMonthlyClients(JSON.parse(cached));
+            } else {
+                let sortedData = (data as MonthlyClient[]).sort((a, b) => a.owner_name.localeCompare(b.owner_name));
+                if (!data || data.length === 0) {
+                    await createTestData();
+                    const { data: newData, error: newError } = await supabase.from('monthly_clients').select('*');
+                    if (!newError && newData) {
+                        sortedData = (newData as MonthlyClient[]).sort((a, b) => a.owner_name.localeCompare(b.owner_name));
+                    }
                 }
+                setMonthlyClients(sortedData);
+                try { localStorage.setItem('cached_monthly_clients', JSON.stringify(sortedData || [])); } catch {}
             }
-            
-            setMonthlyClients(sortedData);
+        } catch (_) {
+            const cached = localStorage.getItem('cached_monthly_clients');
+            if (cached) setMonthlyClients(JSON.parse(cached));
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }, []);
 
     const fetchDaycareEnrollments = useCallback(async () => {
-        const { data, error } = await supabase.from('daycare_enrollments').select('*').eq('status', 'Aprovado');
-        if (error) {
-            console.error('Error fetching daycare enrollments:', error);
-        } else {
-            setDaycareEnrollments(data as DaycareRegistration[]);
+        try {
+            const { data, error } = await supabase.from('daycare_enrollments').select('*').eq('status', 'Aprovado');
+            if (error) {
+                const cached = localStorage.getItem('cached_daycare_enrollments');
+                if (cached) setDaycareEnrollments(JSON.parse(cached));
+            } else {
+                setDaycareEnrollments(data as DaycareRegistration[]);
+                try { localStorage.setItem('cached_daycare_enrollments', JSON.stringify(data || [])); } catch {}
+            }
+        } catch (_) {
+            const cached = localStorage.getItem('cached_daycare_enrollments');
+            if (cached) setDaycareEnrollments(JSON.parse(cached));
         }
     }, []);
 
@@ -4891,47 +4936,23 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
     const handleConfirmDelete = async () => {
         if (!deletingClient) return;
         setIsDeleting(true);
-        const today = new Date().toISOString();
-    
-        const { data: appointmentsToDelete, error: fetchError } = await supabase
-            .from('appointments')
-            .select('id')
-            .eq('monthly_client_id', deletingClient.id)
-            .gte('appointment_time', today);
-    
-        if (fetchError) {
-            setAlertInfo({ title: 'Erro na Exclusão', message: 'Falha ao buscar agendamentos futuros. A exclusão foi cancelada.', variant: 'error' });
+        const dbId = getMonthlyDbId(deletingClient.id);
+        try {
+            await Promise.all([
+                supabase.from('appointments').delete().eq('monthly_client_id', dbId),
+                supabase.from('pet_movel_appointments').delete().eq('monthly_client_id', dbId)
+            ]);
+            const { error: clientError } = await supabase.from('monthly_clients').delete().eq('id', dbId);
+            if (clientError) {
+                setAlertInfo({ title: 'Erro na Exclusão', message: 'Os agendamentos foram removidos, mas ocorreu um erro ao excluir o cadastro do mensalista.', variant: 'error' });
+            } else {
+                setMonthlyClients(prev => prev.filter(c => c.id !== deletingClient.id));
+                onDataChanged();
+            }
+        } finally {
             setIsDeleting(false);
             setDeletingClient(null);
-            return;
         }
-    
-        if (appointmentsToDelete && appointmentsToDelete.length > 0) {
-            const idsToDelete = appointmentsToDelete.map(a => a.id);
-            const { error: apptError } = await supabase
-                .from('appointments')
-                .delete()
-                .in('id', idsToDelete);
-    
-            if (apptError) {
-                setAlertInfo({ title: 'Erro na Exclusão', message: 'Não foi possível excluir os agendamentos futuros associados. A exclusão do mensalista foi cancelada.', variant: 'error' });
-                setIsDeleting(false);
-                setDeletingClient(null);
-                return;
-            }
-        }
-    
-        const { error: clientError } = await supabase.from('monthly_clients').delete().eq('id', deletingClient.id);
-    
-        if (clientError) {
-            setAlertInfo({ title: 'Erro na Exclusão', message: 'Os agendamentos foram removidos, mas ocorreu um erro ao excluir o cadastro do mensalista.', variant: 'error' });
-        } else {
-            setMonthlyClients(prev => prev.filter(c => c.id !== deletingClient.id));
-            onDataChanged();
-        }
-    
-        setIsDeleting(false);
-        setDeletingClient(null);
     };
     
     const weekDays: Record<number, string> = { 1: "Segunda", 2: "Terça", 3: "Quarta", 4: "Quinta", 5: "Sexta" };
@@ -5053,7 +5074,20 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
         try {
             const mc = uploadTargetMonthlyClient as MonthlyClient;
             const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-            const path = `${(mc.id || mc.pet_name.replace(/\s+/g,'_'))}.${ext}`;
+            const base = (mc.id || mc.pet_name.replace(/\s+/g,'_'));
+            const path = `${base}_${Date.now()}.${ext}`;
+            const oldUrl = (mc as any).pet_photo_url as string | undefined;
+            if (oldUrl) {
+                try {
+                    const u = new URL(oldUrl);
+                    const prefix = '/storage/v1/object/public/monthly_pet_photos/';
+                    const idx = u.pathname.indexOf(prefix);
+                    if (idx !== -1) {
+                        const oldPath = u.pathname.substring(idx + prefix.length);
+                        await supabase.storage.from('monthly_pet_photos').remove([oldPath]);
+                    }
+                } catch {}
+            }
             const { error: upErr } = await supabase.storage.from('monthly_pet_photos').upload(path, file, { upsert: true, contentType: file.type });
             if (upErr) throw upErr;
             const { data } = supabase.storage.from('monthly_pet_photos').getPublicUrl(path);
@@ -5269,9 +5303,9 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                 filteredClients.length > 0 ? (
                     viewMode === 'cards' ? (
                         // Visualização em Cards com carrossel horizontal no mobile
-                        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+                        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 md:mx-0 md:px-0 md:grid md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
                             {filteredClients.map(client => (
-                                <div key={client.id} className="flex-none min-w-[85%] sm:min-w-[70%] md:min-w-0 snap-start">
+                                <div key={client.id} className="flex-none min-w-[85%] sm:min-w-[70%] md:min-w-0 snap-center">
                                     <MonthlyClientCard
                                         client={client}
                                         onEdit={() => setEditingClient(client)}
@@ -8320,7 +8354,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                     <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                         <div className="flex justify-between items-center">
                             <span className="text-lg font-semibold text-gray-700">Preço Total:</span>
-                            <span className="text-2xl font-bold text-green-600">R$ {(totalPrice ?? 0).toFixed(2)}</span>
+                            <span className="text-2xl font-bold text-green-600">R$ {(totalPrice ?? 0).toFixed(2).replace('.', ',')}</span>
                         </div>
                         {Object.keys(selectedAddons).some(key => selectedAddons[key]) && (
                             <div className="mt-2 text-sm text-gray-600">
@@ -8494,7 +8528,20 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
         try {
             const reg = uploadTargetRegistration as HotelRegistration;
             const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-            const path = `${(reg.id || reg.pet_name.replace(/\s+/g,'_'))}.${ext}`;
+            const base = (reg.id || reg.pet_name.replace(/\s+/g,'_'));
+            const path = `${base}_${Date.now()}.${ext}`;
+            const oldUrl = (reg as any).pet_photo_url as string | undefined;
+            if (oldUrl) {
+                try {
+                    const u = new URL(oldUrl);
+                    const prefix = '/storage/v1/object/public/pet_photos/';
+                    const idx = u.pathname.indexOf(prefix);
+                    if (idx !== -1) {
+                        const oldPath = u.pathname.substring(idx + prefix.length);
+                        await supabase.storage.from('pet_photos').remove([oldPath]);
+                    }
+                } catch {}
+            }
             const { error: upErr } = await supabase.storage.from('pet_photos').upload(path, file, { upsert: true, contentType: file.type });
             if (upErr) throw upErr;
             const { data } = supabase.storage.from('pet_photos').getPublicUrl(path);
@@ -8519,15 +8566,22 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
 
     const fetchRegistrations = useCallback(async () => {
         setLoading(true);
-        const { data, error } = await supabase.from('hotel_registrations').select('*').order('created_at', { ascending: false });
-        if (error) {
-            console.error('Error fetching hotel registrations:', error);
-            alert('Falha ao buscar registros de hotel.');
-        } else {
-            const normalized = (data as HotelRegistration[]).map(r => ({ ...r, id: r.id !== undefined && r.id !== null ? String(r.id) : r.id }));
-            setRegistrations(normalized);
+        try {
+            const { data, error } = await supabase.from('hotel_registrations').select('*').order('created_at', { ascending: false });
+            if (error) {
+                const cached = localStorage.getItem('cached_hotel_registrations');
+                if (cached) setRegistrations(JSON.parse(cached));
+            } else {
+                const normalized = (data as HotelRegistration[]).map(r => ({ ...r, id: r.id !== undefined && r.id !== null ? String(r.id) : r.id }));
+                setRegistrations(normalized);
+                try { localStorage.setItem('cached_hotel_registrations', JSON.stringify(normalized || [])); } catch {}
+            }
+        } catch (_) {
+            const cached = localStorage.getItem('cached_hotel_registrations');
+            if (cached) setRegistrations(JSON.parse(cached));
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }, []);
 
     useEffect(() => {
@@ -9844,14 +9898,21 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
 
     const fetchEnrollments = useCallback(async () => {
         setLoading(true);
-        const { data, error } = await supabase.from('daycare_enrollments').select('*').order('created_at', { ascending: false });
-        if (error) {
-            console.error('Error fetching daycare enrollments:', error);
-            alert('Falha ao buscar matrículas da creche.');
-        } else {
-            setEnrollments(data as DaycareRegistration[]);
+        try {
+            const { data, error } = await supabase.from('daycare_enrollments').select('*').order('created_at', { ascending: false });
+            if (error) {
+                const cached = localStorage.getItem('cached_daycare_enrollments_all');
+                if (cached) setEnrollments(JSON.parse(cached));
+            } else {
+                setEnrollments(data as DaycareRegistration[]);
+                try { localStorage.setItem('cached_daycare_enrollments_all', JSON.stringify(data || [])); } catch {}
+            }
+        } catch (_) {
+            const cached = localStorage.getItem('cached_daycare_enrollments_all');
+            if (cached) setEnrollments(JSON.parse(cached));
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }, []);
 
     useEffect(() => {
@@ -9916,7 +9977,20 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
         try {
             const enr = uploadTargetDaycareEnrollment as DaycareRegistration;
             const ext = (file.name.split('.')?.pop() || 'jpg').toLowerCase();
-            const path = `${(enr.id || enr.pet_name.replace(/\s+/g,'_'))}.${ext}`;
+            const base = (enr.id || enr.pet_name.replace(/\s+/g,'_'));
+            const path = `${base}_${Date.now()}.${ext}`;
+            const oldUrl = (enr as any).pet_photo_url as string | undefined;
+            if (oldUrl) {
+                try {
+                    const u = new URL(oldUrl);
+                    const prefix = '/storage/v1/object/public/daycare_pet_photos/';
+                    const idx = u.pathname.indexOf(prefix);
+                    if (idx !== -1) {
+                        const oldPath = u.pathname.substring(idx + prefix.length);
+                        await supabase.storage.from('daycare_pet_photos').remove([oldPath]);
+                    }
+                } catch {}
+            }
             const { error: upErr } = await supabase.storage.from('daycare_pet_photos').upload(path, file, { upsert: true, contentType: file.type });
             if (upErr) throw upErr;
             const { data } = supabase.storage.from('daycare_pet_photos').getPublicUrl(path);
@@ -10543,7 +10617,7 @@ const App: React.FC = () => {
     };
     
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [loadingAuth, setLoadingAuth] = useState(true);
+    const [loadingAuth, setLoadingAuth] = useState(false);
     
     // Estado para controlar se a agenda está aberta - com persistência no localStorage
     const [isScheduleOpen, setIsScheduleOpen] = useState(() => {

@@ -4,14 +4,24 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import MobileUiDemo from '@/src/pages/MobileUiDemo';
 
-// Register the service worker to enable PWA features like offline caching
+// Proactively remove any existing service workers to avoid stale caches in preview/dev
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then(registration => {
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    registrations.forEach(r => r.unregister());
+  }).catch(() => {});
+}
+
+// Safe Service Worker registration: register only in production and only if sw.js exists
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', async () => {
+    try {
+      const res = await fetch('/sw.js', { method: 'HEAD' });
+      if (!res.ok) return;
+      const registration = await navigator.serviceWorker.register('/sw.js');
       console.log('ServiceWorker registration successful with scope: ', registration.scope);
-    }).catch(error => {
-      console.log('ServiceWorker registration failed: ', error);
-    });
+    } catch (error) {
+      console.log('ServiceWorker registration skipped:', error);
+    }
   });
 }
 

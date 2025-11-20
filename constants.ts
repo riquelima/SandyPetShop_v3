@@ -45,14 +45,16 @@ export const PET_WEIGHT_OPTIONS: Record<PetWeight, string> = {
     [PetWeight.OVER_30]: 'Acima de 30kg',
 };
 
+// Preços base por peso: Banho e Só Tosa (tosa isolada)
+// Observação: O preço de "Banho & Tosa" é a soma Banho + Só Tosa
 export const SERVICE_PRICES: Record<PetWeight, { [key in ServiceType.BATH | ServiceType.GROOMING_ONLY]: number }> = {
-  [PetWeight.UP_TO_5]: { [ServiceType.BATH]: 65, [ServiceType.GROOMING_ONLY]: 130 },
-  [PetWeight.KG_10]: { [ServiceType.BATH]: 75, [ServiceType.GROOMING_ONLY]: 150 },
-  [PetWeight.KG_15]: { [ServiceType.BATH]: 85, [ServiceType.GROOMING_ONLY]: 170 },
-  [PetWeight.KG_20]: { [ServiceType.BATH]: 95, [ServiceType.GROOMING_ONLY]: 190 },
-  [PetWeight.KG_25]: { [ServiceType.BATH]: 105, [ServiceType.GROOMING_ONLY]: 210 },
-  [PetWeight.KG_30]: { [ServiceType.BATH]: 115, [ServiceType.GROOMING_ONLY]: 230 },
-  [PetWeight.OVER_30]: { [ServiceType.BATH]: 150, [ServiceType.GROOMING_ONLY]: 300 },
+  [PetWeight.UP_TO_5]: { [ServiceType.BATH]: 65, [ServiceType.GROOMING_ONLY]: 65 },
+  [PetWeight.KG_10]: { [ServiceType.BATH]: 75, [ServiceType.GROOMING_ONLY]: 75 },
+  [PetWeight.KG_15]: { [ServiceType.BATH]: 85, [ServiceType.GROOMING_ONLY]: 85 },
+  [PetWeight.KG_20]: { [ServiceType.BATH]: 95, [ServiceType.GROOMING_ONLY]: 95 },
+  [PetWeight.KG_25]: { [ServiceType.BATH]: 105, [ServiceType.GROOMING_ONLY]: 105 },
+  [PetWeight.KG_30]: { [ServiceType.BATH]: 115, [ServiceType.GROOMING_ONLY]: 115 },
+  [PetWeight.OVER_30]: { [ServiceType.BATH]: 150, [ServiceType.GROOMING_ONLY]: 150 },
 };
 
 export const ADDON_SERVICES: AddonService[] = [
