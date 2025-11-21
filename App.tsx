@@ -1112,15 +1112,33 @@ interface StatisticsData {
 const StatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({ isOpen, onClose }) => {
     const [statistics, setStatistics] = useState<StatisticsData | null>(null);
     const [loading, setLoading] = useState(false);
+    const [selectedDailyDate, setSelectedDailyDate] = useState<string>(() => {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    });
 
     const fetchStatistics = useCallback(async () => {
         setLoading(true);
         try {
             const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const weekStart = new Date(today);
-            weekStart.setDate(today.getDate() - today.getDay());
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const [ty, tm, td] = selectedDailyDate.split('-').map(Number);
+            const todayDate = new Date(ty, tm - 1, td);
+            const toISO = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            const todayISO = toISO(todayDate);
+
+            const weekStartDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+            const weekEndDate = new Date(weekStartDate);
+            weekEndDate.setDate(weekStartDate.getDate() + 6);
+            const weekStartISO = toISO(weekStartDate);
+            const weekEndISO = toISO(weekEndDate);
+
+            const monthStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            const monthEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            const monthStartISO = toISO(monthStartDate);
+            const monthEndISO = toISO(monthEndDate);
 
             // Buscar agendamentos concluídos de ambas as tabelas
             const [regularResult, petMovelResult] = await Promise.all([
@@ -1151,30 +1169,23 @@ const StatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({ 
             };
 
             appointments?.forEach(appointment => {
-                const appointmentDate = new Date(appointment.appointment_time);
+                const apptDateISO = String(appointment.appointment_time || '').split('T')[0];
                 const price = appointment.price || 0;
                 const service = appointment.service || 'Não especificado';
 
-                // Criar data de fim do dia para comparação correta
-                const endOfToday = new Date(today);
-                endOfToday.setHours(23, 59, 59, 999);
-
-                // Estatísticas diárias - apenas agendamentos de hoje
-                if (appointmentDate >= today && appointmentDate <= endOfToday) {
+                if (apptDateISO === todayISO) {
                     stats.daily.count++;
                     stats.daily.revenue += price;
                     stats.daily.services[service] = (stats.daily.services[service] || 0) + 1;
                 }
 
-                // Estatísticas semanais - agendamentos desta semana
-                if (appointmentDate >= weekStart) {
+                if (apptDateISO >= weekStartISO && apptDateISO <= weekEndISO) {
                     stats.weekly.count++;
                     stats.weekly.revenue += price;
                     stats.weekly.services[service] = (stats.weekly.services[service] || 0) + 1;
                 }
 
-                // Estatísticas mensais - agendamentos deste mês
-                if (appointmentDate >= monthStart) {
+                if (apptDateISO >= monthStartISO && apptDateISO <= monthEndISO) {
                     stats.monthly.count++;
                     stats.monthly.revenue += price;
                     stats.monthly.services[service] = (stats.monthly.services[service] || 0) + 1;
@@ -1187,7 +1198,7 @@ const StatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({ 
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [selectedDailyDate]);
 
     useEffect(() => {
         if (isOpen) {
@@ -1247,8 +1258,19 @@ const StatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({ 
                         </div>
                     ) : statistics ? (
                         <div className="space-y-6 sm:space-y-8">
+                            <div className="flex justify-end">
+                                <div className="w-full sm:w-80">
+                                    <DatePicker 
+                                        value={selectedDailyDate}
+                                        onChange={setSelectedDailyDate}
+                                        label="Selecione o dia"
+                                        className="mt-1"
+                                        disableWeekends={false}
+                                    />
+                                </div>
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                                <StatCard title="📅 Hoje" data={statistics.daily} />
+                                <StatCard title={`📅 Hoje (${formatDateToBR(selectedDailyDate)})`} data={statistics.daily} />
                                 <StatCard title="📊 Esta Semana" data={statistics.weekly} />
                                 <StatCard title="📈 Este Mês" data={statistics.monthly} />
                             </div>
@@ -3078,7 +3100,7 @@ const DatePicker: React.FC<{
             </div>
             
             {isOpen && (
-                <div className="absolute z-[9999] mt-2 bg-white border border-gray-200 rounded-lg shadow-xl p-4 min-w-[320px] max-w-[90vw] left-0 right-0 mx-auto">
+                <div className="absolute z-[10001] top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl p-4 min-w-[320px] max-w-[90vw] left-0 right-0 mx-auto">
                     <Calendar
                         selectedDate={selectedDate}
                         onDateChange={handleDateChange}
