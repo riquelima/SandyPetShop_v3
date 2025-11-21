@@ -4110,7 +4110,7 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
             
             {/* Modal de Agendamentos do Cliente */}
             {selectedClientForAppointments && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000] p-4">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
                         <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-pink-500 to-purple-600 text-white">
                             <div className="flex justify-between items-center">
@@ -6184,14 +6184,7 @@ const DaycareEnrollmentDetailsModal: React.FC<{
                            <DetailItem label="Necessita de Cuidados Especiais?" value={enrollment.needs_special_care ? 'Sim' : 'Não'} />
                            {enrollment.needs_special_care && <DetailItem label="Descrição do Cuidado" value={enrollment.special_care_description} />}
           </div>
-          <div className="mt-4 flex items-center justify-center gap-4">
-            <a href="https://www.instagram.com/sandyspetmovelcrechehotel/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-              <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" className="w-7 h-7" />
-            </a>
-            <a href="https://wa.me/5511994580316?text=Ol%C3%A1%20Sandy%2C%20vim%20do%20site%20e%20gostaria%20de%20ajuda" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">
-              <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" className="w-7 h-7" />
-            </a>
-          </div>
+          
         </section>
                     {/* Plan & Belongings */}
                     <section>
