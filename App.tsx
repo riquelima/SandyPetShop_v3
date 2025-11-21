@@ -2764,6 +2764,10 @@ const AppointmentCard: React.FC<{
 }> = ({ appointment, onUpdateStatus, isUpdating, onEdit, onDelete, isDeleting, onOpenActionMenu, onDeleteObservation }) => {
     const { id, appointment_time, pet_name, owner_name, service, status, price, addons, whatsapp, monthly_client_id, observation } = appointment;
     const isCompleted = status === 'CONCLUÍDO';
+    const rawPhone = String(whatsapp || '');
+    const phoneDigits = rawPhone.replace(/\D/g, '');
+    const phoneWithCountry = phoneDigits ? (phoneDigits.startsWith('55') ? phoneDigits : `55${phoneDigits}`) : '';
+    const whatsappHref = phoneWithCountry ? `https://api.whatsapp.com/send?phone=${phoneWithCountry}` : '#';
     
     // Calcular total de serviços extras do agendamento (soma ao preço exibido)
     const es: any = (appointment as any).extra_services || null;
@@ -2838,10 +2842,17 @@ const AppointmentCard: React.FC<{
                            + {addons.join(', ')}
                         </div>
                     }
-                     <div className="flex items-center text-base text-gray-700 mt-2">
+                     <a
+                        href={whatsappHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center text-base text-gray-700 mt-2 hover:text-green-700"
+                        aria-label="Conversar no WhatsApp"
+                    >
                         <WhatsAppIcon />
-                        <span className="font-semibold mr-2 ml-1.5">Contato:</span> {whatsapp}
-                    </div>
+                        <span className="font-semibold mr-2 ml-1.5">Contato:</span>
+                        <span className="text-green-600 ml-1 underline">{whatsapp}</span>
+                    </a>
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
