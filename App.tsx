@@ -1965,22 +1965,31 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
             ...(appointment.extra_services && { extra_services: appointment.extra_services }),
         };
 
-        const { data, error } = await supabase
-            .from('appointments')
-            .update(updatePayload)
-            .eq('id', appointment.id)
-            .select();
+        const [appointmentsResult, petMovelResult] = await Promise.all([
+            supabase
+                .from('appointments')
+                .update(updatePayload)
+                .eq('id', appointment.id)
+                .select(),
+            supabase
+                .from('pet_movel_appointments')
+                .update(updatePayload)
+                .eq('id', appointment.id)
+                .select()
+        ]);
 
-        if (error) {
-            alert(`Falha ao atualizar o agendamento: ${error.message || 'Erro desconhecido'}`);
-            console.error('Erro detalhado:', error);
-            console.error('Payload enviado:', updatePayload);
+        if (appointmentsResult.error && petMovelResult.error) {
+            const msg = appointmentsResult.error?.message || petMovelResult.error?.message || 'Erro desconhecido';
+            alert(`Falha ao atualizar o agendamento: ${msg}`);
             setIsSubmitting(false);
-        } else if (data && data.length > 0) {
-            onAppointmentUpdated(data[0] as AdminAppointment);
         } else {
-            alert('Nenhum registro foi atualizado.');
-            setIsSubmitting(false);
+            const updatedData = (Array.isArray(appointmentsResult.data) && appointmentsResult.data[0]) || (Array.isArray(petMovelResult.data) && petMovelResult.data[0]) || null;
+            if (updatedData) {
+                onAppointmentUpdated(updatedData as AdminAppointment);
+            } else {
+                alert('Nenhum registro foi atualizado.');
+                setIsSubmitting(false);
+            }
         }
     };
 
@@ -10112,8 +10121,8 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
                                                 enrollment={enrollment}
                                                 isDraggable={true}
                                                 onDragStart={(e) => handleDragStart(e, enrollment, sectionId)}
-                                                onClick={() => { setSelectedEnrollment(enrollment); setIsDetailsModalOpen(true); /* fecha menu mobile se aberto */ setShowMobileMenu(false); }}
-                                                onEdit={() => { setSelectedEnrollment(enrollment); setIsEditModalOpen(true); setShowMobileMenu(false); }}
+                                                onClick={() => { setSelectedEnrollment(enrollment); setIsDetailsModalOpen(true); }}
+                                                onEdit={() => { setSelectedEnrollment(enrollment); setIsEditModalOpen(true); }}
                                                 onDelete={() => setEnrollmentToDelete(enrollment)}
                                                 onAddExtraServices={handleAddExtraServices}
                                                 onChangePhoto={(enr) => { setUploadTargetDaycareEnrollment(enr); setIsUploadDaycarePhotoModalOpen(true); }}
@@ -10163,7 +10172,7 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
             {isDetailsModalOpen && selectedEnrollment && (
                 <DaycareEnrollmentDetailsModal
                     enrollment={selectedEnrollment}
-                    onClose={() => { setIsDetailsModalOpen(false); setSelectedEnrollment(null); setShowMobileMenu(false); }}
+                    onClose={() => { setIsDetailsModalOpen(false); setSelectedEnrollment(null); }}
                     onUpdateStatus={handleUpdateStatus}
                     isUpdating={isUpdatingStatus}
                     onAddExtraServices={() => handleAddExtraServices(selectedEnrollment)}
@@ -10172,14 +10181,14 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
             {isEditModalOpen && selectedEnrollment && (
                 <EditDaycareEnrollmentModal
                     enrollment={selectedEnrollment}
-                    onClose={() => { setIsEditModalOpen(false); setSelectedEnrollment(null); setShowMobileMenu(false); }}
+                    onClose={() => { setIsEditModalOpen(false); setSelectedEnrollment(null); }}
                     onUpdated={handleEnrollmentUpdated}
                 />
             )}
             {isExtraServicesModalOpen && enrollmentForExtraServices && (
                 <ExtraServicesModal
                     isOpen={isExtraServicesModalOpen}
-                    onClose={() => { setIsExtraServicesModalOpen(false); setEnrollmentForExtraServices(null); setShowMobileMenu(false); }}
+                    onClose={() => { setIsExtraServicesModalOpen(false); setEnrollmentForExtraServices(null); }}
                     onSuccess={handleExtraServicesUpdated}
                     data={enrollmentForExtraServices}
                     type="daycare"
@@ -10557,7 +10566,7 @@ const App: React.FC = () => {
     const handleOpenExtraServicesModal = (appointment: AdminAppointment) => {
         setAppointmentForExtraServices(appointment);
         setIsAppointmentExtraServicesModalOpen(true);
-        setShowMobileMenu(false);
+        
     };
 
     const handleCloseExtraServicesModal = () => {
@@ -10611,7 +10620,7 @@ const App: React.FC = () => {
     const [visitServiceType, setVisitServiceType] = useState<'Creche Pet' | 'Hotel Pet' | null>(null);
     
     // Debug: Log mudanças de view
-    const setViewWithLog = (newView: 'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration') => {
+    const setViewWithLog = (newView: 'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration' | 'visitSelector' | 'visitAppointment') => {
         console.log('Mudando view de', view, 'para', newView);
         setView(newView);
     };
