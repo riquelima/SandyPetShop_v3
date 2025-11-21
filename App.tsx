@@ -3785,7 +3785,7 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
 
     return (
         <div className="animate-fadeIn bg-gray-50 min-h-screen p-6">
-            {selectedForEdit && <EditMonthlyClientModal client={selectedForEdit} onClose={() => setSelectedForEdit(null)} onMonthlyClientUpdated={handleClientUpdated} />}
+            {selectedForEdit && <EditMonthlyClientAdvancedModal client={selectedForEdit} onClose={() => setSelectedForEdit(null)} onMonthlyClientUpdated={handleClientUpdated} />}
             {selectedForDelete && <ConfirmationModal isOpen={!!selectedForDelete} onClose={() => setSelectedForDelete(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o mensalista ${selectedForDelete.pet_name}?`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
             
             {/* Header com título e estatísticas */}
@@ -4813,11 +4813,260 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
     );
 };
 
+const MonthlyClientDetailsModal: React.FC<{ client: MonthlyClient | null; onClose: () => void; }> = ({ client, onClose }) => {
+    const [data, setData] = useState<MonthlyClient | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchDetails = async () => {
+            if (!client) return;
+            setLoading(true);
+            setError(null);
+            try {
+                const { data, error } = await supabase
+                    .from('monthly_clients')
+                    .select('*')
+                    .eq('id', client.id)
+                    .single();
+                if (error) {
+                    setError('Falha ao carregar os dados do mensalista.');
+                    setData(client);
+                } else {
+                    setData(data as MonthlyClient);
+                }
+            } catch (_) {
+                setError('Erro inesperado ao carregar os dados.');
+                setData(client);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchDetails();
+    }, [client]);
+
+    if (!client) return null;
+
+    const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
+        <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</p>
+            <p className="text-gray-800">{value || 'Não informado'}</p>
+        </div>
+    );
+
+    const getRecurrenceText = (c: MonthlyClient) => {
+        const time = `às ${c.recurrence_time}:00`;
+        const day = c.recurrence_day;
+        const weekDays: Record<number, string> = { 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta' };
+        switch (c.recurrence_type) {
+            case 'weekly': return `Semanal, ${weekDays[day]} ${time}`;
+            case 'bi-weekly': return `Quinzenal, ${weekDays[day]} ${time}`;
+            case 'monthly': return `Mensal, dia ${day} ${time}`;
+            default: return '';
+        }
+    };
+
+    const phoneDigits = String(data?.whatsapp || client.whatsapp || '')?.replace(/\D/g, '');
+    const phoneWithCountry = phoneDigits ? (phoneDigits.startsWith('55') ? phoneDigits : `55${phoneDigits}`) : '';
+    const whatsappHref = phoneWithCountry ? `https://api.whatsapp.com/send?phone=${phoneWithCountry}` : '#';
+
+    return (
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-gray-800">Detalhes do Mensalista</h2>
+                    <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100" aria-label="Fechar"><CloseIcon /></button>
+                </div>
+                <div className="p-6 space-y-6">
+                    {loading ? (
+                        <div className="flex justify-center py-8"><LoadingSpinner /></div>
+                    ) : (
+                        <>
+                            {error && <div className="p-3 bg-red-50 text-red-700 rounded-md text-sm">{error}</div>}
+                            {(() => {
+                                const row: any = data || client;
+                                const entries = Object.entries(row || {});
+                                const PT_LABELS: Record<string, string> = { id: 'ID', created_at: 'Criado em', pet_name: 'Pet', pet_breed: 'Raça', owner_name: 'Tutor', owner_address: 'Endereço', whatsapp: 'WhatsApp', service: 'Serviço', weight: 'Peso', price: 'Preço', recurrence_type: 'Recorrência', recurrence_day: 'Dia da recorrência', recurrence_time: 'Hora da recorrência', is_active: 'Ativo', payment_status: 'Status do pagamento', payment_due_date: 'Data de vencimento', condominium: 'Condomínio', extra_services: 'Serviços extras', pet_photo_url: 'Foto do pet' };
+                                const formatLabel = (k: string) => PT_LABELS[k] || k.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+                                const renderValue = (k: string, v: any) => {
+                                    if (k === 'whatsapp') return (<a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="text-green-700 hover:text-green-800 underline break-all">{String(v || '')}</a>);
+                                    if (k === 'payment_due_date' || k === 'created_at' || /_date$/.test(k)) return formatDateToBR(v || null);
+                                    if (k === 'price') return `R$ ${Number(v ?? 0).toFixed(2).replace('.', ',')}`;
+                                    if (k === 'recurrence_type') return v === 'weekly' ? 'Semanal' : v === 'bi-weekly' ? 'Quinzenal' : v === 'monthly' ? 'Mensal' : String(v ?? '');
+                                    if (k === 'recurrence_time') return `${v}:00`;
+                                    if (k === 'recurrence_day') {
+                                        const t = (row?.recurrence_type as string) || '';
+                                        if (t === 'weekly' || t === 'bi-weekly') {
+                                            const wd: Record<number, string> = { 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta' };
+                                            const num = Number(v);
+                                            return wd[num] || String(v ?? '');
+                                        }
+                                        return String(v ?? '');
+                                    }
+                                    if (typeof v === 'boolean') return v ? 'Sim' : 'Não';
+                                    if (k === 'extra_services' && v) {
+                                        const ex = v || {};
+                                        const items = Object.keys(ex);
+                                        return items.length ? (
+                                            <div className="space-y-1">
+                                                {items.map((ek) => (
+                                                    <div key={ek} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                                                        <span className="text-gray-700">{formatLabel(ek)}</span>
+                                                        <span className="font-semibold text-gray-900">{typeof ex[ek] === 'object' ? JSON.stringify(ex[ek]) : String(ex[ek])}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : 'Nenhum';
+                                    }
+                                    return String(v ?? '');
+                                };
+                                return (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                        {entries.map(([k, v]) => (
+                                            <DetailItem key={k} label={formatLabel(k)} value={renderValue(k, v)} />
+                                        ))}
+                                    </div>
+                                );
+                            })()}
+                        </>
+                    )}
+                </div>
+                <div className="p-4 bg-gray-50 flex justify-end">
+                    <button onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg">Fechar</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const EditMonthlyClientAdvancedModal: React.FC<{ client: MonthlyClient; onClose: () => void; onMonthlyClientUpdated: () => void; }> = ({ client, onClose, onMonthlyClientUpdated }) => {
+    const [data, setData] = useState<any | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [alertInfo, setAlertInfo] = useState<{ title: string; message: string; variant: 'success' | 'error' } | null>(null);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const { data, error } = await supabase
+                    .from('monthly_clients')
+                    .select('*')
+                    .eq('id', client.id)
+                    .single();
+                if (error) {
+                    setError('Falha ao carregar os dados completos.');
+                    setData(client);
+                } else {
+                    setData(data);
+                }
+            } catch (_) {
+                setError('Erro inesperado ao carregar os dados completos.');
+                setData(client);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, [client]);
+
+    const PT_LABELS: Record<string, string> = { id: 'ID', created_at: 'Criado em', pet_name: 'Pet', pet_breed: 'Raça', owner_name: 'Tutor', owner_address: 'Endereço', whatsapp: 'WhatsApp', service: 'Serviço', weight: 'Peso', price: 'Preço', recurrence_type: 'Recorrência', recurrence_day: 'Dia da recorrência', recurrence_time: 'Hora da recorrência', is_active: 'Ativo', payment_status: 'Status do pagamento', payment_due_date: 'Data de vencimento', condominium: 'Condomínio', extra_services: 'Serviços extras', pet_photo_url: 'Foto do pet' };
+    const formatLabel = (k: string) => PT_LABELS[k] || k.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const isReadOnly = (k: string) => ['id', 'created_at'].includes(k);
+    const isDateField = (k: string) => k.endsWith('_date') || k === 'payment_due_date' || k === 'created_at';
+
+    const handleChange = (k: string, v: any) => {
+        setData((prev: any) => ({ ...(prev || {}), [k]: v }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!data) return;
+        setIsSaving(true);
+        const payload: any = { ...data };
+        delete payload.id;
+        if (payload.payment_due_date === '') payload.payment_due_date = null;
+        if (typeof payload.extra_services === 'string') {
+            try { payload.extra_services = JSON.parse(payload.extra_services); } catch {}
+        }
+        const { error } = await supabase.from('monthly_clients').update(payload).eq('id', client.id);
+        if (error) {
+            setAlertInfo({ title: 'Erro', message: 'Erro ao salvar os dados completos do mensalista.', variant: 'error' });
+        } else {
+            setAlertInfo({ title: 'Sucesso', message: 'Dados completos atualizados com sucesso.', variant: 'success' });
+        }
+        setIsSaving(false);
+    };
+
+    const handleAlertClose = () => {
+        const ok = alertInfo?.variant === 'success';
+        setAlertInfo(null);
+        if (ok) {
+            onMonthlyClientUpdated();
+            onClose();
+        }
+    };
+
+    return (
+        <>
+            {alertInfo && <AlertModal isOpen={true} onClose={handleAlertClose} title={alertInfo.title} message={alertInfo.message} variant={alertInfo.variant} />}
+            <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <form onSubmit={handleSubmit}>
+                        <div className="p-6 border-b flex items-center justify-between">
+                            <h2 className="text-3xl font-bold text-gray-800">Editar Mensalista</h2>
+                            <button type="button" onClick={onClose} className="p-2 rounded-full hover:bg-gray-100"><CloseIcon /></button>
+                        </div>
+                        <div className="p-6">
+                            {loading ? (
+                                <div className="flex justify-center py-12"><LoadingSpinner /></div>
+                            ) : (
+                                <>
+                                    {error && <div className="p-3 bg-yellow-50 text-yellow-700 rounded-md text-sm">{error}</div>}
+                                    {data && (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {Object.entries(data).map(([k, v]) => (
+                                                <div key={k} className="flex flex-col">
+                                                    <label className="text-sm font-semibold text-gray-700">{formatLabel(k)}</label>
+                                                    {k === 'extra_services' ? (
+                                                        <textarea value={typeof v === 'string' ? v : JSON.stringify(v || {}, null, 2)} onChange={(e) => handleChange(k, e.target.value)} className="mt-1 w-full px-3 py-2 border rounded-md" rows={4} />
+                                                    ) : isReadOnly(k) ? (
+                                                        <input value={String(v ?? '')} readOnly className="mt-1 w-full px-3 py-2 bg-gray-100 border rounded-md" />
+                                                    ) : typeof v === 'boolean' ? (
+                                                        <div className="mt-1"><input type="checkbox" checked={!!v} onChange={(e) => handleChange(k, e.target.checked)} /></div>
+                                                    ) : typeof v === 'number' ? (
+                                                        <input type="number" value={Number(v)} onChange={(e) => handleChange(k, Number(e.target.value))} className="mt-1 w-full px-3 py-2 border rounded-md" />
+                                                    ) : isDateField(k) ? (
+                                                        <input type="date" value={(String(v || '')).split('T')[0] || ''} onChange={(e) => handleChange(k, e.target.value)} className="mt-1 w-full px-3 py-2 border rounded-md" />
+                                                    ) : (
+                                                        <input type="text" value={String(v ?? '')} onChange={(e) => handleChange(k, e.target.value)} className="mt-1 w-full px-3 py-2 border rounded-md" />
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                        <div className="p-6 bg-gray-50 flex justify-end gap-4">
+                            <button type="button" onClick={onClose} className="bg-gray-200 text-gray-800 font-bold py-3.5 px-4 rounded-lg">Cancelar</button>
+                            <button type="submit" disabled={isSaving} className="bg-pink-600 text-white font-bold py-3.5 px-4 rounded-lg disabled:opacity-50">{isSaving ? 'Salvando...' : 'Salvar'}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </>
+    );
+};
+
 const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () => void; }> = ({ onAddClient, onDataChanged }) => {
     const [monthlyClients, setMonthlyClients] = useState<MonthlyClient[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingClient, setEditingClient] = useState<MonthlyClient | null>(null);
     const [deletingClient, setDeletingClient] = useState<MonthlyClient | null>(null);
+    const [viewingClient, setViewingClient] = useState<MonthlyClient | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [alertInfo, setAlertInfo] = useState<{ title: string; message: string; variant: 'success' | 'error' } | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -5128,7 +5377,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
     return (
         <>
             {alertInfo && <AlertModal isOpen={!!alertInfo} onClose={() => setAlertInfo(null)} title={alertInfo.title} message={alertInfo.message} variant={alertInfo.variant} />}
-            {editingClient && <EditMonthlyClientModal client={editingClient} onClose={() => setEditingClient(null)} onMonthlyClientUpdated={handleUpdateSuccess} />}
+            {editingClient && <EditMonthlyClientAdvancedModal client={editingClient} onClose={() => setEditingClient(null)} onMonthlyClientUpdated={handleUpdateSuccess} />}
             {deletingClient && <ConfirmationModal isOpen={!!deletingClient} onClose={() => setDeletingClient(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o mensalista ${deletingClient.pet_name}? Todos os seus agendamentos futuros também serão removidos.`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
             
             <div className="mb-6">
@@ -5334,6 +5583,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                                         onTogglePaymentStatus={(e) => handleTogglePaymentStatus(client, e)}
                                         isClientInDaycare={isClientInDaycare(client)}
                                         onChangePhoto={(mc) => { setUploadTargetMonthlyClient(mc); setIsUploadMonthlyPhotoModalOpen(true); }}
+                                        onView={(mc) => setViewingClient(mc)}
                                     />
                                 </div>
                             ))}
@@ -5425,6 +5675,10 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                 onClose={() => setShowStatisticsModal(false)}
             />
 
+            {viewingClient && (
+                <MonthlyClientDetailsModal client={viewingClient} onClose={() => setViewingClient(null)} />
+            )}
+
             {isUploadMonthlyPhotoModalOpen && uploadTargetMonthlyClient && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-2xl p-6 w-full max-w-md">
@@ -5459,7 +5713,8 @@ const MonthlyClientCard: React.FC<{
     onTogglePaymentStatus: (client: MonthlyClient, e: React.MouseEvent) => void;
     isClientInDaycare?: boolean;
     onChangePhoto: (client: MonthlyClient) => void;
-}> = ({ client, onClick, onEdit, onDelete, onAddExtraServices, onTogglePaymentStatus, isClientInDaycare = false, onChangePhoto }) => {
+    onView: (client: MonthlyClient) => void;
+}> = ({ client, onClick, onEdit, onDelete, onAddExtraServices, onTogglePaymentStatus, isClientInDaycare = false, onChangePhoto, onView }) => {
     
     const getRecurrenceText = (client: MonthlyClient) => {
         if (client.recurrence_type === 'weekly') return 'Semanal';
@@ -5649,7 +5904,7 @@ const MonthlyClientCard: React.FC<{
             </div>
 
             <div className="p-2 bg-gray-50 border-t border-gray-100">
-                <div className="grid grid-cols-3 gap-1.5">
+                <div className="grid grid-cols-4 gap-1.5">
                     <button 
                         onClick={(e) => { e.stopPropagation(); onAddExtraServices(client); }}
                         className="w-full bg-purple-100 text-purple-700 py-1.5 px-2 rounded-md hover:bg-purple-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
@@ -5658,6 +5913,17 @@ const MonthlyClientCard: React.FC<{
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                         </svg>
                         <span>Extras</span>
+                    </button>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onView(client); }}
+                        className="w-full bg-blue-100 text-blue-700 py-1.5 px-2 rounded-md hover:bg-blue-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
+                        aria-label="Visualizar mensalista"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        <span>Visualizar</span>
                     </button>
                     <button 
                         onClick={(e) => { e.stopPropagation(); onEdit(client); }}
