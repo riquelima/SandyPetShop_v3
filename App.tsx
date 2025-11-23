@@ -2185,6 +2185,24 @@ const AdminAddAppointmentModal: React.FC<{
         }
     }, [step, serviceStepView, selectedCondo]);
 
+    // Ensure initial selected date is the next allowed (Mon/Tue), never today
+    useEffect(() => {
+        if (step === 3 && serviceStepView === 'bath_groom' && allowedDays && allowedDays.length > 0) {
+            const now = new Date();
+            const next = new Date(now);
+            next.setDate(next.getDate() + 1);
+            for (let i = 0; i < 31; i++) {
+                const probe = new Date(next);
+                probe.setDate(next.getDate() + i);
+                const { day } = getSaoPauloTimeParts(probe);
+                if (allowedDays.includes(day)) {
+                    setSelectedDate(probe);
+                    break;
+                }
+            }
+        }
+    }, [step, serviceStepView, allowedDays]);
+
     // Reset selected time when date or service changes
     useEffect(() => { 
         setSelectedTime(null); 
@@ -8098,11 +8116,47 @@ const TimeSlotPicker: React.FC<{
         }
         const duration = SERVICES[selectedService].duration;
 
-        // All time slots are always available (no capacity or appointment restrictions)
+        const capacity = isPetMovel ? 1 : MAX_CAPACITY_PER_SLOT;
+        const dayAppointments = appointments.filter(app => 
+            isSameSaoPauloDay(app.appointmentTime, selectedDate) &&
+            (isPetMovel ? String(app.service).startsWith('PET_MOBILE') : !String(app.service).startsWith('PET_MOBILE'))
+        );
+
+        const availability = new Map<number, number>();
+        workingHours.forEach(hour => availability.set(hour, capacity));
+
+        const btStartCounts = new Map<number, number>();
+        workingHours.forEach(hour => btStartCounts.set(hour, 0));
+
+        dayAppointments.forEach(app => {
+            const { hour: startHour } = getSaoPauloTimeParts(app.appointmentTime);
+            const appDuration = app.service && SERVICES[app.service] ? SERVICES[app.service].duration : 1;
+            for (let h = startHour; h < startHour + Math.ceil(appDuration); h++) {
+                if (availability.has(h)) {
+                    availability.set(h, (availability.get(h) || 0) - 1);
+                }
+            }
+            if (SERVICES[app.service] && SERVICES[app.service].duration >= 2 && btStartCounts.has(startHour)) {
+                btStartCounts.set(startHour, (btStartCounts.get(startHour) || 0) + 1);
+            }
+        });
+
         const finalAvailability = new Map<number, boolean>();
         workingHours.forEach(hour => {
-            // All hours are always available
-            finalAvailability.set(hour, true);
+            let hasCapacity = true;
+            for (let i = 0; i < Math.ceil(duration); i++) {
+                const checkHour = hour + i;
+                if ((availability.get(checkHour) || 0) <= 0 || !workingHours.includes(checkHour)) {
+                    hasCapacity = false;
+                    break;
+                }
+            }
+            if (hasCapacity && selectedService === ServiceType.BATH_AND_GROOMING) {
+                if ((btStartCounts.get(hour) || 0) > 0) {
+                    hasCapacity = false;
+                }
+            }
+            finalAvailability.set(hour, hasCapacity);
         });
 
         return finalAvailability;
@@ -8114,9 +8168,9 @@ const TimeSlotPicker: React.FC<{
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {workingHours.map(hour => {
-          // Check if hour is available (not lunch hour and has capacity)
           const isAvailable = getAvailability.get(hour) || false;
-          const isDisabled = !isAvailable;
+          const isPastTime = isSameSaoPauloDay(selectedDate, now) && hour <= todaySaoPaulo.hour;
+          const isDisabled = !isAvailable || isPastTime;
           
           return (
             <button
