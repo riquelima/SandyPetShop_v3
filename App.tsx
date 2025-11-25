@@ -4975,6 +4975,168 @@ const MonthlyClientDetailsModal: React.FC<{ client: MonthlyClient | null; onClos
     );
 };
 
+const RenewMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => void; onSuccess: (updated: MonthlyClient) => void; }> = ({ client, onClose, onSuccess }) => {
+    const [recurrenceType, setRecurrenceType] = useState<'bi-weekly' | 'monthly'>(client.recurrence_type === 'bi-weekly' ? 'bi-weekly' : 'monthly');
+    const [dayOfWeek, setDayOfWeek] = useState<number>(client.recurrence_day || 1);
+    const [time, setTime] = useState<number>(client.recurrence_time || WORKING_HOURS[0]);
+    const [serviceStartDate, setServiceStartDate] = useState<string>('');
+    const [paymentDueDate, setPaymentDueDate] = useState<string>(client.payment_due_date ? client.payment_due_date.split('T')[0] : '');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [alertInfo, setAlertInfo] = useState<{ title: string; message: string; variant: 'success' | 'error' } | null>(null);
+    const [pendingUpdated, setPendingUpdated] = useState<MonthlyClient | null>(null);
+
+    const getDbId = (id: any) => {
+        const s = String(id ?? '');
+        return /^\d+$/.test(s) ? Number(s) : id;
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        try {
+            const startObj = serviceStartDate ? new Date(serviceStartDate + 'T00:00:00') : new Date();
+            const parts = getSaoPauloTimeParts(startObj);
+            let startDay = parts.day === 0 ? 7 : parts.day;
+            let addDays = (dayOfWeek - startDay + 7) % 7;
+            const firstDate = new Date(startObj);
+            firstDate.setDate(firstDate.getDate() + addDays);
+
+            const count = recurrenceType === 'monthly' ? 4 : 2;
+            const intervalDays = recurrenceType === 'monthly' ? 7 : 15;
+            const appts: { appointment_time: string }[] = [];
+            for (let i = 0; i < count; i++) {
+                const t = new Date(firstDate);
+                t.setDate(t.getDate() + (i * intervalDays));
+                const iso = toSaoPauloUTC(t.getFullYear(), t.getMonth(), t.getDate(), time).toISOString();
+                appts.push({ appointment_time: iso });
+            }
+
+            const pricePer = count > 0 ? Number(client.price || 0) / count : Number(client.price || 0);
+            const looksPetMovel = typeof client.service === 'string' && client.service.toLowerCase().includes('pet móvel');
+            const dbId = getDbId(client.id);
+
+            const baseAppointments = appts.map(a => ({
+                owner_name: client.owner_name,
+                pet_name: client.pet_name,
+                service: client.service,
+                appointment_time: a.appointment_time,
+                status: 'AGENDADO',
+                price: pricePer,
+                whatsapp: client.whatsapp,
+                pet_breed: client.pet_breed,
+                owner_address: client.owner_address,
+                weight: client.weight,
+                condominium: client.condominium,
+                monthly_client_id: dbId
+            }));
+
+            if (looksPetMovel) {
+                const petMovelAppointments = appts.map(a => ({
+                    owner_name: client.owner_name,
+                    pet_name: client.pet_name,
+                    pet_breed: client.pet_breed,
+                    service: client.service,
+                    appointment_time: a.appointment_time,
+                    status: 'AGENDADO',
+                    price: pricePer,
+                    whatsapp: client.whatsapp,
+                    owner_address: client.owner_address,
+                    condominium: client.condominium,
+                    monthly_client_id: dbId
+                }));
+                const [res1, res2] = await Promise.all([
+                    supabase.from('appointments').insert(baseAppointments),
+                    supabase.from('pet_movel_appointments').insert(petMovelAppointments)
+                ]);
+                if (res1.error || res2.error) throw new Error(res1.error?.message || res2.error?.message || 'Erro ao criar agendamentos');
+            } else {
+                const { error } = await supabase.from('appointments').insert(baseAppointments);
+                if (error) throw new Error(error.message);
+            }
+
+            const updatePayload = {
+                recurrence_type: recurrenceType,
+                recurrence_day: dayOfWeek,
+                recurrence_time: time,
+                payment_due_date: paymentDueDate && paymentDueDate.trim() !== '' ? paymentDueDate : null
+            };
+            const { error: upErr } = await supabase.from('monthly_clients').update(updatePayload).eq('id', dbId);
+            if (upErr) throw new Error(upErr.message);
+
+            const updated = { ...client, ...updatePayload } as MonthlyClient;
+            setPendingUpdated(updated);
+            setAlertInfo({ title: 'Sucesso', message: `Mês renovado. ${count} agendamento${count > 1 ? 's' : ''} criado${count > 1 ? 's' : ''}.`, variant: 'success' });
+        } catch (err: any) {
+            setAlertInfo({ title: 'Erro', message: err.message || 'Falha ao renovar o mês.', variant: 'error' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleAlertClose = () => {
+        const wasSuccess = alertInfo?.variant === 'success';
+        const updated = pendingUpdated;
+        setAlertInfo(null);
+        setPendingUpdated(null);
+        if (wasSuccess && updated) {
+            onSuccess(updated);
+            onClose();
+        }
+    };
+
+    return (
+        <>
+            {alertInfo && <AlertModal isOpen={true} onClose={handleAlertClose} title={alertInfo.title} message={alertInfo.message} variant={alertInfo.variant} />}
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-xl">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Renovar Mês</h3>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Recorrência</label>
+                            <select value={recurrenceType} onChange={e => setRecurrenceType(e.target.value as 'bi-weekly' | 'monthly')} className="w-full px-3 py-2 border rounded-lg bg-white">
+                                <option value="bi-weekly">Quinzenal</option>
+                                <option value="monthly">Mensal (4x)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Dia</label>
+                            <select value={dayOfWeek} onChange={e => setDayOfWeek(Number(e.target.value))} className="w-full px-3 py-2 border rounded-lg bg-white">
+                                <option value={1}>Segunda-feira</option>
+                                <option value={2}>Terça-feira</option>
+                                <option value={3}>Quarta-feira</option>
+                                <option value={4}>Quinta-feira</option>
+                                <option value={5}>Sexta-feira</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Horário</label>
+                        <select value={time} onChange={e => setTime(Number(e.target.value))} className="w-full px-3 py-2 border rounded-lg bg-white">
+                            {WORKING_HOURS.map(h => (<option key={h} value={h}>{String(h).padStart(2,'0')}:00</option>))}
+                        </select>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Início do serviço</label>
+                            <input type="date" value={serviceStartDate} onChange={e => setServiceStartDate(e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Data de pagamento</label>
+                            <input type="date" value={paymentDueDate} onChange={e => setPaymentDueDate(e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md">Cancelar</button>
+                        <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-pink-600 text-white rounded-md disabled:opacity-50">{isSubmitting ? 'Salvando...' : 'Renovar'}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        </>
+    );
+};
+
 const EditMonthlyClientAdvancedModal: React.FC<{ client: MonthlyClient; onClose: () => void; onMonthlyClientUpdated: () => void; }> = ({ client, onClose, onMonthlyClientUpdated }) => {
     const [data, setData] = useState<any | null>(null);
     const [loading, setLoading] = useState(false);
@@ -5125,6 +5287,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
     // Estados para modal de serviços extras
     const [isMonthlyExtraServicesModalOpen, setIsMonthlyExtraServicesModalOpen] = useState(false);
     const [monthlyClientForExtraServices, setMonthlyClientForExtraServices] = useState<MonthlyClient | null>(null);
+    const [monthlyClientForRenewal, setMonthlyClientForRenewal] = useState<MonthlyClient | null>(null);
     
     // Estado para modal de estatísticas
     const [showStatisticsModal, setShowStatisticsModal] = useState(false);
@@ -5620,6 +5783,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                                         isClientInDaycare={isClientInDaycare(client)}
                                         onChangePhoto={(mc) => { setUploadTargetMonthlyClient(mc); setIsUploadMonthlyPhotoModalOpen(true); }}
                                         onView={(mc) => setViewingClient(mc)}
+                                        onRenew={() => setMonthlyClientForRenewal(client)}
                                     />
                                 </div>
                             ))}
@@ -5705,6 +5869,14 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                 />
             )}
 
+            {monthlyClientForRenewal && (
+                <RenewMonthlyClientModal
+                    client={monthlyClientForRenewal}
+                    onClose={() => setMonthlyClientForRenewal(null)}
+                    onSuccess={(updated) => { setMonthlyClients(prev => prev.map(c => c.id === updated.id ? updated : c)); onDataChanged(); setMonthlyClientForRenewal(null); }}
+                />
+            )}
+
             {/* Modal de Estatísticas de Mensalistas */}
             <MonthlyClientsStatisticsModal
                 isOpen={showStatisticsModal}
@@ -5750,7 +5922,8 @@ const MonthlyClientCard: React.FC<{
     isClientInDaycare?: boolean;
     onChangePhoto: (client: MonthlyClient) => void;
     onView: (client: MonthlyClient) => void;
-}> = ({ client, onClick, onEdit, onDelete, onAddExtraServices, onTogglePaymentStatus, isClientInDaycare = false, onChangePhoto, onView }) => {
+    onRenew: (client: MonthlyClient) => void;
+}> = ({ client, onClick, onEdit, onDelete, onAddExtraServices, onTogglePaymentStatus, isClientInDaycare = false, onChangePhoto, onView, onRenew }) => {
     
     const getRecurrenceText = (client: MonthlyClient) => {
         if (client.recurrence_type === 'weekly') return 'Semanal';
@@ -5848,6 +6021,17 @@ const MonthlyClientCard: React.FC<{
 
             {/* Conteúdo do Card */}
             <div className="p-4 sm:p-5 space-y-4 flex-1 overflow-y-auto">
+                <div className="flex justify-end">
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onRenew(client); }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 text-xs font-medium"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.418 11H9m0 0l3-3m-3 3l3 3M4.582 9A7.5 7.5 0 1120.5 16.5" />
+                        </svg>
+                        <span>Renovar Mês</span>
+                    </button>
+                </div>
                 {/* Informações básicas */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
