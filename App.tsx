@@ -4910,7 +4910,14 @@ const MonthlyClientDetailsModal: React.FC<{ client: MonthlyClient | null; onClos
         <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                 <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-gray-800">Detalhes do Mensalista</h2>
+                    <div className="flex items-center gap-3">
+                        <img
+                            src={(data?.pet_photo_url || client.pet_photo_url) || 'https://cdn-icons-png.flaticon.com/512/3009/3009489.png'}
+                            alt={String(data?.pet_name || client.pet_name || 'Pet')}
+                            className="w-12 h-12 rounded-full object-cover"
+                        />
+                        <h2 className="text-2xl font-bold text-gray-800">Detalhes do Mensalista</h2>
+                    </div>
                     <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100" aria-label="Fechar"><CloseIcon /></button>
                 </div>
                 <div className="p-6 space-y-6">
@@ -6033,7 +6040,7 @@ const MonthlyClientCard: React.FC<{
                     </button>
                 </div>
                 {/* Informações básicas */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tutor</p>
                         <p className="text-gray-800 font-medium">{client.owner_name || 'Não informado'}</p>
@@ -6090,40 +6097,51 @@ const MonthlyClientCard: React.FC<{
                 </div>
 
                 {/* Data de Pagamento (exibe data de vencimento como referência de pagamento) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Data de pagamento</p>
                         <p className="text-gray-800 font-medium">{client.payment_due_date ? formatDateToBR(client.payment_due_date) : 'Não informado'}</p>
                     </div>
                 </div>
 
-                {/* Serviços Extras */}
-                {client.extra_services && Object.values(client.extra_services).some(value => value === true || (typeof value === 'number' && value > 0)) && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                        <div className="text-sm text-gray-600 font-semibold mb-2">Serviços Extras:</div>
-                        <div className="flex flex-wrap gap-1">
-                            {client.extra_services.pernoite && (
-                                <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">Pernoite</span>
-                            )}
-                            {client.extra_services.banho_tosa && (
-                                <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">Banho & Tosa</span>
-                            )}
-                            {client.extra_services.so_banho && (
-                                <span className="px-2 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full">Só banho</span>
-                            )}
-                            {client.extra_services.adestrador && (
-                                <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Adestrador</span>
-                            )}
-                            {client.extra_services.despesa_medica && (
-                                <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">Despesa médica</span>
-                            )}
-                            {client.extra_services.dias_extras && client.extra_services.dias_extras > 0 && (
-                                <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
-                                    {client.extra_services.dias_extras} dia{client.extra_services.dias_extras > 1 ? 's' : ''} extra{client.extra_services.dias_extras > 1 ? 's' : ''}
-                                </span>
-                            )}
-                        </div>
-                    </div>
+                {client.extra_services && (
+                    (() => {
+                        const ex = client.extra_services as any;
+                        const hasExtras = Boolean(
+                            (ex?.pernoite?.enabled || ex?.pernoite === true) ||
+                            (ex?.banho_tosa?.enabled || ex?.banho_tosa === true) ||
+                            (ex?.so_banho?.enabled || ex?.so_banho === true) ||
+                            (ex?.adestrador?.enabled || ex?.adestrador === true) ||
+                            (ex?.despesa_medica?.enabled || ex?.despesa_medica === true) ||
+                            (((ex?.dias_extras?.quantity ?? 0) > 0))
+                        );
+                        if (!hasExtras) return null;
+                        return (
+                            <div className="mt-3 pt-3 border-t border-gray-100">
+                                <div className="text-sm text-gray-600 font-semibold mb-2">Serviços Extras:</div>
+                                <div className="flex flex-wrap gap-1">
+                                    {(ex?.pernoite?.enabled || ex?.pernoite === true) && (
+                                        <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">Pernoite</span>
+                                    )}
+                                    {(ex?.banho_tosa?.enabled || ex?.banho_tosa === true) && (
+                                        <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">Banho & Tosa</span>
+                                    )}
+                                    {(ex?.so_banho?.enabled || ex?.so_banho === true) && (
+                                        <span className="px-2 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full">Só banho</span>
+                                    )}
+                                    {(ex?.adestrador?.enabled || ex?.adestrador === true) && (
+                                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Adestrador</span>
+                                    )}
+                                    {(ex?.despesa_medica?.enabled || ex?.despesa_medica === true) && (
+                                        <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">Despesa médica</span>
+                                    )}
+                                    {((ex?.dias_extras?.quantity ?? 0) > 0) && (
+                                        <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">{ex?.dias_extras?.quantity} dia{ex?.dias_extras?.quantity > 1 ? 's' : ''} extra{ex?.dias_extras?.quantity > 1 ? 's' : ''}</span>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })()
                 )}
 
                 {/* Status do Pagamento */}
