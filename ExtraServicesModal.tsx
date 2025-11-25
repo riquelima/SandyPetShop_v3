@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { supabase } from './supabaseClient';
 
@@ -117,7 +118,7 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
     switch (type) {
       case 'appointment': return 'appointments';
       case 'monthly': return 'monthly_clients';
-      case 'daycare': return 'daycare_registrations';
+      case 'daycare': return 'daycare_enrollments';
       case 'hotel': return 'hotel_registrations';
       default: return '';
     }
@@ -132,28 +133,28 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
       const extraServicesForSave = {
         pernoite: { 
           enabled: extraServices.pernoite.enabled, 
-          value: Number(extraServices.pernoite.value) || 0 
+          value: extraServices.pernoite.value === '' ? undefined : Number(extraServices.pernoite.value)
         },
         banho_tosa: { 
           enabled: extraServices.banho_tosa.enabled, 
-          value: Number(extraServices.banho_tosa.value) || 0 
+          value: extraServices.banho_tosa.value === '' ? undefined : Number(extraServices.banho_tosa.value)
         },
         so_banho: { 
           enabled: extraServices.so_banho.enabled, 
-          value: Number(extraServices.so_banho.value) || 0 
+          value: extraServices.so_banho.value === '' ? undefined : Number(extraServices.so_banho.value)
         },
         adestrador: { 
           enabled: extraServices.adestrador.enabled, 
-          value: Number(extraServices.adestrador.value) || 0 
+          value: extraServices.adestrador.value === '' ? undefined : Number(extraServices.adestrador.value)
         },
         despesa_medica: { 
           enabled: extraServices.despesa_medica.enabled, 
-          value: Number(extraServices.despesa_medica.value) || 0 
+          value: extraServices.despesa_medica.value === '' ? undefined : Number(extraServices.despesa_medica.value)
         },
         dias_extras: { 
           enabled: extraServices.dias_extras.enabled,
-          quantity: Number(extraServices.dias_extras.quantity) || 0, 
-          value: Number(extraServices.dias_extras.value) || 0 
+          quantity: extraServices.dias_extras.quantity === '' ? 0 : Number(extraServices.dias_extras.quantity), 
+          value: extraServices.dias_extras.value === '' ? undefined : Number(extraServices.dias_extras.value)
         }
       };
       
@@ -204,8 +205,8 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  const modal = (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[10001] p-4" role="dialog" aria-modal="true">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-6 border-b">
           <h2 className="text-xl font-bold text-gray-800">{title}</h2>
@@ -423,6 +424,8 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 };
 
 export default ExtraServicesModal;

@@ -173,41 +173,37 @@ const calculateExtraServicesTotal = (extraServices: any): number => {
 
 // Função para calcular o valor total da fatura da creche
 const calculateDaycareInvoiceTotal = (enrollment: DaycareRegistration): number => {
-    let total = 0;
-    
-    // Valor base do plano contratado
-    if (enrollment.contracted_plan && DAYCARE_PLAN_PRICES[enrollment.contracted_plan]) {
-        total += DAYCARE_PLAN_PRICES[enrollment.contracted_plan];
+    const base = (typeof enrollment.total_price === 'number' && enrollment.total_price > 0)
+        ? Number(enrollment.total_price)
+        : (enrollment.contracted_plan && DAYCARE_PLAN_PRICES[enrollment.contracted_plan])
+            ? DAYCARE_PLAN_PRICES[enrollment.contracted_plan]
+            : 0;
+
+    let extras = 0;
+    const es: any = enrollment.extra_services as any;
+    if (es) {
+        // Novo formato (enabled/value/quantity)
+        if (es.pernoite?.enabled) extras += Number(es.pernoite.value ?? DAYCARE_EXTRA_SERVICES_PRICES.pernoite);
+        if (es.banho_tosa?.enabled) extras += Number(es.banho_tosa.value ?? DAYCARE_EXTRA_SERVICES_PRICES.banho_tosa);
+        if (es.so_banho?.enabled) extras += Number(es.so_banho.value ?? DAYCARE_EXTRA_SERVICES_PRICES.so_banho);
+        if (es.adestrador?.enabled) extras += Number(es.adestrador.value ?? DAYCARE_EXTRA_SERVICES_PRICES.adestrador);
+        if (es.despesa_medica?.enabled) extras += Number(es.despesa_medica.value ?? DAYCARE_EXTRA_SERVICES_PRICES.despesa_medica);
+        if (es.dias_extras?.quantity && es.dias_extras.quantity > 0) {
+            extras += Number(es.dias_extras.quantity) * Number(es.dias_extras.value ?? DAYCARE_EXTRA_SERVICES_PRICES.dia_extra);
+        }
+
+        // Formato antigo (booleans e número para dia_extra)
+        if (es.pernoite === true) extras += DAYCARE_EXTRA_SERVICES_PRICES.pernoite;
+        if (es.banho_tosa === true) extras += DAYCARE_EXTRA_SERVICES_PRICES.banho_tosa;
+        if (es.so_banho === true) extras += DAYCARE_EXTRA_SERVICES_PRICES.so_banho;
+        if (es.adestrador === true) extras += DAYCARE_EXTRA_SERVICES_PRICES.adestrador;
+        if (es.despesa_medica === true) extras += DAYCARE_EXTRA_SERVICES_PRICES.despesa_medica;
+        if (typeof es.dia_extra === 'number' && es.dia_extra > 0) {
+            extras += es.dia_extra * DAYCARE_EXTRA_SERVICES_PRICES.dia_extra;
+        }
     }
-    
-    // Valor dos serviços extras
-    if (enrollment.extra_services) {
-        if (enrollment.extra_services.pernoite) {
-            total += DAYCARE_EXTRA_SERVICES_PRICES.pernoite;
-        }
-        if (enrollment.extra_services.banho_tosa) {
-            total += DAYCARE_EXTRA_SERVICES_PRICES.banho_tosa;
-        }
-        if (enrollment.extra_services.so_banho) {
-            total += DAYCARE_EXTRA_SERVICES_PRICES.so_banho;
-        }
-        if (enrollment.extra_services.adestrador) {
-            total += DAYCARE_EXTRA_SERVICES_PRICES.adestrador;
-        }
-        if (enrollment.extra_services.despesa_medica) {
-            total += DAYCARE_EXTRA_SERVICES_PRICES.despesa_medica;
-        }
-        if (enrollment.extra_services.dia_extra && enrollment.extra_services.dia_extra > 0) {
-            total += enrollment.extra_services.dia_extra * DAYCARE_EXTRA_SERVICES_PRICES.dia_extra;
-        }
-    }
-    
-    // Se existe um total_price definido, usar ele ao invés do calculado
-    if (enrollment.total_price && enrollment.total_price > 0) {
-        return enrollment.total_price;
-    }
-    
-    return total;
+
+    return base + extras;
 };
 
 // Função para calcular o valor total da fatura do hotel pet
@@ -6081,29 +6077,32 @@ const DaycareEnrollmentCard: React.FC<{
                     </div>
                     
                     {/* Serviços Extras */}
-                    {enrollment.extra_services && Object.values(enrollment.extra_services).some(value => value === true || (typeof value === 'number' && value > 0)) && (
+                    {enrollment.extra_services && (
                         <div className="mt-3 pt-3 border-t border-gray-100">
                             <div className="text-sm text-gray-600 font-semibold mb-2">Serviços Extras:</div>
                             <div className="flex flex-wrap gap-1">
-                                {enrollment.extra_services.pernoite && (
+                                {((enrollment as any).extra_services?.pernoite?.enabled || (enrollment as any).extra_services?.pernoite === true) && (
                                     <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">Pernoite</span>
                                 )}
-                                {enrollment.extra_services.banho_tosa && (
+                                {((enrollment as any).extra_services?.banho_tosa?.enabled || (enrollment as any).extra_services?.banho_tosa === true) && (
                                     <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">Banho & Tosa</span>
                                 )}
-                                {enrollment.extra_services.so_banho && (
+                                {((enrollment as any).extra_services?.so_banho?.enabled || (enrollment as any).extra_services?.so_banho === true) && (
                                     <span className="px-2 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full">Só banho</span>
                                 )}
-                                {enrollment.extra_services.adestrador && (
+                                {((enrollment as any).extra_services?.adestrador?.enabled || (enrollment as any).extra_services?.adestrador === true) && (
                                     <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Adestrador</span>
                                 )}
-                                {enrollment.extra_services.despesa_medica && (
+                                {((enrollment as any).extra_services?.despesa_medica?.enabled || (enrollment as any).extra_services?.despesa_medica === true) && (
                                     <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">Despesa médica</span>
                                 )}
-                                {enrollment.extra_services.dia_extra && enrollment.extra_services.dia_extra > 0 && (
+                                {(((enrollment as any).extra_services?.dias_extras?.quantity ?? 0) > 0) && (
                                     <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
-                                        {enrollment.extra_services.dia_extra} dia{enrollment.extra_services.dia_extra > 1 ? 's' : ''} extra{enrollment.extra_services.dia_extra > 1 ? 's' : ''}
+                                        {(enrollment as any).extra_services.dias_extras.quantity} dia{(enrollment as any).extra_services.dias_extras.quantity > 1 ? 's' : ''} extra{(enrollment as any).extra_services.dias_extras.quantity > 1 ? 's' : ''}
                                     </span>
+                                )}
+                                {(!((enrollment as any).extra_services?.pernoite?.enabled || (enrollment as any).extra_services?.banho_tosa?.enabled || (enrollment as any).extra_services?.so_banho?.enabled || (enrollment as any).extra_services?.adestrador?.enabled || (enrollment as any).extra_services?.despesa_medica?.enabled || (((enrollment as any).extra_services?.dias_extras?.quantity ?? 0) > 0) || (enrollment as any).extra_services?.pernoite === true || (enrollment as any).extra_services?.banho_tosa === true || (enrollment as any).extra_services?.so_banho === true || (enrollment as any).extra_services?.adestrador === true || (enrollment as any).extra_services?.despesa_medica === true || (typeof (enrollment as any).extra_services?.dia_extra === 'number' && (enrollment as any).extra_services?.dia_extra > 0))) && (
+                                    <span className="text-xs text-gray-500">Nenhum serviço extra</span>
                                 )}
                             </div>
                         </div>
@@ -6239,29 +6238,29 @@ const DaycareEnrollmentDetailsModal: React.FC<{
                     </section>
                     
                     {/* Extra Services */}
-                    {enrollment.extra_services && Object.values(enrollment.extra_services).some(value => value === true || (typeof value === 'number' && value > 0)) && (
+                    {enrollment.extra_services && (
                         <section>
                             <h3 className="text-lg font-semibold text-pink-700 border-b pb-2 mb-4">Serviços Extras</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                                {enrollment.extra_services.pernoite && (
+                                {(((enrollment as any).extra_services?.pernoite?.enabled || (enrollment as any).extra_services?.pernoite === true)) && (
                                     <DetailItem label="Pernoite" value="Sim" />
                                 )}
-                                {enrollment.extra_services.banho_tosa && (
+                                {(((enrollment as any).extra_services?.banho_tosa?.enabled || (enrollment as any).extra_services?.banho_tosa === true)) && (
                                     <DetailItem label="Banho & Tosa" value="Sim" />
                                 )}
-                                {enrollment.extra_services.so_banho && (
+                                {(((enrollment as any).extra_services?.so_banho?.enabled || (enrollment as any).extra_services?.so_banho === true)) && (
                                     <DetailItem label="Só banho" value="Sim" />
                                 )}
-                                {enrollment.extra_services.adestrador && (
+                                {(((enrollment as any).extra_services?.adestrador?.enabled || (enrollment as any).extra_services?.adestrador === true)) && (
                                     <DetailItem label="Adestrador" value="Sim" />
                                 )}
-                                {enrollment.extra_services.despesa_medica && (
+                                {(((enrollment as any).extra_services?.despesa_medica?.enabled || (enrollment as any).extra_services?.despesa_medica === true)) && (
                                     <DetailItem label="Despesa médica" value="Sim" />
                                 )}
-                                {enrollment.extra_services.dia_extra && enrollment.extra_services.dia_extra > 0 && (
+                                {(((enrollment as any).extra_services?.dias_extras?.quantity ?? 0) > 0) && (
                                     <DetailItem 
                                         label="Dias extras" 
-                                        value={`${enrollment.extra_services.dia_extra} dia${enrollment.extra_services.dia_extra > 1 ? 's' : ''}`} 
+                                        value={`${(enrollment as any).extra_services.dias_extras.quantity} dia${(enrollment as any).extra_services.dias_extras.quantity > 1 ? 's' : ''}`} 
                                     />
                                 )}
                             </div>
