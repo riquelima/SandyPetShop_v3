@@ -3349,24 +3349,24 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
                                 {dailyAppointments.length > 0 ? (
                                     <>
                                         <h3 className="text-lg font-semibold text-gray-700 mb-3">Agendados</h3>
-                                        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3">
-                                            {dailyScheduled.map(app => (
-                                                <div key={app.id} className="flex-none min-w-[280px] sm:min-w-[320px] md:min-w-0">
-                                                    <AppointmentCard appointment={app} onUpdateStatus={handleUpdateStatus} isUpdating={updatingStatusId === app.id} onEdit={handleOpenEditModal} onDelete={handleRequestDelete} isDeleting={deletingAppointmentId === app.id} onOpenActionMenu={onOpenActionMenu} onDeleteObservation={onDeleteObservation} />
-                                                </div>
-                                            ))}
-                                        </div>
+                                        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3">
+                                             {dailyScheduled.map(app => (
+                                                <div key={app.id} className="flex-none w-screen sm:w-[420px] lg:w-[460px] md:min-w-0 snap-center">
+                                                     <AppointmentCard appointment={app} onUpdateStatus={handleUpdateStatus} isUpdating={updatingStatusId === app.id} onEdit={handleOpenEditModal} onDelete={handleRequestDelete} isDeleting={deletingAppointmentId === app.id} onOpenActionMenu={onOpenActionMenu} onDeleteObservation={onDeleteObservation} />
+                                                 </div>
+                                             ))}
+                                         </div>
 
                                         <div className="mt-8">
                                             <h3 className="text-lg font-semibold text-gray-700 mb-3">Concluídos</h3>
                                             {dailyCompleted.length > 0 ? (
-                                                <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3">
-                                                    {dailyCompleted.map(app => (
-                                                        <div key={app.id} className="flex-none min-w-[280px] sm:min-w-[320px] md:min-w-0">
-                                                            <AppointmentCard appointment={app} onUpdateStatus={handleUpdateStatus} isUpdating={updatingStatusId === app.id} onEdit={handleOpenEditModal} onDelete={handleRequestDelete} isDeleting={deletingAppointmentId === app.id} onOpenActionMenu={onOpenActionMenu} onDeleteObservation={onDeleteObservation} />
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                                <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3">
+                                                     {dailyCompleted.map(app => (
+                                                        <div key={app.id} className="flex-none w-screen sm:w-[420px] lg:w-[460px] md:min-w-0 snap-center">
+                                                             <AppointmentCard appointment={app} onUpdateStatus={handleUpdateStatus} isUpdating={updatingStatusId === app.id} onEdit={handleOpenEditModal} onDelete={handleRequestDelete} isDeleting={deletingAppointmentId === app.id} onOpenActionMenu={onOpenActionMenu} onDeleteObservation={onDeleteObservation} />
+                                                         </div>
+                                                     ))}
+                                                 </div>
                                             ) : (
                                                 <div className="text-center py-6 bg-white rounded-lg shadow-sm">
                                                     <p className="text-gray-500">Nenhum concluído para este dia.</p>
@@ -3980,10 +3980,10 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                                 <div className="border-t border-gray-100 bg-gray-50/50 animate-fadeIn">
                                     {Object.entries(clients).map(([number, clientList]) => (
                                         <div key={number} className="p-6 border-b border-gray-100 last:border-b-0">
-                                            <div className="overflow-x-auto snap-x snap-mandatory scroll-px-4">
+                                            <div className="overflow-x-auto snap-x snap-mandatory -mx-6 md:mx-0">
                                                 <div className="flex gap-4 pb-2">
-                                    {clientList.map(client => (
-                                        <div key={client.id} className="shrink-0 w-[92vw] sm:w-[420px] lg:w-[460px] snap-center">
+                                                    {clientList.map(client => (
+                                        <div key={client.id} className="shrink-0 w-screen sm:w-[420px] lg:w-[460px] snap-center">
                                                         <div 
                                                             className="bg-white rounded-2xl shadow-sm p-6 min-h-[380px] hover:shadow-md transition-shadow border border-gray-200 cursor-pointer flex flex-col"
                                                             onClick={() => handleOpenAppointmentsModal(client)}
@@ -5778,9 +5778,9 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                 filteredClients.length > 0 ? (
                     viewMode === 'cards' ? (
                         // Visualização em Cards com carrossel horizontal no mobile
-                        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 md:mx-0 md:px-0 md:grid md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+                        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory md:mx-0 md:px-0 md:grid md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
                             {filteredClients.map(client => (
-                                <div key={client.id} className="flex-none min-w-[85%] sm:min-w-[70%] md:min-w-0 snap-center">
+                                <div key={client.id} className="flex-none w-screen sm:w-[420px] lg:w-[460px] md:min-w-0 snap-center">
                                     <MonthlyClientCard
                                         client={client}
                                         onEdit={() => setEditingClient(client)}
@@ -9407,10 +9407,10 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                 {isExpanded && (
                     <div className="p-4 pt-0">
                         {items.length > 0 ? (
-                            <div className="overflow-x-auto scroll-px-4">
+                            <div className="overflow-x-auto -mx-4">
                                 <div className="flex gap-4 pb-2 snap-x snap-mandatory">
                                     {items.map(reg => (
-                                        <div key={reg.id} draggable onDragStart={(e) => handleHotelDragStart(e, reg, sectionId)} className="shrink-0 w-[calc(100vw-2rem)] sm:w-[420px] lg:w-[460px] snap-center">
+                                        <div key={reg.id} draggable onDragStart={(e) => handleHotelDragStart(e, reg, sectionId)} className="shrink-0 w-screen sm:w-[420px] lg:w-[460px] snap-center">
                                             <HotelRegistrationCard registration={reg} onAddExtraServices={handleAddHotelExtraServices} showCheckActions={sectionId==='approved'} inHotel={sectionId==='in_hotel'} onChangePhoto={(r) => { setUploadTargetRegistration(r); setIsUploadPhotoModalOpen(true); }} />
                                         </div>
                                     ))}
@@ -10626,10 +10626,10 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
                         className="p-4 min-h-[100px] animate-fadeIn"
                     >
                         {count > 0 ? (
-                            <div className="overflow-x-auto">
+                            <div className="overflow-x-auto -mx-4">
                                 <div className="flex gap-4 pb-2 snap-x snap-mandatory">
                                     {enrollments.map(enrollment => (
-                                        <div key={enrollment.id} className="shrink-0 w-[360px] sm:w-[420px] lg:w-[460px] snap-center">
+                                        <div key={enrollment.id} className="shrink-0 w-screen sm:w-[420px] lg:w-[460px] snap-center">
                                             <DaycareEnrollmentCard
                                                 enrollment={enrollment}
                                                 isDraggable={true}
