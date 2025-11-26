@@ -8310,68 +8310,15 @@ const TimeSlotPicker: React.FC<{
     isPetMovel: boolean;
   }> = ({ selectedDate, selectedService, appointments, onTimeSelect, selectedTime, workingHours, isPetMovel }) => {
     const getAvailability = useMemo(() => {
-        if (!selectedService) {
-            const finalAvailability = new Map<number, boolean>();
-            workingHours.forEach(hour => finalAvailability.set(hour, false));
-            return finalAvailability;
-        }
-        const duration = SERVICES[selectedService].duration;
-
-        const capacity = isPetMovel ? 1 : MAX_CAPACITY_PER_SLOT;
-        const dayAppointments = appointments.filter(app => 
-            isSameSaoPauloDay(app.appointmentTime, selectedDate) &&
-            (isPetMovel ? String(app.service).startsWith('PET_MOBILE') : !String(app.service).startsWith('PET_MOBILE'))
-        );
-
-        const availability = new Map<number, number>();
-        workingHours.forEach(hour => availability.set(hour, capacity));
-
-        const btStartCounts = new Map<number, number>();
-        workingHours.forEach(hour => btStartCounts.set(hour, 0));
-
-        dayAppointments.forEach(app => {
-            const { hour: startHour } = getSaoPauloTimeParts(app.appointmentTime);
-            const appDuration = app.service && SERVICES[app.service] ? SERVICES[app.service].duration : 1;
-            for (let h = startHour; h < startHour + Math.ceil(appDuration); h++) {
-                if (availability.has(h)) {
-                    availability.set(h, (availability.get(h) || 0) - 1);
-                }
-            }
-            if (SERVICES[app.service] && SERVICES[app.service].duration >= 2 && btStartCounts.has(startHour)) {
-                btStartCounts.set(startHour, (btStartCounts.get(startHour) || 0) + 1);
-            }
-        });
-
         const finalAvailability = new Map<number, boolean>();
-        workingHours.forEach(hour => {
-            let hasCapacity = true;
-            for (let i = 0; i < Math.ceil(duration); i++) {
-                const checkHour = hour + i;
-                if ((availability.get(checkHour) || 0) <= 0 || !workingHours.includes(checkHour)) {
-                    hasCapacity = false;
-                    break;
-                }
-            }
-            if (hasCapacity && selectedService === ServiceType.BATH_AND_GROOMING) {
-                if ((btStartCounts.get(hour) || 0) > 0) {
-                    hasCapacity = false;
-                }
-            }
-            finalAvailability.set(hour, hasCapacity);
-        });
-
+        workingHours.forEach(hour => finalAvailability.set(hour, true));
         return finalAvailability;
-    }, [selectedDate, selectedService, appointments, workingHours, isPetMovel]);
+    }, [workingHours]);
     
-    const now = new Date();
-    const todaySaoPaulo = getSaoPauloTimeParts(now);
-  
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {workingHours.map(hour => {
-          const isAvailable = getAvailability.get(hour) || false;
-          const isPastTime = isSameSaoPauloDay(selectedDate, now) && hour <= todaySaoPaulo.hour;
-          const isDisabled = !isAvailable || isPastTime;
+          const isDisabled = false;
           
           return (
             <button
@@ -8381,7 +8328,7 @@ const TimeSlotPicker: React.FC<{
               onClick={() => onTimeSelect(hour)}
             className={`p-5 rounded-lg text-center font-semibold transition-colors border-2
                 ${selectedTime === hour ? 'bg-pink-300 text-black border-pink-600' : ''}
-                ${isDisabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' : 'bg-white hover:bg-pink-50 border-gray-200'}
+                bg-white hover:bg-pink-50 border-gray-200
               `}
             >
               {`${hour}:00`}
