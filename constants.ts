@@ -75,10 +75,11 @@ export const ADDON_SERVICES: AddonService[] = [
 
 // Preços dos planos da creche
 export const DAYCARE_PLAN_PRICES: Record<string, number> = {
-  '2x_week': 200, // 2x por semana
-  '3x_week': 280, // 3x por semana
-  '4x_week': 350, // 4x por semana
-  '5x_week': 400, // 5x por semana
+  '4x_month': 300,
+  '8x_month': 520,
+  '12x_month': 660,
+  '16x_month': 720,
+  '20x_month': 800,
 };
 
 // Preços dos serviços extras da creche

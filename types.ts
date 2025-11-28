@@ -37,6 +37,8 @@ export interface Appointment {
   whatsapp: string;
   service: ServiceType;
   appointmentTime: Date;
+  monthly_client_id?: string;
+  condominium?: string;
 }
 
 export interface AdminAppointment {
@@ -111,7 +113,7 @@ export interface MonthlyClient {
 export interface DaycareRegistration {
     id?: string;
     created_at?: string;
-    enrollment_date: string;
+    enrollment_date?: string;
     pet_name: string;
     pet_breed: string;
     is_neutered: boolean | null;
@@ -137,7 +139,12 @@ export interface DaycareRegistration {
         items: string[];
         other: string;
     };
-    contracted_plan: '2x_week' | '3x_week' | '4x_week' | '5x_week' | null;
+    contracted_plan: string | null;
+    check_in_date?: string;
+    check_in_time?: string;
+    check_out_date?: string;
+    check_out_time?: string;
+    attendance_days?: number[];
     // Serviços extras
     extra_services?: {
         pernoite?: boolean;

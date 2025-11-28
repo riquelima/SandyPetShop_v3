@@ -18,8 +18,10 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
+    "@testsprite/testsprite-mcp": "^0.0.18",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "playwright": "^1.57.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }
