@@ -1492,13 +1492,13 @@ const MonthlyClientsStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => 
                 }
                 return total;
             };
-            const estimatedRevenue = (monthlyClients || []).reduce((sum, client: any) => sum + calculateMonthlyClientTotal(client), 0);
+            const estimatedRevenue = (monthlyClientsForMonth || []).reduce((sum, client: any) => sum + calculateMonthlyClientTotal(client), 0);
 
             const allCondos = ['Vitta Parque', 'Paseo', 'Max Haus', 'Nenhum Condomínio'];
             const condominiumStats: { [key: string]: { clients: number; appointments: number; revenue: number; members: { pet: string; owner: string }[] } } = {};
             allCondos.forEach(c => { condominiumStats[c] = { clients: 0, appointments: 0, revenue: 0, members: [] }; });
 
-            (monthlyClients || []).forEach((client: any) => {
+            (monthlyClientsForMonth || []).forEach((client: any) => {
                 const raw = client.condominium ? String(client.condominium).trim() : '';
                 const condo = raw || 'Nenhum Condomínio';
                 if (!condominiumStats[condo]) condominiumStats[condo] = { clients: 0, appointments: 0, revenue: 0, members: [] };
@@ -1508,7 +1508,7 @@ const MonthlyClientsStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => 
             });
 
             appointmentsForMonthClients.forEach((apt: any) => {
-                const client = (monthlyClients || []).find((c: any) => c.id === apt.monthly_client_id);
+                const client = (monthlyClientsForMonth || []).find((c: any) => c.id === apt.monthly_client_id);
                 const raw = client?.condominium ? String(client.condominium).trim() : '';
                 const condo = raw || 'Nenhum Condomínio';
                 if (!condominiumStats[condo]) condominiumStats[condo] = { clients: 0, appointments: 0, revenue: 0, members: [] };
