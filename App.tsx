@@ -6443,6 +6443,12 @@ const DaycareEnrollmentCard: React.FC<{
       '5x_week': '5x por Semana',
     };
 
+    const buildWhatsAppLink = (phone: string) => {
+        const digits = String(phone || '').replace(/\D/g, '');
+        const withCountry = digits ? (digits.startsWith('55') ? digits : `55${digits}`) : '';
+        return withCountry ? `https://wa.me/${withCountry}` : '#';
+    };
+
     // Calcular o valor total da fatura
     const invoiceTotal = calculateDaycareInvoiceTotal(enrollment);
 
@@ -6478,17 +6484,43 @@ const DaycareEnrollmentCard: React.FC<{
                     <div className="flex items-center justify-between text-base text-gray-700 mb-3">
                         <div className="flex items-center">
                             <TagIcon />
-                            <span className="font-semibold mr-2">Plano:</span> {contracted_plan ? planLabels[contracted_plan] : 'Não informado'}
+                            <span className="font-semibold mr-2">Plano contratado:</span> {contracted_plan ? planLabels[contracted_plan] : 'Não informado'}
                         </div>
                     </div>
                     <div className="space-y-2 text-sm">
                         <div className="flex items-center gap-2 text-gray-600">
                             <WhatsAppIcon />
-                            <span>{enrollment.contact_phone || 'Sem telefone'}</span>
+                            {enrollment.contact_phone ? (
+                                <a href={buildWhatsAppLink(enrollment.contact_phone)} target="_blank" rel="noopener noreferrer" className="text-green-700 hover:underline">
+                                    {enrollment.contact_phone}
+                                </a>
+                            ) : (
+                                <span>Sem telefone</span>
+                            )}
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
                             <CalendarIcon />
                             <span>Pagamento: {formatDateToBR(enrollment.payment_date || null)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-600">
+                            <img src="https://cdn-icons-png.flaticon.com/512/9576/9576046.png" alt="Entrada Icon" className="h-5 w-5" />
+                            <span>
+                                Entrada: {enrollment.check_in_date ? `${formatDateToBR(enrollment.check_in_date)} ${String(enrollment.check_in_time ?? '').split(':').slice(0,2).join(':')}` : 'Não informado'}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-600">
+                            <img src="https://cdn-icons-png.flaticon.com/512/9576/9576053.png" alt="Saída Icon" className="h-5 w-5" />
+                            <span>
+                                Saída: {enrollment.check_out_date ? `${formatDateToBR(enrollment.check_out_date)} ${String(enrollment.check_out_time ?? '').split(':').slice(0,2).join(':')}` : 'Não informado'}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-600">
+                            <CalendarIcon />
+                            <span>
+                                Dias da semana: {(enrollment.attendance_days && enrollment.attendance_days.length > 0) 
+                                    ? (enrollment.attendance_days as any[]).map((idx: number) => ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][idx]).join(', ') 
+                                    : 'Não informado'}
+                            </span>
                         </div>
                     </div>
                     
@@ -7606,6 +7638,7 @@ const HotelRegistrationForm: React.FC<{
                 check_in_status: 'pending',
                 checked_in_at: null,
                 checked_out_at: null,
+                payment_status: 'Pendente',
                 responsible_signature: formData.tutor_signature || '', // Usar tutor_signature como fallback
                 veterinarian: formData.veterinarian || ''
             };
@@ -9846,6 +9879,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
     const [isDeleting, setIsDeleting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [updatingId, setUpdatingId] = useState<string | null>(null);
+    const [paymentUpdatingId, setPaymentUpdatingId] = useState<string | null>(null);
     const [registrationToEdit, setRegistrationToEdit] = useState<HotelRegistration | null>(null);
     const [isHotelExtraServicesModalOpen, setIsHotelExtraServicesModalOpen] = useState(false);
     const [hotelRegistrationForExtraServices, setHotelRegistrationForExtraServices] = useState<HotelRegistration | null>(null);
@@ -9990,6 +10024,26 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
             }
         }
         setUpdatingId(null);
+    };
+
+    const handleTogglePaymentStatus = async (registration: HotelRegistration) => {
+        if (!registration.id) return;
+        setPaymentUpdatingId(registration.id);
+        const current = (registration.payment_status === 'Pago') ? 'Pago' : 'Pendente';
+        const next = current === 'Pago' ? 'Pendente' : 'Pago';
+        const { data, error } = await supabase
+            .from('hotel_registrations')
+            .update({ payment_status: next })
+            .eq('id', getDbId(registration.id))
+            .select()
+            .single();
+        if (!error) {
+            const updatedId = data && (data as any).id !== undefined ? String((data as any).id) : String(registration.id);
+            setRegistrations(prev => prev.map(r => String(r.id) === updatedId ? { ...r, payment_status: next } : r));
+        } else {
+            alert('Erro ao atualizar status de pagamento');
+        }
+        setPaymentUpdatingId(null);
     };
 
     const handleConfirmReject = async () => {
@@ -10345,7 +10399,25 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                             return <span className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap truncate ${b.bg} ${b.text}`}>{b.label}</span>;
                         })()}
                     </div>
-                    
+                    <div className="flex flex-col items-end gap-1">
+                        <span className="text-[10px] text-gray-500">Status do pagamento</span>
+                        {(() => {
+                            const current = (registration.payment_status === 'Pago') ? 'Pago' : 'Pendente';
+                            const cls = current === 'Pago'
+                                ? 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200'
+                                : 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200';
+                            return (
+                                <button
+                                    onClick={() => handleTogglePaymentStatus(registration)}
+                                    disabled={paymentUpdatingId === registration.id}
+                                    className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap truncate border ${cls}`}
+                                    title={current === 'Pago' ? 'Marcar como pendente' : 'Marcar como pago'}
+                                >
+                                    {paymentUpdatingId === registration.id ? 'Atualizando...' : current}
+                                </button>
+                            );
+                        })()}
+                    </div>
                 </div>
                 <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-3 text-gray-600">

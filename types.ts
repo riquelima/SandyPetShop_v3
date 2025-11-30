@@ -234,6 +234,7 @@ export interface HotelRegistration {
     checked_out_at?: string;
     check_in_status?: 'pending' | 'checked_in' | 'checked_out';
     approval_status?: 'Pendente' | 'Aprovado' | 'Rejeitado' | 'pendente' | 'aprovado' | 'rejeitado';
+    payment_status?: 'Pendente' | 'Pago';
     rejection_reason?: string | null;
     extra_services?: {
         pernoite: { enabled: boolean; value: number };
