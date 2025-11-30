@@ -285,6 +285,7 @@ const ChevronLeftIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="ht
 const ChevronRightIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>;
 const Collapsible: React.FC<{ title: string; defaultOpen?: boolean; className?: string }> = ({ title, defaultOpen = true, className, children }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
+
     return (
         <div className={className || ''}>
             <button type="button" onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center justify-between">
@@ -1414,6 +1415,15 @@ const MonthlyClientsStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => 
         const now = new Date();
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     });
+    const selectedMonthLabel = useMemo(() => {
+        const parts = selectedMonth.split('-');
+        const y = parts[0] || '';
+        const m = parts[1] || '';
+        return `${m}/${y}`;
+    }, [selectedMonth]);
+
+    const [expandedCondos, setExpandedCondos] = useState<Record<string, boolean>>({});
+    const toggleExpanded = (condo: string) => setExpandedCondos(prev => ({ ...prev, [condo]: !prev[condo] }));
 
     const fetchMonthlyClientsStatistics = useCallback(async () => {
         setLoading(true);
@@ -1459,46 +1469,66 @@ const MonthlyClientsStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => 
             const clientIdsForMonth = new Set(monthlyClientsForMonth.map((c: any) => c.id));
             const appointmentsForMonthClients = (appointments || []).filter(apt => clientIdsForMonth.has(apt.monthly_client_id));
 
-            // Calcular estatísticas com base nos mensalistas do mês
-            const totalClients = monthlyClientsForMonth.length;
-            const totalAppointments = appointmentsForMonthClients.length;
-            const completedAppointments = appointmentsForMonthClients.filter(apt => apt.status === 'CONCLUÍDO').length;
-            const pendingAppointments = appointmentsForMonthClients.filter(apt => apt.status === 'AGENDADO').length;
+            const totalClients = monthlyClients.length;
+            const totalAppointments = (appointments || []).length;
+            const completedAppointments = (appointments || []).filter(apt => apt.status === 'CONCLUÍDO').length;
+            const pendingAppointments = (appointments || []).filter(apt => apt.status === 'AGENDADO').length;
             
             // Calcular receita realizada (agendamentos concluídos)
             const realizedRevenue = appointmentsForMonthClients
                 .filter(apt => apt.status === 'CONCLUÍDO')
                 .reduce((sum, apt) => sum + (apt.price || 0), 0);
 
-            // Calcular receita estimada total do mês (soma do preço do pacote mensal por cliente ativo)
-            // Obs.: o campo `monthly_clients.price` representa o valor do pacote mensal (não por agendamento)
-            const estimatedRevenue = monthlyClientsForMonth.reduce((sum, client: any) => {
-                const clientMonthlyPackagePrice = Number(client.price) || 0;
-                return sum + clientMonthlyPackagePrice;
-            }, 0);
-
-            // Agrupar por condomínio
-            const condominiumStats: { [key: string]: { clients: number; appointments: number; revenue: number } } = {};
-            monthlyClientsForMonth.forEach((client: any) => {
-                const condo = client.condominium || 'Não especificado';
-                if (!condominiumStats[condo]) {
-                    condominiumStats[condo] = { clients: 0, appointments: 0, revenue: 0 };
+            const calculateMonthlyClientTotal = (client: any) => {
+                let total = Number(client.price || 0);
+                const ex: any = client.extra_services || {};
+                if (ex.pernoite?.enabled) total += Number(ex.pernoite.value || 0);
+                if (ex.banho_tosa?.enabled) total += Number(ex.banho_tosa.value || 0);
+                if (ex.so_banho?.enabled) total += Number(ex.so_banho.value || 0);
+                if (ex.adestrador?.enabled) total += Number(ex.adestrador.value || 0);
+                if (ex.despesa_medica?.enabled) total += Number(ex.despesa_medica.value || 0);
+                if ((ex.dias_extras?.quantity || 0) > 0) {
+                    total += Number(ex.dias_extras.quantity) * Number(ex.dias_extras.value || 0);
                 }
+                return total;
+            };
+            const estimatedRevenue = (monthlyClients || []).reduce((sum, client: any) => sum + calculateMonthlyClientTotal(client), 0);
+
+            const allCondos = ['Vitta Parque', 'Paseo', 'Max Haus', 'Nenhum Condomínio'];
+            const condominiumStats: { [key: string]: { clients: number; appointments: number; revenue: number; members: { pet: string; owner: string }[] } } = {};
+            allCondos.forEach(c => { condominiumStats[c] = { clients: 0, appointments: 0, revenue: 0, members: [] }; });
+
+            (monthlyClients || []).forEach((client: any) => {
+                const raw = client.condominium ? String(client.condominium).trim() : '';
+                const condo = raw || 'Nenhum Condomínio';
+                if (!condominiumStats[condo]) condominiumStats[condo] = { clients: 0, appointments: 0, revenue: 0, members: [] };
                 condominiumStats[condo].clients++;
-                
-                // Contar agendamentos deste cliente
-                const clientAppointments = appointmentsForMonthClients.filter(apt => apt.monthly_client_id === client.id);
-                condominiumStats[condo].appointments += clientAppointments.length;
-                condominiumStats[condo].revenue += clientAppointments
-                    .filter(apt => apt.status === 'CONCLUÍDO')
-                    .reduce((sum, apt) => sum + (apt.price || 0), 0);
+                condominiumStats[condo].revenue += calculateMonthlyClientTotal(client);
+                condominiumStats[condo].members.push({ pet: String(client.pet_name || ''), owner: String(client.owner_name || '') });
             });
 
-            // Agrupar por status de pagamento
+            appointmentsForMonthClients.forEach((apt: any) => {
+                const client = (monthlyClients || []).find((c: any) => c.id === apt.monthly_client_id);
+                const raw = client?.condominium ? String(client.condominium).trim() : '';
+                const condo = raw || 'Nenhum Condomínio';
+                if (!condominiumStats[condo]) condominiumStats[condo] = { clients: 0, appointments: 0, revenue: 0, members: [] };
+                condominiumStats[condo].appointments += 1;
+            });
+
+            const normalizePayment = (s: any) => {
+                const raw = String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                const clean = raw.replace(/[^a-z]/g, '');
+                if (clean.includes('pago') || clean.includes('paid') || clean.includes('ok') || clean.includes('confirm') || clean.includes('concluido')) return 'Pago';
+                if (clean.includes('pendente') || clean.includes('pending') || clean.includes('atrasado') || clean.includes('aberto')) return 'Pendente';
+                return 'Pendente';
+            };
             const paymentStats: { [key: string]: number } = {};
+            let paidCount = 0;
+            let pendingCount = 0;
             monthlyClientsForMonth.forEach((client: any) => {
-                const status = client.payment_status || 'Pendente';
-                paymentStats[status] = (paymentStats[status] || 0) + 1;
+                const canonical = normalizePayment(client.payment_status);
+                paymentStats[canonical] = (paymentStats[canonical] || 0) + 1;
+                if (canonical === 'Pago') paidCount++; else pendingCount++;
             });
 
             setStatistics({
@@ -1510,6 +1540,7 @@ const MonthlyClientsStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => 
                 estimatedRevenue,
                 condominiumStats,
                 paymentStats,
+                paymentSummary: { paid: paidCount, pending: pendingCount },
                 selectedMonth: `${month}/${year}`
             });
         } catch (error) {
@@ -1533,18 +1564,15 @@ const MonthlyClientsStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => 
                 <div className="sticky top-0 bg-white border-b border-gray-200 p-4 sm:p-6 rounded-t-xl sm:rounded-t-2xl">
                     <div className="flex justify-between items-center">
                         <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800">📊 Estatísticas dos Mensalistas</h2>
-                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-xl sm:text-2xl font-bold min-w-[44px] min-h-[44px] flex items-center justify-center">×</button>
-                    </div>
-                    
-                    {/* Seletor de Mês */}
-                    <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Selecionar Mês:</label>
-                        <input
-                            type="month"
-                            value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        />
+                        <div className="flex items-center gap-3">
+                            <MonthPicker 
+                                value={`${selectedMonth}-01`} 
+                                onChange={(v) => setSelectedMonth(v.slice(0, 7))} 
+                                placeholder="Selecione o mês"
+                                className="max-w-[240px]"
+                            />
+                            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-xl sm:text-2xl font-bold min-w-[44px] min-h-[44px] flex items-center justify-center">×</button>
+                        </div>
                     </div>
                 </div>
                 
@@ -1555,33 +1583,18 @@ const MonthlyClientsStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => 
                         </div>
                     ) : statistics ? (
                         <div className="space-y-6 sm:space-y-8">
-                            {/* Cards de Resumo */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                                    <h3 className="text-sm font-medium text-blue-600 mb-1">Total de Mensalistas</h3>
-                                    <p className="text-2xl font-bold text-blue-700">{statistics.totalClients}</p>
-                                </div>
-                                
-                                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                                    <h3 className="text-sm font-medium text-purple-600 mb-1">Agendamentos ({statistics.selectedMonth})</h3>
-                                    <p className="text-2xl font-bold text-purple-700">{statistics.totalAppointments}</p>
-                                    <p className="text-xs text-purple-600">
-                                        {statistics.completedAppointments} concluídos, {statistics.pendingAppointments} pendentes
-                                    </p>
-                                </div>
-                                
-                                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                                    <h3 className="text-sm font-medium text-green-600 mb-1">Receita Realizada</h3>
-                                    <p className="text-2xl font-bold text-green-700">
-                                        R$ {statistics.realizedRevenue.toFixed(2).replace('.', ',')}
-                                    </p>
-                                </div>
-                                
-                                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                                    <h3 className="text-sm font-medium text-yellow-600 mb-1">Receita Estimada</h3>
-                                    <p className="text-2xl font-bold text-yellow-700">
-                                        R$ {statistics.estimatedRevenue.toFixed(2).replace('.', ',')}
-                                    </p>
+                            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-4 sm:p-6">
+                                <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">📊 Resumo Geral</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
+                                    <div className="text-center">
+                                        <h3 className="text-sm font-medium text-blue-600 mb-1">Total Geral Mensalistas</h3>
+                                        <p className="text-2xl font-bold text-blue-700">{statistics.totalClients}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <h3 className="text-sm font-medium text-green-600 mb-1">Receita Estimada</h3>
+                                        <p className="text-2xl font-bold text-green-700">R$ {statistics.estimatedRevenue.toFixed(2).replace('.', ',')}</p>
+                                    </div>
+                                    
                                 </div>
                             </div>
 
@@ -1590,26 +1603,35 @@ const MonthlyClientsStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => 
                                 <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-gray-200">
                                     <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">📍 Por Condomínio</h3>
                                     <div className="space-y-3">
-                                        {Object.entries(statistics.condominiumStats).map(([condo, stats]: [string, any]) => (
-                                            <div key={condo} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+                                    {Object.entries(statistics.condominiumStats).map(([condo, stats]: [string, any]) => (
+                                        <div key={condo} className="bg-gray-50 rounded-lg">
+                                            <button type="button" onClick={() => toggleExpanded(condo)} className="w-full flex justify-between items-center p-3">
                                                 <div>
-                                                    <p className="font-semibold text-gray-800">{condo}</p>
-                                                    <p className="text-sm text-gray-600">
-                                                        {stats.clients} mensalistas • {stats.appointments} agendamentos
-                                                    </p>
+                                                    <p className="font-semibold text-gray-800">{condo === 'Nenhum Condomínio' ? 'Banho & Tosa Fixo' : condo}</p>
+                                                    <p className="text-sm text-gray-600">{stats.clients} mensalistas</p>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="font-bold text-green-600">
-                                                        R$ {stats.revenue.toFixed(2).replace('.', ',')}
-                                                    </p>
+                                                    <p className="font-bold text-green-600">R$ {stats.revenue.toFixed(2).replace('.', ',')}</p>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            </button>
+                                            {expandedCondos[condo] && (
+                                                <div className="px-3 pb-3">
+                                                    <ul className="bg-white border border-gray-200 rounded-lg divide-y">
+                                                        {stats.members.map((m: any, idx: number) => (
+                                                            <li key={idx} className="py-2 px-3 flex justify-between">
+                                                                <span className="text-gray-800 font-medium">{m.pet}</span>
+                                                                <span className="text-gray-600">{m.owner}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
                                     </div>
                                 </div>
                             )}
 
-                            {/* Status de Pagamento */}
                             {Object.keys(statistics.paymentStats).length > 0 && (
                                 <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-gray-200">
                                     <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">💳 Status de Pagamento</h3>
@@ -1729,6 +1751,17 @@ const DaycareStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }
 
     if (!isOpen) return null;
 
+    const translatePlan = (code: string) => {
+        if (planLabels[code]) return planLabels[code];
+        const m = code.match(/^(\d+)x_(month|week)$/);
+        if (m) {
+            const qty = m[1];
+            const unit = m[2] === 'month' ? 'MÊS' : 'SEMANA';
+            return `${qty} X ${unit}`;
+        }
+        return code.replace(/_/g, ' ').replace(/month/i, 'MÊS').replace(/week/i, 'SEMANA').toUpperCase();
+    };
+
     const DaycareStatCard: React.FC<{ title: string; data: { count: number; revenue: number; plans: { [key: string]: number } } }> = ({ title, data }) => (
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-gray-200">
             <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 border-b pb-2">{title}</h3>
@@ -1751,7 +1784,7 @@ const DaycareStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }
                         <div className="space-y-2">
                             {Object.entries(data.plans).map(([plan, count]) => (
                                 <div key={plan} className="flex justify-between items-center bg-gray-50 p-2 rounded">
-                                    <span className="text-gray-700">{plan.replace('_', 'x ').replace('week', ' por semana')}</span>
+                                    <span className="text-gray-700">{translatePlan(plan)}</span>
                                     <span className="font-semibold text-gray-900">{count}</span>
                                 </div>
                             ))}
@@ -1831,6 +1864,12 @@ const DaycareStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }
 const HotelStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({ isOpen, onClose }) => {
     const [statistics, setStatistics] = useState<any>(null);
     const [loading, setLoading] = useState(false);
+    const [selectedMonthValue, setSelectedMonthValue] = useState<string>(() => {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        return `${y}-${m}-01`;
+    });
 
     const fetchHotelStatistics = useCallback(async () => {
         setLoading(true);
@@ -1839,7 +1878,11 @@ const HotelStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> 
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const weekStart = new Date(today);
             weekStart.setDate(today.getDate() - today.getDay());
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const [selYearStr, selMonthStr] = selectedMonthValue.split('-');
+            const selYear = Number(selYearStr);
+            const selMonthIndex = Number(selMonthStr) - 1;
+            const monthStart = new Date(selYear, selMonthIndex, 1);
+            const nextMonthStart = new Date(selYear, selMonthIndex + 1, 1);
 
             // Buscar registros do hotel
             const { data: registrations, error } = await supabase
@@ -1855,7 +1898,7 @@ const HotelStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> 
             const stats = {
                 daily: { count: 0, revenue: 0, services: {} as { [key: string]: number } },
                 weekly: { count: 0, revenue: 0, services: {} as { [key: string]: number } },
-                monthly: { count: 0, revenue: 0, services: {} as { [key: string]: number } },
+                monthly: { count: 0, revenue: 0, services: {} as { [key: string]: number }, details: [] as { pet: string; tutor: string; total: number; extras: string[] }[] },
                 total: { 
                     checkedIn: 0, 
                     checkedOut: 0, 
@@ -1866,8 +1909,10 @@ const HotelStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> 
 
             registrations?.forEach(registration => {
                 const registrationDate = new Date(registration.created_at);
-                const price = registration.total_price || 0;
-                const isCheckedIn = registration.is_checked_in;
+                const price = calculateHotelInvoiceTotal(registration);
+                const isCheckedIn = String(registration.check_in_status || '').toLowerCase() === 'checked_in';
+                const normAppr = String(registration.approval_status || '').trim().toLowerCase();
+                const isApproved = normAppr === 'approved' || normAppr === 'aprovado';
 
                 // Criar data de fim do dia para comparação correta
                 const endOfToday = new Date(today);
@@ -1877,7 +1922,7 @@ const HotelStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> 
                 if (isCheckedIn) stats.total.checkedIn++;
                 else stats.total.checkedOut++;
 
-                stats.total.totalRevenue += price;
+                if (isApproved) stats.total.totalRevenue += price;
 
                 // Contar serviços extras
                 if (registration.extra_services) {
@@ -1931,21 +1976,53 @@ const HotelStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> 
                     }
                 }
 
-                // Estatísticas mensais - registros deste mês
-                if (registrationDate >= monthStart) {
+                const isInApprovedSection = isApproved 
+                    && String(registration.check_in_status || '') !== 'checked_in' 
+                    && String(registration.check_in_status || '') !== 'checked_out'
+                    && String(registration.status || '') !== 'Concluído';
+                const checkInDateRaw = registration.check_in_date;
+                let checkInDate: Date | null = null;
+                if (checkInDateRaw) {
+                    const parts = String(checkInDateRaw).split('-');
+                    if (parts.length >= 3) {
+                        const y = Number(parts[0]);
+                        const m = Number(parts[1]);
+                        const d = Number(parts[2]);
+                        checkInDate = new Date(y, m - 1, d);
+                    } else {
+                        const parsed = new Date(checkInDateRaw);
+                        if (!isNaN(parsed.getTime())) checkInDate = parsed; 
+                    }
+                }
+                if (checkInDate && checkInDate >= monthStart && checkInDate < nextMonthStart && isInApprovedSection) {
                     stats.monthly.count++;
                     stats.monthly.revenue += price;
-                    
+                    const extrasList: string[] = [];
+                    const esAny: any = registration.extra_services || {};
+                    if (esAny.banho_tosa?.enabled || esAny.banho_tosa === true) extrasList.push('Banho & Tosa');
+                    if (esAny.so_banho?.enabled || esAny.so_banho === true) extrasList.push('Só banho');
+                    if (esAny.adestrador?.enabled || esAny.adestrador === true) extrasList.push('Adestrador');
+                    if (esAny.despesa_medica?.enabled || esAny.despesa_medica === true) extrasList.push('Despesa médica');
+                    if (esAny.pernoite?.enabled || esAny.pernoite === true) extrasList.push('Pernoite');
+                    const dx = esAny.dias_extras;
+                    if (dx && ((typeof dx === 'object' && Number(dx.quantity) > 0) || dx === true)) extrasList.push('Dias extras');
+                    stats.monthly.details.push({ pet: registration.pet_name, tutor: registration.tutor_name, total: price, extras: extrasList });
                     if (registration.extra_services) {
-                        const services = registration.extra_services;
-                        if (services.banho_tosa) {
-                            stats.monthly.services['Banho e Tosa'] = (stats.monthly.services['Banho e Tosa'] || 0) + 1;
+                        const es: any = registration.extra_services;
+                        if (es.banho_tosa?.enabled || es.banho_tosa === true) {
+                            stats.monthly.services['Banho & Tosa'] = (stats.monthly.services['Banho & Tosa'] || 0) + 1;
                         }
-                        if (services.transporte) {
-                            stats.monthly.services['Transporte'] = (stats.monthly.services['Transporte'] || 0) + 1;
+                        if (es.so_banho?.enabled || es.so_banho === true) {
+                            stats.monthly.services['Só banho'] = (stats.monthly.services['Só banho'] || 0) + 1;
                         }
-                        if (services.veterinario) {
-                            stats.monthly.services['Veterinário'] = (stats.monthly.services['Veterinário'] || 0) + 1;
+                        if (es.adestrador?.enabled || es.adestrador === true) {
+                            stats.monthly.services['Adestrador'] = (stats.monthly.services['Adestrador'] || 0) + 1;
+                        }
+                        if (es.despesa_medica?.enabled || es.despesa_medica === true) {
+                            stats.monthly.services['Despesa médica'] = (stats.monthly.services['Despesa médica'] || 0) + 1;
+                        }
+                        if (es.pernoite?.enabled || es.pernoite === true) {
+                            stats.monthly.services['Pernoite'] = (stats.monthly.services['Pernoite'] || 0) + 1;
                         }
                     }
                 }
@@ -1957,7 +2034,7 @@ const HotelStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> 
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [selectedMonthValue]);
 
     useEffect(() => {
         if (isOpen) {
@@ -1967,22 +2044,37 @@ const HotelStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> 
 
     if (!isOpen) return null;
 
-    const HotelStatCard: React.FC<{ title: string; data: { count: number; revenue: number; services: { [key: string]: number } } }> = ({ title, data }) => (
+    const HotelStatCard: React.FC<{ title: string; data: { count: number; revenue: number; services: { [key: string]: number }; details?: { pet: string; tutor: string; total: number; extras: string[] }[] } }> = ({ title, data }) => (
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-gray-200">
-            <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 border-b pb-2">{title}</h3>
+            <div className="mb-3 sm:mb-4 border-b pb-2">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-800">{title}</h3>
+            </div>
             <div className="space-y-3 sm:space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    <div className="bg-blue-50 p-3 sm:p-4 rounded-lg">
-                        <p className="text-xs sm:text-sm text-gray-600">Total de Hospedagens</p>
-                        <p className="text-xl sm:text-2xl font-bold text-blue-600">{data.count}</p>
+                {data.details && data.details.length > 0 ? (
+                    <div className="space-y-2">
+                        {data.details.map((item, idx) => (
+                            <div key={idx} className="flex items-start justify-between bg-gray-50 p-3 rounded">
+                                <div>
+                                    <p className="font-semibold text-gray-800">{item.pet}</p>
+                                    <p className="text-xs text-gray-600">Tutor: {item.tutor}</p>
+                                    {item.extras.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {item.extras.map((ex, i) => (
+                                                <span key={i} className="px-2 py-1 text-xs rounded-full bg-pink-100 text-pink-700">{ex}</span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-sm text-gray-600">Valor Total</p>
+                                    <p className="text-lg font-bold text-gray-900">R$ {item.total.toFixed(2).replace('.', ',')}</p>
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                    <div className="bg-green-50 p-3 sm:p-4 rounded-lg">
-                        <p className="text-xs sm:text-sm text-gray-600">Receita Total</p>
-                        <p className="text-lg sm:text-2xl font-bold text-green-600 whitespace-nowrap overflow-hidden text-ellipsis">
-                            R$ {data.revenue.toFixed(2).replace('.', ',')}
-                        </p>
-                    </div>
-                </div>
+                ) : (
+                    <div className="text-center py-8 text-gray-500">Sem pets com check-in neste mês.</div>
+                )}
                 {Object.keys(data.services).length > 0 && (
                     <div>
                         <h4 className="font-semibold text-gray-700 mb-2">Serviços Extras:</h4>
@@ -2006,7 +2098,15 @@ const HotelStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> 
                 <div className="sticky top-0 bg-white border-b border-gray-200 p-4 sm:p-6 rounded-t-xl sm:rounded-t-2xl">
                     <div className="flex justify-between items-center">
                         <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800">🏨 Estatísticas do Hotel Pet</h2>
-                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-xl sm:text-2xl font-bold min-w-[44px] min-h-[44px] flex items-center justify-center">×</button>
+                        <div className="flex items-center gap-3">
+                            <MonthPicker 
+                                value={selectedMonthValue} 
+                                onChange={setSelectedMonthValue} 
+                                placeholder="Selecione o mês"
+                                className="max-w-[240px]"
+                            />
+                            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-xl sm:text-2xl font-bold min-w-[44px] min-h-[44px] flex items-center justify-center">×</button>
+                        </div>
                     </div>
                 </div>
                 
@@ -2020,27 +2120,23 @@ const HotelStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> 
                             {/* Estatísticas Gerais */}
                             <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-4 sm:p-6">
                                 <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">📊 Resumo Geral</h3>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-3 gap-4">
                                     <div className="text-center">
                                         <p className="text-2xl font-bold text-green-600">{statistics.total.checkedIn}</p>
                                         <p className="text-sm text-gray-600">Check-ins Ativos</p>
                                     </div>
                                     <div className="text-center">
-                                        <p className="text-2xl font-bold text-blue-600">{statistics.total.checkedOut}</p>
-                                        <p className="text-sm text-gray-600">Check-outs</p>
+                                        <p className="text-2xl font-bold text-blue-600">{statistics.monthly.count}</p>
+                                        <p className="text-sm text-gray-600">Total de Hospedagens</p>
                                     </div>
                                     <div className="text-center">
-                                        <p className="text-lg sm:text-xl font-bold text-green-600 whitespace-nowrap overflow-hidden text-ellipsis">
-                                            R$ {statistics.total.totalRevenue.toFixed(2).replace('.', ',')}
-                                        </p>
+                                        <p className="text-lg sm:text-xl font-bold text-green-600 whitespace-nowrap overflow-hidden text-ellipsis">R$ {statistics.monthly.revenue.toFixed(2).replace('.', ',')}</p>
                                         <p className="text-sm text-gray-600">Receita Total</p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                                <HotelStatCard title="📅 Hoje" data={statistics.daily} />
-                                <HotelStatCard title="📊 Esta Semana" data={statistics.weekly} />
+                            <div className="grid grid-cols-1 gap-4 sm:gap-6">
                                 <HotelStatCard title="📈 Este Mês" data={statistics.monthly} />
                             </div>
                             
@@ -3366,7 +3462,138 @@ const DatePicker: React.FC<{
     );
 };
 
-    
+const MonthPicker: React.FC<{
+    value: string;
+    onChange: (value: string) => void;
+    label?: string;
+    placeholder?: string;
+    className?: string;
+}> = ({ value, onChange, label, placeholder = "Selecione o mês", className = "" }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const inputRef = useRef<HTMLDivElement | null>(null);
+    const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+    const initialDate = (() => {
+        if (value) {
+            const [year, month] = value.split('-').map(Number);
+            return new Date(year, month - 1, 1);
+        }
+        return new Date();
+    })();
+    const [displayYear, setDisplayYear] = useState(initialDate.getFullYear());
+    const [selectedMonth, setSelectedMonth] = useState(initialDate.getMonth());
+
+    useEffect(() => {
+        if (value) {
+            const [year, month] = value.split('-').map(Number);
+            setDisplayYear(year);
+            setSelectedMonth(month - 1);
+        }
+    }, [value]);
+
+    useEffect(() => {
+        const updatePosition = () => {
+            if (!inputRef.current) return;
+            const rect = inputRef.current.getBoundingClientRect();
+            setDropdownPos({ top: rect.bottom + 8, left: rect.left + rect.width / 2 });
+        };
+        if (isOpen) {
+            updatePosition();
+            const handler = () => updatePosition();
+            window.addEventListener('resize', handler);
+            window.addEventListener('scroll', handler, true);
+            return () => {
+                window.removeEventListener('resize', handler);
+                window.removeEventListener('scroll', handler, true);
+            };
+        }
+    }, [isOpen]);
+
+    const monthNames = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
+    const handleSelectMonth = (monthIndex: number) => {
+        const y = displayYear;
+        const m = String(monthIndex + 1).padStart(2, '0');
+        const newVal = `${y}-${m}-01`;
+        setSelectedMonth(monthIndex);
+        onChange(newVal);
+        setIsOpen(false);
+    };
+
+    const formattedValue = (() => {
+        if (!value) return '';
+        const [y, m] = value.split('-');
+        const idx = Number(m) - 1;
+        const name = monthNames[idx];
+        return `${name} de ${y}`;
+    })();
+
+    return (
+        <div className="relative">
+            {label && (
+                <label className="block text-base font-semibold text-gray-700 mb-1">{label}</label>
+            )}
+            <div className="relative" ref={inputRef}>
+                <input
+                    type="text"
+                    value={formattedValue}
+                    placeholder={placeholder}
+                    readOnly
+                    onClick={() => setIsOpen(!isOpen)}
+                    className={`w-full px-5 py-4 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-colors ${className}`}
+                />
+            </div>
+            {isOpen && createPortal(
+                <div
+                    className="bg-white border border-gray-200 rounded-lg shadow-xl p-4 min-w-[320px] max-w-[90vw]"
+                    style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, transform: 'translateX(-50%)', zIndex: 10001 }}
+                >
+                    <div className="w-full max-w-full sm:max-w-sm mx-auto">
+                        <div className="flex justify-between items-center mb-4 px-2">
+                            <button type="button" className="p-2 rounded-full hover:bg-gray-100" onClick={() => setDisplayYear(displayYear - 1)}>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                            </button>
+                            <h3 className="font-semibold text-lg capitalize">{displayYear}</h3>
+                            <button type="button" className="p-2 rounded-full hover:bg-gray-100" onClick={() => setDisplayYear(displayYear + 1)}>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 place-items-center">
+                            {monthNames.map((name, idx) => (
+                                <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => handleSelectMonth(idx)}
+                                    className={`px-3 py-2 rounded-full text-center transition-colors flex items-center justify-center ${selectedMonth === idx ? 'bg-pink-300 text-black font-bold border border-pink-600' : 'hover:bg-pink-100 text-gray-700'}`}
+                                >
+                                    {name.charAt(0).toUpperCase() + name.slice(1)}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="flex justify-between mt-4 pt-3 border-t">
+                        <button type="button" className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800" onClick={() => setIsOpen(false)}>Cancelar</button>
+                        <button
+                            type="button"
+                            className="px-4 py-2 text-sm bg-pink-600 text-white rounded hover:bg-pink-700"
+                            onClick={() => {
+                                const d = new Date();
+                                setDisplayYear(d.getFullYear());
+                                handleSelectMonth(d.getMonth());
+                            }}
+                        >
+                            Este mês
+                        </button>
+                    </div>
+                </div>,
+                document.body
+            )}
+            {isOpen && createPortal(
+                <div className="fixed inset-0 z-[9998] bg-black bg-opacity-10" onClick={() => setIsOpen(false)} />, document.body
+            )}
+        </div>
+    );
+};
+
 // --- ADMIN DASHBOARD VIEWS ---
 
 interface AppointmentsViewProps {
@@ -3988,6 +4215,8 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
 
     const groupedClients = useMemo(() => {
         const groups: Record<string, Record<string, MonthlyClient[]>> = {};
+        const ALL_CONDOS = ['Vitta Parque', 'Paseo', 'Max Haus', 'Nenhum Condomínio'];
+        ALL_CONDOS.forEach(c => { groups[c] = {}; });
         const extractNumber = (address: string | null) => address ? `Apto/Casa ${address.match(/\d+/)?.[0] || address}` : 'Endereço não informado';
         
         // Filtrar clientes baseado no termo de busca
@@ -4163,7 +4392,14 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                 </div>
             ) : (
                 <div className="space-y-6">
-                    {Object.entries(groupedClients).map(([condo, clients]) => (
+                    {Object.entries(groupedClients)
+                        .sort(([a], [b]) => {
+                            const pa = a === 'Nenhum Condomínio' ? 0 : 1;
+                            const pb = b === 'Nenhum Condomínio' ? 0 : 1;
+                            if (pa !== pb) return pa - pb;
+                            return a.localeCompare(b);
+                        })
+                        .map(([condo, clients]) => (
                         <div key={condo} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
                             <button 
                                 onClick={() => toggleCondo(condo)} 
@@ -5918,7 +6154,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                             >
                                 <option value="">Todos os condomínios</option>
                                 {Array.from(new Set(monthlyClients.map(client => client.condominium))).sort().map(condo => (
-                                    <option key={condo} value={condo}>{condo}</option>
+                                    <option key={condo} value={condo}>{condo === 'Nenhum Condomínio' ? 'Banho & Tosa Fixo' : condo}</option>
                                 ))}
                             </select>
                         </div>
