@@ -2,6 +2,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { ToastProvider } from '@/src/components/ui/toast';
 import MobileUiDemo from '@/src/pages/MobileUiDemo';
 
 // Proactively remove any existing service workers to avoid stale caches in preview/dev
@@ -34,6 +35,8 @@ const root = ReactDOM.createRoot(rootElement);
 const useMobileDemo = window.location.hash === '#mobile-ui-demo'
 root.render(
   <React.StrictMode>
-    {useMobileDemo ? <MobileUiDemo /> : <App />}
+    <ToastProvider>
+      {useMobileDemo ? <MobileUiDemo /> : <App />}
+    </ToastProvider>
   </React.StrictMode>
 );

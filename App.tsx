@@ -10,6 +10,7 @@ import NotificationBell from './NotificationBell';
 import ExtraServicesModal from './ExtraServicesModal';
 import ActionChooserModal from './src/ActionChooserModal';
 import { Menu, MenuItem } from './src/components/ui/menu';
+import { Button } from './src/components/ui/button';
 
 
 const planLabels: Record<string, string> = {
@@ -72,11 +73,15 @@ const isSaoPauloWeekend = (date: Date): boolean => {
 };
 
 const formatWhatsapp = (value: string): string => {
-  return value
-    .replace(/\D/g, '')
+  let digits = value.replace(/\D/g, '');
+  if (digits.startsWith('55')) {
+    digits = digits.slice(2);
+  }
+  digits = digits.slice(0, 11);
+  const formatted = digits
     .replace(/^(\d{2})(\d)/, '($1) $2')
-    .replace(/(\d{5})(\d)/, '$1-$2')
-    .slice(0, 15);
+    .replace(/(\d{5})(\d)/, '$1-$2');
+  return formatted.slice(0, 15);
 };
 
 const formatDateToBR = (dateString: string | null): string => {
@@ -94,6 +99,57 @@ const formatDateToISO = (dateString: string | null): string => {
     // Handles both date (YYYY-MM-DD) and datetime (YYYY-MM-DDTHH:mm:ss.sssZ) strings
     const datePart = dateString.split('T')[0];
     return datePart;
+};
+
+const getCurrentMonthPaymentDueDate = (): string => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    let day = 30;
+    if (month === 1) {
+        day = new Date(year, 2, 0).getDate();
+    } else {
+        day = 30;
+    }
+    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+};
+
+const getWeightKeyFromLabel = (label: string | null): PetWeight | null => {
+    if (!label) return null;
+    const keys = Object.keys(PET_WEIGHT_OPTIONS) as PetWeight[];
+    return keys.find(k => PET_WEIGHT_OPTIONS[k] === label) || null;
+};
+
+const inferServiceTypeFromLabel = (label: string | null): ServiceType | null => {
+    if (!label) return null;
+    const l = label.toLowerCase();
+    const isPetMovel = l.includes('pet móvel');
+    const hasBathTosa = l.includes('banho & tosa') || l.includes('banho e tosa');
+    const hasBath = l.includes('banho');
+    const hasTosa = l.includes('tosa');
+    if (isPetMovel && hasBathTosa) return ServiceType.PET_MOBILE_BATH_AND_GROOMING;
+    if (isPetMovel && hasBath && !hasBathTosa) return ServiceType.PET_MOBILE_BATH;
+    if (isPetMovel && hasTosa && !hasBathTosa) return ServiceType.PET_MOBILE_GROOMING_ONLY;
+    if (hasBathTosa) return ServiceType.BATH_AND_GROOMING;
+    if (hasBath && !hasBathTosa) return ServiceType.BATH;
+    if (hasTosa && !hasBathTosa) return ServiceType.GROOMING_ONLY;
+    return null;
+};
+
+const getUnitPriceByType = (weightKey: PetWeight | null | undefined, type: ServiceType | null | undefined): number => {
+    if (!weightKey || !type) return 0;
+    const prices = SERVICE_PRICES[weightKey];
+    if (!prices) return 0;
+    if (type === ServiceType.BATH_AND_GROOMING || type === ServiceType.PET_MOBILE_BATH_AND_GROOMING) {
+        return Number(prices[ServiceType.BATH]) + Number(prices[ServiceType.GROOMING_ONLY]);
+    }
+    if (type === ServiceType.BATH || type === ServiceType.PET_MOBILE_BATH) {
+        return Number(prices[ServiceType.BATH]);
+    }
+    if (type === ServiceType.GROOMING_ONLY || type === ServiceType.PET_MOBILE_GROOMING_ONLY) {
+        return Number(prices[ServiceType.GROOMING_ONLY]);
+    }
+    return 0;
 };
 
 const formatCurrency = (value: string | number): string => {
@@ -325,6 +381,11 @@ const SignaturePad: React.FC<{ value?: string; onChange: (dataUrl: string) => vo
         const rect = canvas.getBoundingClientRect();
         return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     };
+    const getTouchPos = (e: TouchEvent, canvas: HTMLCanvasElement) => {
+        const rect = canvas.getBoundingClientRect();
+        const t = e.touches[0] || e.changedTouches[0];
+        return t ? { x: t.clientX - rect.left, y: t.clientY - rect.top } : null;
+    };
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -359,11 +420,44 @@ const SignaturePad: React.FC<{ value?: string; onChange: (dataUrl: string) => vo
         canvas.addEventListener('pointermove', handleMove);
         canvas.addEventListener('pointerup', handleUp);
         canvas.addEventListener('pointerleave', handleUp);
+        const handleTouchStart = (e: TouchEvent) => {
+            e.preventDefault();
+            isDrawingRef.current = true;
+            const p = getTouchPos(e, canvas);
+            lastPosRef.current = p || null;
+        };
+        const handleTouchMove = (e: TouchEvent) => {
+            e.preventDefault();
+            if (!isDrawingRef.current) return;
+            const p = getTouchPos(e, canvas);
+            if (!p || !lastPosRef.current) return;
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+            lastPosRef.current = p;
+        };
+        const handleTouchEnd = (e: TouchEvent) => {
+            e.preventDefault();
+            if (!isDrawingRef.current) return;
+            isDrawingRef.current = false;
+            lastPosRef.current = null;
+            onChange(canvas.toDataURL('image/png'));
+        };
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
         return () => {
             canvas.removeEventListener('pointerdown', handleDown);
             canvas.removeEventListener('pointermove', handleMove);
             canvas.removeEventListener('pointerup', handleUp);
             canvas.removeEventListener('pointerleave', handleUp);
+            canvas.removeEventListener('touchstart', handleTouchStart);
+            canvas.removeEventListener('touchmove', handleTouchMove);
+            canvas.removeEventListener('touchend', handleTouchEnd);
         };
     }, [onChange]);
 
@@ -381,7 +475,7 @@ const SignaturePad: React.FC<{ value?: string; onChange: (dataUrl: string) => vo
     return (
         <div className="space-y-2">
             <div className="border-2 border-gray-300 rounded-md bg-white">
-                <canvas ref={canvasRef} className="w-full touch-manipulation" />
+                <canvas ref={canvasRef} className="w-full" style={{ touchAction: 'none' }} />
             </div>
             <div className="flex items-center gap-2">
                 <button type="button" onClick={handleClear} className="px-3 py-2 rounded-md border bg-gray-100 hover:bg-gray-200 text-gray-700">Limpar</button>
@@ -392,7 +486,7 @@ const SignaturePad: React.FC<{ value?: string; onChange: (dataUrl: string) => vo
 };
 const PawIcon = () => <img src="https://static.thenounproject.com/png/pet-icon-6939415-512.png" alt="Pet Icon" className="h-7 w-7 opacity-60" />;
 const UserIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/10754/10754012.png" alt="User Icon" className="h-7 w-7 opacity-60" />;
-const WhatsAppIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/15713/15713434.png" alt="WhatsApp Icon" className="h-7 w-7 opacity-60" />;
+const WhatsAppIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/15713/15713434.png" alt="WhatsApp Icon" className="h-5 w-5 opacity-60" />;
 const SuccessIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="min-h-[64px] w-24 text-green-500 mx-auto mb-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>;
 const ChartBarIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>;
 const FunnelIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M3 4.5A1.5 1.5 0 014.5 3h15a1.5 1.5 0 011.2 2.4l-6.3 8.4v4.2a1.5 1.5 0 01-.9 1.37l-3 1.5A1.5 1.5 0 018 19.5v-5.7L1.3 5.4A1.5 1.5 0 013 4.5z"/></svg>;
@@ -401,26 +495,46 @@ const AddressIcon = () => <img src="https://static.thenounproject.com/png/locati
 const LogoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V5h10a1 1 0 100-2H3zm12.293 4.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L16.586 13H9a1 1 0 110-2h7.586l-1.293-1.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>;
 const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" /></svg>;
 const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 10.586V6z" clipRule="evenodd" /></svg>;
-const TagIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor"><path d="M5.5 16a3.5 3.5 0 01-3.5-3.5V5.5A3.5 3.5 0 015.5 2h5.086a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V12.5A3.5 3.5 0 0112.5 16h-7zM10 9a1 1 0 100-2 1 1 0 000 2z" /></svg>;
-const CheckCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>;
+const CameraAddIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" {...props}>
+    <rect x="3" y="6" width="18" height="13" rx="3" fill="currentColor" />
+    <rect x="8" y="3" width="4" height="3" rx="1" fill="currentColor" />
+    <circle cx="12" cy="12.5" r="5" fill="#ffffff" />
+    <circle cx="12" cy="12.5" r="2.6" fill="currentColor" />
+  </svg>
+);
+const TagIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/13733/13733507.png" alt="Tag" className="h-5 w-5 mr-1.5" />;
+const CheckCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>;
 const LoadingSpinner = () => <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600"></div>;
 const ListIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" /></svg>;
 const UserPlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 11a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1v-1z" /></svg>;
-const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>;
+const EditIcon: React.FC<{ className?: string }> = ({ className = 'h-5 w-5' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>
+);
 const ObservationIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 11-2 0V4H6v12a1 1 0 11-2 0V4zm4 12a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>;
-const DeleteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg>;
+const DeleteIcon: React.FC<{ className?: string }> = ({ className = 'h-5 w-5' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg>
+);
 const MenuIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>;
 const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
 const ErrorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const SuccessAlertIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 
-// FIX: Added the missing CalendarIcon component.
-const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" /></svg>;
+// FIX: CalendarIcon uses requested PNG asset instead of inline SVG
+const CalendarIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <img src="https://cdn-icons-png.flaticon.com/512/10755/10755360.png" alt="Calendário" className={className || 'h-5 w-5'} />
+);
 const LockClosedIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>;
 const LockOpenIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>;
 
 // --- NEW ADMIN MENU ICONS ---
 const BathTosaIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/13702/13702805.png" alt="Banho & Tosa Icon" className="h-7 w-7" />;
+const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="M6 9l6 6 6-6" />
+    </svg>
+);
+// ChevronRightIcon já está definido acima; evitando redefinição
 const DaycareIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/14257/14257709.png" alt="Creche Pet Icon" className="h-7 w-7" />;
 const ClientsMenuIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/1077/1077063.png" alt="Clientes Icon" className="h-7 w-7" />;
 const MonthlyIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/14242/14242317.png" alt="Mensalistas Icon" className="h-7 w-7" />;
@@ -929,36 +1043,37 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
             if (recurrence.type === 'weekly' || recurrence.type === 'bi-weekly') {
                 let firstDate = new Date(serviceStartDateObj);
                 const startDateSaoPaulo = getSaoPauloTimeParts(firstDate);
-                // JS getDay(): Sun=0, Mon=1... Sat=6. Our day picker: Mon=1... Fri=5
-                let firstDateDayOfWeek = startDateSaoPaulo.day;
-                if (firstDateDayOfWeek === 0) firstDateDayOfWeek = 7; // Convert Sunday to 7 to be after Saturday
-
+                let firstDateDayOfWeek = startDateSaoPaulo.day === 0 ? 7 : startDateSaoPaulo.day;
                 let daysToAdd = (recurrenceDay - firstDateDayOfWeek + 7) % 7;
-                // If the service start date is the same day as recurrence day, start from that day
-                if (daysToAdd === 0) {
-                    daysToAdd = 0; // Start from the service start date itself
-                }
                 firstDate.setDate(firstDate.getDate() + daysToAdd);
 
-                const appointmentsToGenerate = recurrence.type === 'weekly' ? 4 : 2;
                 const intervalDays = recurrence.type === 'weekly' ? 7 : 15;
+                const endLimit = new Date(Date.UTC(2026, 11, 31, 23, 59, 59));
 
-                for (let i = 0; i < appointmentsToGenerate; i++) {
-                    const targetDate = new Date(firstDate);
-                    targetDate.setDate(targetDate.getDate() + (i * intervalDays));
-                    const appointmentTime = toSaoPauloUTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), recurrenceTime);
+                let cursor = new Date(firstDate);
+                while (cursor <= endLimit) {
+                    const appointmentTime = toSaoPauloUTC(cursor.getFullYear(), cursor.getMonth(), cursor.getDate(), recurrenceTime);
                     appointmentsToCreate.push({ appointment_time: appointmentTime.toISOString() });
+                    cursor.setDate(cursor.getDate() + intervalDays);
                 }
-            } else { // monthly
-                let targetDate = new Date(serviceStartDateObj);
-                targetDate.setDate(recurrenceDay);
-                
-                // If the target day is before the service start date, move to next month
-                if (targetDate < serviceStartDateObj) {
-                    targetDate.setMonth(targetDate.getMonth() + 1);
+            } else {
+                const endLimit = new Date(Date.UTC(2026, 11, 31, 23, 59, 59));
+                let cursor = new Date(serviceStartDateObj);
+                const year = cursor.getFullYear();
+                const month = cursor.getMonth();
+                const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+                const targetDay = Math.min(recurrenceDay, lastDayOfMonth);
+                cursor.setDate(targetDay);
+                if (cursor < serviceStartDateObj) cursor.setMonth(cursor.getMonth() + 1);
+                while (cursor <= endLimit) {
+                    const y = cursor.getFullYear();
+                    const m = cursor.getMonth();
+                    const ldm = new Date(y, m + 1, 0).getDate();
+                    const day = Math.min(recurrenceDay, ldm);
+                    const appointmentTime = toSaoPauloUTC(y, m, day, recurrenceTime);
+                    appointmentsToCreate.push({ appointment_time: appointmentTime.toISOString() });
+                    cursor.setMonth(cursor.getMonth() + 1);
                 }
-                const appointmentTime = toSaoPauloUTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), recurrenceTime);
-                appointmentsToCreate.push({ appointment_time: appointmentTime.toISOString() });
             }
 
             // No conflict checking - all appointments are allowed
@@ -989,13 +1104,23 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
 
             if (clientError || !newClient) throw new Error(clientError?.message || "Falha ao criar o cadastro do mensalista.");
 
+            const primaryServiceOrder: ServiceType[] = [
+                ServiceType.BATH_AND_GROOMING,
+                ServiceType.BATH,
+                ServiceType.GROOMING_ONLY,
+                ServiceType.PET_MOBILE_BATH_AND_GROOMING,
+                ServiceType.PET_MOBILE_BATH,
+                ServiceType.PET_MOBILE_GROOMING_ONLY
+            ];
+            const primaryType = primaryServiceOrder.find(s => Number(serviceQuantities[s] || 0) > 0) || null;
+            const unitPrice = getUnitPriceByType(selectedWeight!, primaryType || null) || finalPrice;
             const supabasePayloads = appointmentsToCreate.map(app => ({
                 owner_name: formData.ownerName,
                 pet_name: formData.petName,
                 service: serviceString,
                 appointment_time: app.appointment_time,
                 status: 'AGENDADO',
-                price: appointmentsToCreate.length > 0 ? finalPrice / appointmentsToCreate.length : finalPrice,
+                price: unitPrice,
                 whatsapp: formData.whatsapp,
                 pet_breed: formData.petBreed,
                 owner_address: formData.ownerAddress,
@@ -1020,7 +1145,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                         service: serviceString,
                         appointment_time: app.appointment_time,
                         status: 'AGENDADO',
-                        price: appointmentsToCreate.length > 0 ? finalPrice / appointmentsToCreate.length : finalPrice,
+                        price: unitPrice,
                         whatsapp: formData.whatsapp,
                         owner_address: formData.ownerAddress,
                         condominium: formData.condominium,
@@ -1661,6 +1786,7 @@ const MonthlyClientsStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => 
 const DaycareStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({ isOpen, onClose }) => {
     const [statistics, setStatistics] = useState<any>(null);
     const [loading, setLoading] = useState(false);
+    const [showApproved, setShowApproved] = useState(true);
 
     const fetchDaycareStatistics = useCallback(async () => {
         setLoading(true);
@@ -1683,17 +1809,19 @@ const DaycareStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }
             }
 
             const stats = {
-                daily: { count: 0, revenue: 0, plans: {} as { [key: string]: number } },
-                weekly: { count: 0, revenue: 0, plans: {} as { [key: string]: number } },
-                monthly: { count: 0, revenue: 0, plans: {} as { [key: string]: number } },
+                daily: { count: 0, revenue: 0, plans: {} as { [key: string]: number }, items: [] as { pet_name: string; plan: string }[] },
+                weekly: { count: 0, revenue: 0, plans: {} as { [key: string]: number }, items: [] as { pet_name: string; plan: string }[] },
+                monthly: { count: 0, revenue: 0, plans: {} as { [key: string]: number }, items: [] as { pet_name: string; plan: string }[] },
                 total: { 
                     approved: 0, 
                     pending: 0, 
                     rejected: 0,
                     totalRevenue: 0,
-                    plans: {} as { [key: string]: number }
+                    plans: {} as { [key: string]: number },
+                    items: [] as { pet_name: string; plan: string }[]
                 }
             };
+            let monthlyApprovedCheckIns = 0;
 
             enrollments?.forEach(enrollment => {
                 const enrollmentDate = new Date(enrollment.created_at);
@@ -1706,7 +1834,10 @@ const DaycareStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }
                 endOfToday.setHours(23, 59, 59, 999);
 
                 // Estatísticas totais por status
-                if (status === 'Aprovado') stats.total.approved++;
+                if (status === 'Aprovado') {
+                    stats.total.approved++;
+                    stats.total.items.push({ pet_name: enrollment.pet_name, plan });
+                }
                 else if (status === 'Pendente') stats.total.pending++;
                 else if (status === 'Rejeitado') stats.total.rejected++;
 
@@ -1718,6 +1849,7 @@ const DaycareStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }
                     stats.daily.count++;
                     stats.daily.revenue += price;
                     stats.daily.plans[plan] = (stats.daily.plans[plan] || 0) + 1;
+                    stats.daily.items.push({ pet_name: enrollment.pet_name, plan });
                 }
 
                 // Estatísticas semanais - matrículas desta semana
@@ -1725,16 +1857,28 @@ const DaycareStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }
                     stats.weekly.count++;
                     stats.weekly.revenue += price;
                     stats.weekly.plans[plan] = (stats.weekly.plans[plan] || 0) + 1;
+                    stats.weekly.items.push({ pet_name: enrollment.pet_name, plan });
                 }
 
                 // Estatísticas mensais - matrículas deste mês
                 if (enrollmentDate >= monthStart) {
-                    stats.monthly.count++;
                     stats.monthly.revenue += price;
                     stats.monthly.plans[plan] = (stats.monthly.plans[plan] || 0) + 1;
+                    stats.monthly.items.push({ pet_name: enrollment.pet_name, plan });
+                }
+
+                if (status === 'Aprovado') {
+                    const cstr = (enrollment as any).check_in_date as string | null;
+                    if (cstr) {
+                        const cdate = new Date(cstr.split('T')[0]);
+                        if (cdate.getFullYear() === now.getFullYear() && cdate.getMonth() === now.getMonth()) {
+                            monthlyApprovedCheckIns++;
+                        }
+                    }
                 }
             });
 
+            stats.monthly.count = monthlyApprovedCheckIns;
             setStatistics(stats);
         } catch (error) {
             console.error('Erro ao calcular estatísticas da creche:', error);
@@ -1762,7 +1906,7 @@ const DaycareStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }
         return code.replace(/_/g, ' ').replace(/month/i, 'MÊS').replace(/week/i, 'SEMANA').toUpperCase();
     };
 
-    const DaycareStatCard: React.FC<{ title: string; data: { count: number; revenue: number; plans: { [key: string]: number } } }> = ({ title, data }) => (
+    const DaycareStatCard: React.FC<{ title: string; data: { count: number; revenue: number; plans: { [key: string]: number }; items?: { pet_name: string; plan: string }[] } }> = ({ title, data }) => (
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-gray-200">
             <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 border-b pb-2">{title}</h3>
             <div className="space-y-3 sm:space-y-4">
@@ -1778,14 +1922,14 @@ const DaycareStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }
                         </p>
                     </div>
                 </div>
-                {Object.keys(data.plans).length > 0 && (
+                {data.items && data.items.length > 0 && (
                     <div>
                         <h4 className="font-semibold text-gray-700 mb-2">Planos Contratados:</h4>
                         <div className="space-y-2">
-                            {Object.entries(data.plans).map(([plan, count]) => (
-                                <div key={plan} className="flex justify-between items-center bg-gray-50 p-2 rounded">
-                                    <span className="text-gray-700">{translatePlan(plan)}</span>
-                                    <span className="font-semibold text-gray-900">{count}</span>
+                            {data.items.map((item, idx) => (
+                                <div key={`${item.pet_name}-${idx}`} className="flex justify-between items-center bg-gray-50 p-2 rounded">
+                                    <span className="text-gray-700">{item.pet_name}</span>
+                                    <span className="font-semibold text-gray-900">{translatePlan(item.plan)}</span>
                                 </div>
                             ))}
                         </div>
@@ -1835,8 +1979,29 @@ const DaycareStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }
                                         <p className="text-sm text-gray-600">Receita Total</p>
                                     </div>
                                 </div>
+                                {statistics.total.items && statistics.total.items.length > 0 && (
+                                    <div className="mt-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h4 className="font-semibold text-gray-700">Reservas Aprovadas</h4>
+                                            <button type="button" onClick={() => setShowApproved(s => !s)} className="p-1 rounded hover:bg-gray-100 text-gray-600" aria-expanded={showApproved} aria-controls="approved_reservations_list">
+                                                {showApproved ? <ChevronDownIcon className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4" />}
+                                            </button>
+                                        </div>
+                                        {showApproved && (
+                                            <div id="approved_reservations_list" className="space-y-2">
+                                                {statistics.total.items.map((item: { pet_name: string; plan: string }, idx: number) => (
+                                                    <div key={`${item.pet_name}-${idx}`} className="flex justify-between items-center bg-gray-50 p-2 rounded">
+                                                        <span className="text-gray-700">{item.pet_name}</span>
+                                                        <span className="font-semibold text-gray-900">{translatePlan(item.plan)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
+                            <h3 className="text-lg sm:text-xl font-bold text-gray-800">Novas Matrículas</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                                 <DaycareStatCard title="📅 Hoje" data={statistics.daily} />
                                 <DaycareStatCard title="📊 Esta Semana" data={statistics.weekly} />
@@ -1977,24 +2142,11 @@ const HotelStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> 
                 }
 
                 const isInApprovedSection = isApproved 
-                    && String(registration.check_in_status || '') !== 'checked_in' 
-                    && String(registration.check_in_status || '') !== 'checked_out'
+                    && String(registration.check_in_status || '').toLowerCase() !== 'checked_in' 
+                    && String(registration.check_in_status || '').toLowerCase() !== 'checked_out'
                     && String(registration.status || '') !== 'Concluído';
-                const checkInDateRaw = registration.check_in_date;
-                let checkInDate: Date | null = null;
-                if (checkInDateRaw) {
-                    const parts = String(checkInDateRaw).split('-');
-                    if (parts.length >= 3) {
-                        const y = Number(parts[0]);
-                        const m = Number(parts[1]);
-                        const d = Number(parts[2]);
-                        checkInDate = new Date(y, m - 1, d);
-                    } else {
-                        const parsed = new Date(checkInDateRaw);
-                        if (!isNaN(parsed.getTime())) checkInDate = parsed; 
-                    }
-                }
-                if (checkInDate && checkInDate >= monthStart && checkInDate < nextMonthStart && isInApprovedSection) {
+
+                if (isInApprovedSection) {
                     stats.monthly.count++;
                     stats.monthly.revenue += price;
                     const extrasList: string[] = [];
@@ -2073,7 +2225,7 @@ const HotelStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> 
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-8 text-gray-500">Sem pets com check-in neste mês.</div>
+                    <div className="text-center py-8 text-gray-500">Sem hospedagens aprovadas.</div>
                 )}
                 {Object.keys(data.services).length > 0 && (
                     <div>
@@ -2168,7 +2320,10 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value })); // Permite digitação livre para todos os campos
+        setFormData(prev => ({ 
+            ...prev, 
+            [name]: name === 'whatsapp' ? formatWhatsapp(value) : value 
+        }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -3123,7 +3278,8 @@ const AppointmentCard: React.FC<{
             (es.dias_extras?.quantity > 0)
         )
     );
-    const displayPrice: number = Number(price || 0) + extrasTotal;
+    const monthlyDiscount = monthly_client_id ? 10 : 0;
+    const displayPrice: number = Math.max(0, Number(price || 0) - monthlyDiscount) + extrasTotal;
     
     const statusStyles: Record<string, string> = {
         'AGENDADO': 'bg-blue-100 text-blue-800',
@@ -3229,7 +3385,7 @@ const AppointmentCard: React.FC<{
                             }`}
                             aria-label="Concluir serviço"
                         >
-                            {isUpdating && !isDeleting ? <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-white"></div> : <CheckCircleIcon/>}
+                            {isUpdating && !isDeleting ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : <CheckCircleIcon/>}
                         </button>
                     </div>
                 </div>
@@ -3262,7 +3418,8 @@ const Calendar: React.FC<{
     disablePast?: boolean;
     disableWeekends?: boolean;
     allowedDays?: number[];
-  }> = ({ selectedDate, onDateChange, disablePast = false, disableWeekends = true, allowedDays }) => {
+    disabledDates?: string[];
+  }> = ({ selectedDate, onDateChange, disablePast = false, disableWeekends = true, allowedDays, disabledDates }) => {
     const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
   
     useEffect(() => {
@@ -3303,9 +3460,15 @@ const Calendar: React.FC<{
         todayLocal.setHours(0, 0, 0, 0);
         const candidateLocal = new Date(date.getFullYear(), date.getMonth(), date.getDate());
         const isPastLocal = candidateLocal < todayLocal;
+        const sp = getSaoPauloTimeParts(date);
+        const y = String(sp.year);
+        const m = String(sp.month + 1).padStart(2, '0');
+        const d = String(sp.date).padStart(2, '0');
+        const ymd = `${y}-${m}-${d}`;
         const isDisabled = (disablePast && (isPastSaoPauloDate(date) || isPastLocal)) ||
                           (disableWeekends && isSaoPauloWeekend(date)) ||
-                          (allowedDays && !allowedDays.includes(dayOfWeek));
+                          (allowedDays && !allowedDays.includes(dayOfWeek)) ||
+                          (!!disabledDates && disabledDates.includes(ymd));
   
         days.push(
           <button
@@ -3355,6 +3518,7 @@ const DatePicker: React.FC<{
     disablePast?: boolean;
     disableWeekends?: boolean;
     allowedDays?: number[];
+    disabledDates?: string[];
 }> = ({ 
     value, 
     onChange, 
@@ -3364,7 +3528,8 @@ const DatePicker: React.FC<{
     className = "", 
     disablePast = false,
     disableWeekends = true,
-    allowedDays
+    allowedDays,
+    disabledDates
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedDate, setSelectedDate] = useState<Date>(() => {
@@ -3429,6 +3594,7 @@ const DatePicker: React.FC<{
                         disablePast={disablePast}
                         disableWeekends={disableWeekends}
                         allowedDays={allowedDays}
+                        disabledDates={disabledDates}
                     />
                     <div className="flex justify-between mt-4 pt-3 border-t">
                         <button
@@ -3617,6 +3783,16 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
     const [deletingAppointmentId, setDeletingAppointmentId] = useState<string | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isStatisticsModalOpen, setIsStatisticsModalOpen] = useState(false);
+    const [isCloseDayModalOpen, setIsCloseDayModalOpen] = useState(false);
+    const [closeDaysMonth, setCloseDaysMonth] = useState<string>(() => {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        return `${y}-${m}-01`;
+    });
+    const [selectedCloseDays, setSelectedCloseDays] = useState<Set<string>>(new Set());
+    const [applyBathGroom, setApplyBathGroom] = useState(true);
+    const [applyPetMovel, setApplyPetMovel] = useState(true);
 
     useEffect(() => {
         // A busca de agendamentos agora é feita no componente App
@@ -3748,6 +3924,80 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
             {isAddModalOpen && <AdminAddAppointmentModal isOpen={isAddModalOpen} onClose={handleCloseAddModal} onAppointmentCreated={handleAppointmentCreated} />}
             {appointmentToDelete && <ConfirmationModal isOpen={!!appointmentToDelete} onClose={() => setAppointmentToDelete(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o agendamento para ${appointmentToDelete.pet_name}?`} confirmText="Excluir" variant="danger" isLoading={deletingAppointmentId === appointmentToDelete.id} />}
             <StatisticsModal isOpen={isStatisticsModalOpen} onClose={() => setIsStatisticsModalOpen(false)} />
+            {isCloseDayModalOpen && (
+                <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fadeIn">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-scaleIn">
+                        <div className="p-6 border-b">
+                            <h2 className="text-2xl font-bold text-gray-800">Fechar Agenda do Dia</h2>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <MonthPicker value={closeDaysMonth} onChange={setCloseDaysMonth} label="Mês" />
+                            <div className="grid grid-cols-7 gap-3 place-items-center">
+                                {(() => {
+                                    const [yStr, mStr] = closeDaysMonth.split('-');
+                                    const y = Number(yStr);
+                                    const m = Number(mStr) - 1;
+                                    const firstDay = new Date(y, m, 1).getDay();
+                                    const daysInMonth = new Date(y, m + 1, 0).getDate();
+                                    const cells: JSX.Element[] = [];
+                                    for (let i = 0; i < firstDay; i++) cells.push(<div key={`empty-${i}`} className="p-2 w-10 h-10" />);
+                                    for (let d = 1; d <= daysInMonth; d++) {
+                                        const dateStr = `${yStr}-${mStr}-${String(d).padStart(2, '0')}`;
+                                        const isSelected = selectedCloseDays.has(dateStr);
+                                        cells.push(
+                                            <button
+                                                key={dateStr}
+                                                type="button"
+                                                onClick={() => {
+                                                    const next = new Set(selectedCloseDays);
+                                                    if (next.has(dateStr)) next.delete(dateStr); else next.add(dateStr);
+                                                    setSelectedCloseDays(next);
+                                                }}
+                                                className={`p-2 w-10 h-10 rounded-full text-center transition-colors flex items-center justify-center ${isSelected ? 'bg-pink-300 text-black font-bold border border-pink-600' : 'hover:bg-pink-100 text-gray-700'}`}
+                                            >
+                                                {d}
+                                            </button>
+                                        );
+                                    }
+                                    return cells;
+                                })()}
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <label className="flex items-center gap-2"><input type="checkbox" checked={applyBathGroom} onChange={(e) => setApplyBathGroom(e.target.checked)} className="h-4 w-4" /> <span>Banho & Tosa</span></label>
+                                <label className="flex items-center gap-2"><input type="checkbox" checked={applyPetMovel} onChange={(e) => setApplyPetMovel(e.target.checked)} className="h-4 w-4" /> <span>Pet Móvel</span></label>
+                            </div>
+                        </div>
+                        <div className="p-6 bg-gray-50 flex justify-end items-center gap-2">
+                            <button type="button" onClick={() => setIsCloseDayModalOpen(false)} className="inline-flex items-center justify-center h-10 w-1/2 sm:min-w-[140px] sm:w-auto rounded-lg text-sm font-bold whitespace-nowrap bg-gray-200 text-gray-800 hover:bg-gray-300">Cancelar</button>
+                            <button
+                                    type="button"
+                                    onClick={async () => {
+                                        const rows: any[] = [];
+                                        selectedCloseDays.forEach((d) => {
+                                            if (applyBathGroom) rows.push({ date: d, service: 'BATH_GROOM' });
+                                            if (applyPetMovel) rows.push({ date: d, service: 'PET_MOVEL' });
+                                        });
+                                        if (rows.length === 0) { setIsCloseDayModalOpen(false); return; }
+                                        try {
+                                            const { error } = await supabase.from('disabled_dates').upsert(rows, { onConflict: 'date,service' });
+                                            if (!error) {
+                                                setIsCloseDayModalOpen(false);
+                                                setSelectedCloseDays(new Set());
+                                            } else {
+                                                alert('Falha ao salvar dias fechados.');
+                                            }
+                                        } catch (_e) {
+                                            alert('Falha ao salvar dias fechados.');
+                                        }
+                                    }}
+                                    className="inline-flex items-center justify-center h-10 w-1/2 sm:min-w-[140px] sm:w-auto rounded-lg text-sm font-bold whitespace-nowrap bg-pink-600 text-white hover:bg-pink-700"
+                                >
+                                    Salvar
+                                </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="flex flex-col gap-4 mb-6">
                 <div className="relative flex-grow">
@@ -3762,6 +4012,10 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
                     <button onClick={() => setIsStatisticsModalOpen(true)} className="flex-shrink-0 inline-flex items-center justify-center gap-2 sm:gap-3 bg-blue-600 text-white font-bold w-auto h-12 sm:w-auto sm:h-auto px-3 sm:py-4 sm:px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-lg border-2 border-blue-500 sm:min-w-[160px]">
                         <span className="text-lg">📊</span>
                         <span className="inline text-xs sm:text-sm">Estatísticas</span>
+                    </button>
+                    <button onClick={() => setIsCloseDayModalOpen(true)} className="flex-shrink-0 inline-flex items-center justify-center gap-2 sm:gap-3 bg-blue-600 text-white font-bold w-auto h-12 sm:w-auto sm:h-auto px-3 sm:py-4 sm:px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-lg border-2 border-blue-500 sm:min-w-[160px]">
+                        <CalendarIcon />
+                        <span className="inline text-xs sm:text-sm">Bloquear Dias</span>
                     </button>
                     <button onClick={() => setAdminView(adminView === 'daily' ? 'all' : 'daily')} className="flex-shrink-0 inline-flex items-center justify-center gap-2 sm:gap-3 bg-pink-100 text-pink-800 font-semibold w-auto h-12 sm:w-auto sm:h-auto px-3 sm:py-3 sm:px-5 rounded-lg hover:bg-pink-200 transition-colors">
                         {adminView === 'daily' ? (
@@ -3850,7 +4104,10 @@ const EditPetMovelAppointmentModal: React.FC<{
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value })); // Permite digitação livre para todos os campos
+        setFormData(prev => ({ 
+            ...prev, 
+            [name]: name === 'whatsapp' ? formatWhatsapp(value) : value 
+        }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -5147,6 +5404,20 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
             }
 
 
+            const unitPriceEdit = (() => {
+                const prices = selectedWeight ? SERVICE_PRICES[selectedWeight] : null;
+                if (!prices || !selectedService) return Number(price || 0);
+                if (selectedService === ServiceType.BATH_AND_GROOMING || selectedService === ServiceType.PET_MOBILE_BATH_AND_GROOMING) {
+                    return Number(prices[ServiceType.BATH]) + Number(prices[ServiceType.GROOMING_ONLY]);
+                }
+                if (selectedService === ServiceType.BATH || selectedService === ServiceType.PET_MOBILE_BATH) {
+                    return Number(prices[ServiceType.BATH]);
+                }
+                if (selectedService === ServiceType.GROOMING_ONLY || selectedService === ServiceType.PET_MOBILE_GROOMING_ONLY) {
+                    return Number(prices[ServiceType.GROOMING_ONLY]);
+                }
+                return Number(price || 0);
+            })();
             const supabasePayloads = appointmentsToCreate.map(app => ({
                 pet_name: formData.petName,
                 owner_name: formData.ownerName,
@@ -5155,7 +5426,7 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
                 owner_address: formData.ownerAddress,
                 service: SERVICES[selectedService!].label,
                 weight: PET_WEIGHT_OPTIONS[selectedWeight!],
-                price: price / appointmentsToCreate.length,
+                price: unitPriceEdit,
                 status: 'AGENDADO',
                 appointment_time: app.appointment_time,
                 monthly_client_id: client.id,
@@ -5179,7 +5450,7 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
                         service: SERVICES[selectedService!].label,
                         appointment_time: app.appointment_time,
                         status: 'AGENDADO',
-                        price: price / appointmentsToCreate.length,
+                        price: unitPriceEdit,
                         whatsapp: formData.whatsapp,
                         owner_address: formData.ownerAddress,
                         condominium: formData.condominium,
@@ -5428,11 +5699,12 @@ const MonthlyClientDetailsModal: React.FC<{ client: MonthlyClient | null; onClos
 };
 
 const RenewMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => void; onSuccess: (updated: MonthlyClient) => void; }> = ({ client, onClose, onSuccess }) => {
-    const [recurrenceType, setRecurrenceType] = useState<'bi-weekly' | 'monthly'>(client.recurrence_type === 'bi-weekly' ? 'bi-weekly' : 'monthly');
+    const [recurrenceType, setRecurrenceType] = useState<'weekly' | 'bi-weekly' | 'monthly'>(client.recurrence_type === 'weekly' ? 'weekly' : client.recurrence_type === 'bi-weekly' ? 'bi-weekly' : 'monthly');
     const [dayOfWeek, setDayOfWeek] = useState<number>(client.recurrence_day || 1);
+    const [dayOfMonth, setDayOfMonth] = useState<number>(client.recurrence_type === 'monthly' ? (client.recurrence_day || 30) : 30);
     const [time, setTime] = useState<number>(client.recurrence_time || WORKING_HOURS[0]);
     const [serviceStartDate, setServiceStartDate] = useState<string>('');
-    const [paymentDueDate, setPaymentDueDate] = useState<string>(client.payment_due_date ? client.payment_due_date.split('T')[0] : '');
+    const [paymentDueDate, setPaymentDueDate] = useState<string>(getCurrentMonthPaymentDueDate());
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [alertInfo, setAlertInfo] = useState<{ title: string; message: string; variant: 'success' | 'error' } | null>(null);
     const [pendingUpdated, setPendingUpdated] = useState<MonthlyClient | null>(null);
@@ -5449,21 +5721,40 @@ const RenewMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => 
             const startObj = serviceStartDate ? new Date(serviceStartDate + 'T00:00:00') : new Date();
             const parts = getSaoPauloTimeParts(startObj);
             let startDay = parts.day === 0 ? 7 : parts.day;
-            let addDays = (dayOfWeek - startDay + 7) % 7;
-            const firstDate = new Date(startObj);
-            firstDate.setDate(firstDate.getDate() + addDays);
-
-            const count = recurrenceType === 'monthly' ? 4 : 2;
-            const intervalDays = recurrenceType === 'monthly' ? 7 : 15;
+            const endLimit = new Date(Date.UTC(2026, 11, 31, 23, 59, 59));
             const appts: { appointment_time: string }[] = [];
-            for (let i = 0; i < count; i++) {
-                const t = new Date(firstDate);
-                t.setDate(t.getDate() + (i * intervalDays));
-                const iso = toSaoPauloUTC(t.getFullYear(), t.getMonth(), t.getDate(), time).toISOString();
-                appts.push({ appointment_time: iso });
+            if (recurrenceType === 'weekly' || recurrenceType === 'bi-weekly') {
+                const addDays = (dayOfWeek - startDay + 7) % 7;
+                const firstDate = new Date(startObj);
+                firstDate.setDate(firstDate.getDate() + addDays);
+                const intervalDays = recurrenceType === 'weekly' ? 7 : 15;
+                let cursor = new Date(firstDate);
+                while (cursor <= endLimit) {
+                    const iso = toSaoPauloUTC(cursor.getFullYear(), cursor.getMonth(), cursor.getDate(), time).toISOString();
+                    appts.push({ appointment_time: iso });
+                    cursor.setDate(cursor.getDate() + intervalDays);
+                }
+            } else {
+                let cursor = new Date(startObj);
+                const initYear = cursor.getFullYear();
+                const initMonth = cursor.getMonth();
+                const ldm = new Date(initYear, initMonth + 1, 0).getDate();
+                cursor.setDate(Math.min(dayOfMonth, ldm));
+                if (cursor < startObj) cursor.setMonth(cursor.getMonth() + 1);
+                while (cursor <= endLimit) {
+                    const y = cursor.getFullYear();
+                    const m = cursor.getMonth();
+                    const last = new Date(y, m + 1, 0).getDate();
+                    const d = Math.min(dayOfMonth, last);
+                    const iso = toSaoPauloUTC(y, m, d, time).toISOString();
+                    appts.push({ appointment_time: iso });
+                    cursor.setMonth(cursor.getMonth() + 1);
+                }
             }
 
-            const pricePer = count > 0 ? Number(client.price || 0) / count : Number(client.price || 0);
+            const weightKey = getWeightKeyFromLabel(client.weight);
+            const inferredType = inferServiceTypeFromLabel(client.service);
+            const pricePer = getUnitPriceByType(weightKey, inferredType) || Number(client.price || 0);
             const looksPetMovel = typeof client.service === 'string' && client.service.toLowerCase().includes('pet móvel');
             const dbId = getDbId(client.id);
 
@@ -5490,7 +5781,7 @@ const RenewMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => 
                     service: client.service,
                     appointment_time: a.appointment_time,
                     status: 'AGENDADO',
-                    price: pricePer,
+                price: pricePer,
                     whatsapp: client.whatsapp,
                     owner_address: client.owner_address,
                     condominium: client.condominium,
@@ -5508,7 +5799,7 @@ const RenewMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => 
 
             const updatePayload = {
                 recurrence_type: recurrenceType,
-                recurrence_day: dayOfWeek,
+                recurrence_day: recurrenceType === 'monthly' ? dayOfMonth : dayOfWeek,
                 recurrence_time: time,
                 payment_due_date: paymentDueDate && paymentDueDate.trim() !== '' ? paymentDueDate : null
             };
@@ -5517,7 +5808,7 @@ const RenewMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => 
 
             const updated = { ...client, ...updatePayload } as MonthlyClient;
             setPendingUpdated(updated);
-            setAlertInfo({ title: 'Sucesso', message: `Mês renovado. ${count} agendamento${count > 1 ? 's' : ''} criado${count > 1 ? 's' : ''}.`, variant: 'success' });
+            setAlertInfo({ title: 'Sucesso', message: `Renovação concluída. ${appts.length} agendamento(s) criado(s) até 2026.`, variant: 'success' });
         } catch (err: any) {
             setAlertInfo({ title: 'Erro', message: err.message || 'Falha ao renovar o mês.', variant: 'error' });
         } finally {
@@ -5546,20 +5837,29 @@ const RenewMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Recorrência</label>
-                            <select value={recurrenceType} onChange={e => setRecurrenceType(e.target.value as 'bi-weekly' | 'monthly')} className="w-full px-3 py-2 border rounded-lg bg-white">
+                            <select value={recurrenceType} onChange={e => setRecurrenceType(e.target.value as 'weekly' | 'bi-weekly' | 'monthly')} className="w-full px-3 py-2 border rounded-lg bg-white">
+                                <option value="weekly">Semanal</option>
                                 <option value="bi-weekly">Quinzenal</option>
-                                <option value="monthly">Mensal (4x)</option>
+                                <option value="monthly">Mensal</option>
                             </select>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Dia</label>
-                            <select value={dayOfWeek} onChange={e => setDayOfWeek(Number(e.target.value))} className="w-full px-3 py-2 border rounded-lg bg-white">
-                                <option value={1}>Segunda-feira</option>
-                                <option value={2}>Terça-feira</option>
-                                <option value={3}>Quarta-feira</option>
-                                <option value={4}>Quinta-feira</option>
-                                <option value={5}>Sexta-feira</option>
-                            </select>
+                            {recurrenceType === 'monthly' ? (
+                                <select value={dayOfMonth} onChange={e => setDayOfMonth(Number(e.target.value))} className="w-full px-3 py-2 border rounded-lg bg-white">
+                                    {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                                        <option key={d} value={d}>{d}</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <select value={dayOfWeek} onChange={e => setDayOfWeek(Number(e.target.value))} className="w-full px-3 py-2 border rounded-lg bg-white">
+                                    <option value={1}>Segunda-feira</option>
+                                    <option value={2}>Terça-feira</option>
+                                    <option value={3}>Quarta-feira</option>
+                                    <option value={4}>Quinta-feira</option>
+                                    <option value={5}>Sexta-feira</option>
+                                </select>
+                            )}
                         </div>
                     </div>
                     <div>
@@ -5713,6 +6013,7 @@ const EditMonthlyClientAdvancedModal: React.FC<{ client: MonthlyClient; onClose:
 
 const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () => void; }> = ({ onAddClient, onDataChanged }) => {
     const [monthlyClients, setMonthlyClients] = useState<MonthlyClient[]>([]);
+    const [renewDisabledIds, setRenewDisabledIds] = useState<Set<any>>(new Set());
     const [loading, setLoading] = useState(true);
     const [editingClient, setEditingClient] = useState<MonthlyClient | null>(null);
     const [deletingClient, setDeletingClient] = useState<MonthlyClient | null>(null);
@@ -5843,6 +6144,23 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
         fetchDaycareEnrollments();
     }, [fetchMonthlyClients, fetchDaycareEnrollments]);
     
+    const ensureCurrentMonthDueDate = useCallback(async () => {
+        const due = getCurrentMonthPaymentDueDate();
+        const monthKey = due.slice(0, 7);
+        const last = localStorage.getItem('last_payment_due_update_month') || '';
+        if (last === monthKey) return;
+        const { error } = await supabase.from('monthly_clients').update({ payment_due_date: due });
+        if (!error) {
+            try { localStorage.setItem('last_payment_due_update_month', monthKey); } catch {}
+            setMonthlyClients(prev => prev.map(c => ({ ...c, payment_due_date: due })));
+            onDataChanged();
+        }
+    }, [onDataChanged]);
+
+    useEffect(() => {
+        ensureCurrentMonthDueDate();
+    }, [ensureCurrentMonthDueDate]);
+    
     // Função para verificar se um cliente mensalista também é cliente de creche
     const isClientInDaycare = useCallback((monthlyClient: MonthlyClient): boolean => {
         return daycareEnrollments.some(enrollment => 
@@ -5874,6 +6192,8 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
             setDeletingClient(null);
         }
     };
+
+    
     
     const weekDays: Record<number, string> = { 1: "Segunda", 2: "Terça", 3: "Quarta", 4: "Quinta", 5: "Sexta" };
     
@@ -6121,6 +6441,8 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                 </svg>
                             </button>
+
+                            
                             
                             {/* Botão Adicionar Mensalista */}
                             <button onClick={onAddClient} className="bg-pink-600 text-white font-semibold py-2 sm:py-2.5 px-3 rounded-lg hover:bg-pink-700 transition-colors flex items-center justify-center">
@@ -6236,6 +6558,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                                         onChangePhoto={(mc) => { setUploadTargetMonthlyClient(mc); setIsUploadMonthlyPhotoModalOpen(true); }}
                                         onView={(mc) => setViewingClient(mc)}
                                         onRenew={() => setMonthlyClientForRenewal(client)}
+                                        renewDisabled={renewDisabledIds.has(client.id)}
                                     />
                                 </div>
                             ))}
@@ -6325,7 +6648,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                 <RenewMonthlyClientModal
                     client={monthlyClientForRenewal}
                     onClose={() => setMonthlyClientForRenewal(null)}
-                    onSuccess={(updated) => { setMonthlyClients(prev => prev.map(c => c.id === updated.id ? updated : c)); onDataChanged(); setMonthlyClientForRenewal(null); }}
+                    onSuccess={(updated) => { setMonthlyClients(prev => prev.map(c => c.id === updated.id ? updated : c)); setRenewDisabledIds(prev => new Set([...Array.from(prev), updated.id])); onDataChanged(); setMonthlyClientForRenewal(null); }}
                 />
             )}
 
@@ -6375,7 +6698,8 @@ const MonthlyClientCard: React.FC<{
     onChangePhoto: (client: MonthlyClient) => void;
     onView: (client: MonthlyClient) => void;
     onRenew: (client: MonthlyClient) => void;
-}> = ({ client, onClick, onEdit, onDelete, onAddExtraServices, onTogglePaymentStatus, isClientInDaycare = false, onChangePhoto, onView, onRenew }) => {
+    renewDisabled?: boolean;
+}> = ({ client, onClick, onEdit, onDelete, onAddExtraServices, onTogglePaymentStatus, isClientInDaycare = false, onChangePhoto, onView, onRenew, renewDisabled = false }) => {
     
     const getRecurrenceText = (client: MonthlyClient) => {
         if (client.recurrence_type === 'weekly') return 'Semanal';
@@ -6476,7 +6800,8 @@ const MonthlyClientCard: React.FC<{
                 <div className="flex justify-end">
                     <button 
                         onClick={(e) => { e.stopPropagation(); onRenew(client); }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 text-xs font-medium"
+                        disabled={renewDisabled}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.418 11H9m0 0l3-3m-3 3l3 3M4.582 9A7.5 7.5 0 1120.5 16.5" />
@@ -6655,11 +6980,24 @@ const DaycareEnrollmentCard: React.FC<{
     onEdit: (enrollment: DaycareRegistration) => void;
     onDelete: (enrollment: DaycareRegistration) => void;
     onAddExtraServices: (enrollment: DaycareRegistration) => void;
+    sectionId: 'pending' | 'approved' | 'inDaycare';
     isDraggable?: boolean;
     onDragStart?: (e: React.DragEvent<HTMLDivElement>) => void;
     onChangePhoto: (enrollment: DaycareRegistration) => void;
-}> = ({ enrollment, onClick, onEdit, onDelete, onAddExtraServices, isDraggable = false, onDragStart, onChangePhoto }) => {
+    onOpenDiary?: (enrollment: DaycareRegistration) => void;
+    onApprove?: (enrollment: DaycareRegistration) => void;
+    onTogglePaymentStatus?: (enrollment: DaycareRegistration) => void;
+    paymentUpdatingId?: string | null;
+}> = ({ enrollment, onClick, onEdit, onDelete, onAddExtraServices, sectionId, isDraggable = false, onDragStart, onChangePhoto, onOpenDiary, onApprove, onTogglePaymentStatus, paymentUpdatingId }) => {
     const { created_at, pet_name, tutor_name, contracted_plan, status } = enrollment;
+    const formatTimeText = (time: string | null | undefined): string => {
+        if (!time) return 'Não definido';
+        const s = String(time);
+        const m = s.match(/^(\d{1,2}):(\d{2})/);
+        return m ? `${m[1].padStart(2,'0')}:${m[2]}` : s;
+    };
+    const checkInTimeText = formatTimeText(enrollment.check_in_time);
+    const checkOutTimeText = formatTimeText(enrollment.check_out_time);
 
     const statusStyles: Record<string, string> = {
         'Pendente': 'bg-blue-100 text-blue-800',
@@ -6709,20 +7047,36 @@ const DaycareEnrollmentCard: React.FC<{
                         <p className="text-lg font-extrabold">R$ {invoiceTotal.toFixed(2).replace('.', ',')}</p>
                     </div>
                 </div>
-                <div className="flex items-center justify-between mb-3">
-                    <div className={`px-3 py-1 text-[11px] font-bold rounded-full whitespace-nowrap truncate ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`}>{status}</div>
-                    <div className="text-xs text-gray-500 hidden sm:block">
-                        Solicitação em: {new Date(created_at!).toLocaleDateString('pt-BR')}
+                <div className="mb-3">
+                    <div className="flex items-center justify-between">
+                        <div className={`px-3 py-1 text-[11px] font-bold rounded-full whitespace-nowrap truncate ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`}>{status}</div>
+                        <div className="flex flex-col items-end gap-1">
+                            <span className="text-[10px] text-gray-500">Status do pagamento</span>
+                            {(() => {
+                                const current = (enrollment.payment_status === 'Pago') ? 'Pago' : 'Pendente';
+                                const cls = current === 'Pago'
+                                    ? 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200'
+                                    : 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200';
+                                return (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onTogglePaymentStatus && onTogglePaymentStatus(enrollment); }}
+                                        disabled={paymentUpdatingId === enrollment.id}
+                                        className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap truncate border ${cls}`}
+                                        title={current === 'Pago' ? 'Marcar como pendente' : 'Marcar como pago'}
+                                    >
+                                        {paymentUpdatingId === enrollment.id ? 'Atualizando...' : current}
+                                    </button>
+                                );
+                            })()}
+                        </div>
+                    </div>
+                    <div className="mt-2 flex items-center text-sm text-gray-700">
+                        <TagIcon />
+                        <span className="font-semibold mr-2">Plano</span> {contracted_plan ? planLabels[contracted_plan] : 'Não informado'}
                     </div>
                 </div>
                 
                 <div className="mt-4 border-t border-gray-200 pt-4">
-                    <div className="flex items-center justify-between text-base text-gray-700 mb-3">
-                        <div className="flex items-center">
-                            <TagIcon />
-                            <span className="font-semibold mr-2">Plano contratado:</span> {contracted_plan ? planLabels[contracted_plan] : 'Não informado'}
-                        </div>
-                    </div>
                     <div className="space-y-2 text-sm">
                         <div className="flex items-center gap-2 text-gray-600">
                             <WhatsAppIcon />
@@ -6735,23 +7089,22 @@ const DaycareEnrollmentCard: React.FC<{
                             )}
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
-                            <CalendarIcon />
-                            <span>Pagamento: {formatDateToBR(enrollment.payment_date || null)}</span>
+                            <CalendarIcon className="h-5 w-5" />
+                            <span>Início:</span>
+                            <span className="font-semibold">{formatDateToBR(enrollment.check_in_date || null)}</span>
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
                             <img src="https://cdn-icons-png.flaticon.com/512/9576/9576046.png" alt="Entrada Icon" className="h-5 w-5" />
-                            <span>
-                                Entrada: {enrollment.check_in_date ? `${formatDateToBR(enrollment.check_in_date)} ${String(enrollment.check_in_time ?? '').split(':').slice(0,2).join(':')}` : 'Não informado'}
-                            </span>
+                            <span>Entrada:</span>
+                            <span className="font-semibold">{checkInTimeText}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-gray-600">
+                        <div className="flex items-center gap-2 text-gray-600 mt-1">
                             <img src="https://cdn-icons-png.flaticon.com/512/9576/9576053.png" alt="Saída Icon" className="h-5 w-5" />
-                            <span>
-                                Saída: {enrollment.check_out_date ? `${formatDateToBR(enrollment.check_out_date)} ${String(enrollment.check_out_time ?? '').split(':').slice(0,2).join(':')}` : 'Não informado'}
-                            </span>
+                            <span>Saída:</span>
+                            <span className="font-semibold">{checkOutTimeText}</span>
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
-                            <CalendarIcon />
+                            <CalendarIcon className="h-5 w-5" />
                             <span>
                                 Dias da semana: {(enrollment.attendance_days && enrollment.attendance_days.length > 0) 
                                     ? (enrollment.attendance_days as any[]).map((idx: number) => ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][idx]).join(', ') 
@@ -6793,8 +7146,19 @@ const DaycareEnrollmentCard: React.FC<{
                     )}
                 </div>
             </div>
-             <div className="p-3 bg-gray-50 border-t border-gray-100">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
+            <div className="p-3 bg-gray-50 border-t border-gray-100">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+                    {status === 'Pendente' && onApprove && (
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onApprove(enrollment); }}
+                            className="w-full bg-green-100 text-green-700 py-1.5 px-2 rounded-md hover:bg-green-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon" className="w-4 h-4">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                            <span>Aprovar</span>
+                        </button>
+                    )}
                     <button 
                         onClick={(e) => { e.stopPropagation(); onAddExtraServices(enrollment); }}
                         className="w-full bg-green-100 text-green-700 py-1.5 px-2 rounded-md hover:bg-green-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
@@ -6805,6 +7169,21 @@ const DaycareEnrollmentCard: React.FC<{
                         </svg>
                         <span>Extras</span>
                     </button>
+                    {(sectionId === 'approved' || sectionId === 'inDaycare') && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onOpenDiary && onOpenDiary(enrollment); }}
+                            className="w-full bg-purple-200 text-black py-1.5 px-2 rounded-md hover:bg-purple-300 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
+                            title="Diário"
+                        >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <circle cx="12" cy="12" r="9" strokeWidth="1.5" />
+                                <circle cx="9" cy="10" r="1" fill="currentColor" />
+                                <circle cx="15" cy="10" r="1" fill="currentColor" />
+                                <path d="M8 14c1.5 1 3 1.5 4 1.5s2.5-.5 4-1.5" strokeWidth="1.5" strokeLinecap="round" />
+                            </svg>
+                            <span>Diário</span>
+                        </button>
+                    )}
                     <button 
                         onClick={(e) => { e.stopPropagation(); onEdit(enrollment); }}
                         className="w-full bg-blue-100 text-blue-700 py-1.5 px-2 rounded-md hover:bg-blue-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium"
@@ -7051,7 +7430,8 @@ const EditDaycareEnrollmentModal: React.FC<{
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: name === 'contact_phone' ? formatWhatsapp(value) : value }));
+        const shouldFormat = name === 'contact_phone' || name === 'vet_phone';
+        setFormData(prev => ({ ...prev, [name]: shouldFormat ? formatWhatsapp(value) : value }));
     };
 
     const handleRadioChange = (name: keyof DaycareRegistration, value: any) => {
@@ -7794,7 +8174,8 @@ const HotelRegistrationForm: React.FC<{
             // Permite digitação livre para campos numéricos, sem conversão imediata
             setFormData(prev => ({ ...prev, [name]: value }));
         } else {
-            setFormData(prev => ({ ...prev, [name]: name === 'tutor_phone' ? formatWhatsapp(value) : value }));
+            const shouldFormat = name === 'tutor_phone' || name === 'emergency_contact_phone' || name === 'vet_phone';
+            setFormData(prev => ({ ...prev, [name]: shouldFormat ? formatWhatsapp(value) : value }));
         }
     };
 
@@ -8464,7 +8845,8 @@ const DaycareRegistrationForm: React.FC<{
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: name === 'contact_phone' ? formatWhatsapp(value) : value }));
+        const shouldFormat = name === 'contact_phone' || name === 'vet_phone';
+        setFormData(prev => ({ ...prev, [name]: shouldFormat ? formatWhatsapp(value) : value }));
     };
 
     const handleRadioChange = (name: keyof DaycareRegistration, value: any) => {
@@ -9279,6 +9661,8 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [allowedDays, setAllowedDays] = useState<number[] | undefined>(undefined);
+  const [disabledBathGroomDates, setDisabledBathGroomDates] = useState<string[]>([]);
+  const [disabledPetMovelDates, setDisabledPetMovelDates] = useState<string[]>([]);
   
   const isVisitService = useMemo(() => 
     selectedService === ServiceType.VISIT_DAYCARE || selectedService === ServiceType.VISIT_HOTEL,
@@ -9344,6 +9728,29 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
   }, []);
 
   useEffect(() => { reloadAppointments(); }, [reloadAppointments]);
+
+  const loadDisabledDates = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from('disabled_dates').select('*');
+      if (error) {
+        return;
+      }
+      const bath = new Set<string>();
+      const pet = new Set<string>();
+      (data || []).forEach((rec: any) => {
+        const date = String(rec.date || rec.day || '').trim();
+        if (!date) return;
+        const svc = String(rec.service || rec.for_service || 'ALL').toUpperCase();
+        if (svc === 'ALL') { bath.add(date); pet.add(date); }
+        else if (svc.includes('BATH') || svc.includes('GROOM')) { bath.add(date); }
+        else if (svc.includes('PET') || svc.includes('MOVEL') || svc.includes('MÓVEL')) { pet.add(date); }
+      });
+      setDisabledBathGroomDates(Array.from(bath));
+      setDisabledPetMovelDates(Array.from(pet));
+    } catch {}
+  }, []);
+
+  useEffect(() => { loadDisabledDates(); }, [loadDisabledDates]);
 
   useEffect(() => {
     let authSub: any = null;
@@ -10006,6 +10413,12 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                     // Para outros serviços, usar allowedDays normal
                     return allowedDays;
                   })()}
+                  disabledDates={(() => {
+                    if (!selectedService) return [];
+                    if ([ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_BATH_AND_GROOMING, ServiceType.PET_MOBILE_GROOMING_ONLY].includes(selectedService)) return disabledPetMovelDates;
+                    if ([ServiceType.BATH, ServiceType.GROOMING_ONLY, ServiceType.BATH_AND_GROOMING].includes(selectedService)) return disabledBathGroomDates;
+                    return [];
+                  })()}
                 />
               </div>
               <div>
@@ -10340,30 +10753,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
             }
             fetchRegistrations();
             setExpandedHotelSections(prev => prev.includes('approved') ? prev : [...prev, 'approved']);
-            const formatPhone = (raw: string) => {
-                const digits = (raw || '').replace(/\D/g, '');
-                if (digits.startsWith('55')) return digits;
-                return `55${digits}`;
-            };
-            const formatDateTime = (d?: string | null, t?: string | null) => {
-                if (!d) return '';
-                const dateStr = formatDateToBR(d);
-                const timeStr = String(t || '').split(':').slice(0,2).join(':');
-                return `${dateStr} ${timeStr}`.trim();
-            };
-            const body = {
-                tutor_nome: registration.tutor_name,
-                telefone: formatPhone(registration.tutor_phone || ''),
-                checkin_previsto: formatDateTime(registration.check_in_date, registration.check_in_time),
-                checkout_previsto: formatDateTime(registration.check_out_date, registration.check_out_time),
-            };
-            try {
-                await fetch('https://n8n.intelektus.tech/webhook/hospedagemConfirmada', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body),
-                });
-            } catch (e) {}
+            try { await sendHotelApprovalWebhook({ ...(registration as any), ...payload } as HotelRegistration); } catch {}
         }
         else {
             alert(`Falha ao aprovar hospedagem: ${error.message || 'Erro desconhecido'}`);
@@ -10391,13 +10781,215 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
         setSelectedRegistration(null);
     };
 
-        const handleHotelExtraServicesUpdated = (updatedRegistration: HotelRegistration) => {
-            setRegistrations(prev => prev.map(r => 
-                r.id === updatedRegistration.id ? updatedRegistration : r
-            ));
-            setIsHotelExtraServicesModalOpen(false);
-            setHotelRegistrationForExtraServices(null);
+    const handleHotelExtraServicesUpdated = (updatedRegistration: HotelRegistration) => {
+        setRegistrations(prev => prev.map(r => 
+            r.id === updatedRegistration.id ? updatedRegistration : r
+        ));
+        setIsHotelExtraServicesModalOpen(false);
+        setHotelRegistrationForExtraServices(null);
+    };
+
+    const sendHotelApprovalWebhook = async (registration: HotelRegistration) => {
+        const invoiceTotal = calculateHotelInvoiceTotal(registration);
+        const digits = String(registration.tutor_phone || '').replace(/\D/g, '');
+        const withCountry = digits ? (digits.startsWith('55') ? digits : `55${digits}`) : '';
+        const whatsapp_link = withCountry ? `https://wa.me/${withCountry}` : null;
+        const payload = {
+            id: registration.id,
+            created_at: registration.created_at ?? null,
+            updated_at: (registration as any).updated_at ?? null,
+            registration_date: registration.registration_date ?? null,
+            status: registration.status,
+            approval_status: registration.approval_status ?? null,
+            check_in_status: registration.check_in_status ?? null,
+            checked_in_at: registration.checked_in_at ?? null,
+            checked_out_at: registration.checked_out_at ?? null,
+            pet: {
+                name: registration.pet_name,
+                breed: registration.pet_breed,
+                sex: registration.pet_sex,
+                age: registration.pet_age,
+                neutered: registration.is_neutered,
+                weight: (registration as any).pet_weight ?? null,
+                photo_url: registration.pet_photo_url ?? null,
+            },
+            tutor: {
+                name: registration.tutor_name,
+                rg: registration.tutor_rg,
+                address: registration.tutor_address,
+                phone: registration.tutor_phone,
+                email: registration.tutor_email,
+                social_media: registration.tutor_social_media ?? null,
+                whatsapp_link,
+            },
+            emergency: {
+                contact_name: registration.emergency_contact_name,
+                contact_phone: registration.emergency_contact_phone,
+                contact_relation: registration.emergency_contact_relation,
+                vet_phone: registration.vet_phone,
+            },
+            documents: {
+                has_rg_document: registration.has_rg_document,
+                has_residence_proof: registration.has_residence_proof,
+                has_vaccination_card: registration.has_vaccination_card,
+                has_vet_certificate: registration.has_vet_certificate,
+                has_flea_tick_remedy: registration.has_flea_tick_remedy,
+                flea_tick_remedy_date: registration.flea_tick_remedy_date,
+                photo_authorization: registration.photo_authorization,
+                retrieve_at_checkout: registration.retrieve_at_checkout,
+                declaration_accepted: registration.declaration_accepted,
+                tutor_check_in_signature: registration.tutor_check_in_signature,
+                tutor_check_out_signature: registration.tutor_check_out_signature,
+                tutor_signature: (registration as any).tutor_signature ?? null,
+            },
+            health: {
+                preexisting_disease: registration.preexisting_disease,
+                allergies: registration.allergies,
+                behavior: registration.behavior,
+                fears_traumas: registration.fears_traumas,
+                wounds_marks: registration.wounds_marks,
+            },
+            food: {
+                brand: registration.food_brand,
+                quantity: registration.food_quantity,
+                feeding_frequency: registration.feeding_frequency,
+                observations: registration.food_observations,
+                accepts_treats: registration.accepts_treats,
+                special_food_care: registration.special_food_care,
+            },
+            schedule: {
+                check_in_date: registration.check_in_date,
+                check_in_time: registration.check_in_time,
+                check_out_date: registration.check_out_date,
+                check_out_time: registration.check_out_time,
+            },
+            services: {
+                bath: registration.service_bath,
+                transport: registration.service_transport,
+                daily_rate: registration.service_daily_rate,
+                extra_hour: registration.service_extra_hour,
+                vet: registration.service_vet,
+                training: registration.service_training,
+                extra_services: registration.extra_services ?? null,
+            },
+            pricing: {
+                total_services_price: registration.total_services_price,
+                invoice_total: invoiceTotal,
+            },
+            additional_info: registration.additional_info,
+            professional_name: registration.professional_name,
         };
+        try {
+            await fetch('https://n8n.intelektus.tech/webhook/hospedagemConfirmada', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+        } catch (err) {
+            console.warn('Falha ao enviar webhook hospedagemConfirmada', err);
+        }
+    };
+
+    const sendHotelCheckoutWebhook = async (registration: HotelRegistration) => {
+        const invoiceTotal = calculateHotelInvoiceTotal(registration);
+        const digits = String(registration.tutor_phone || '').replace(/\D/g, '');
+        const withCountry = digits ? (digits.startsWith('55') ? digits : `55${digits}`) : '';
+        const whatsapp_link = withCountry ? `https://wa.me/${withCountry}` : null;
+        const payload = {
+            id: registration.id,
+            created_at: registration.created_at ?? null,
+            updated_at: (registration as any).updated_at ?? null,
+            registration_date: registration.registration_date ?? null,
+            status: 'Concluído',
+            approval_status: registration.approval_status ?? null,
+            check_in_status: 'checked_out',
+            checked_in_at: registration.checked_in_at ?? null,
+            checked_out_at: new Date().toISOString(),
+            pet: {
+                name: registration.pet_name,
+                breed: registration.pet_breed,
+                sex: registration.pet_sex,
+                age: registration.pet_age,
+                neutered: registration.is_neutered,
+                weight: (registration as any).pet_weight ?? null,
+                photo_url: registration.pet_photo_url ?? null,
+            },
+            tutor: {
+                name: registration.tutor_name,
+                rg: registration.tutor_rg,
+                address: registration.tutor_address,
+                phone: registration.tutor_phone,
+                email: registration.tutor_email,
+                social_media: registration.tutor_social_media ?? null,
+                whatsapp_link,
+            },
+            emergency: {
+                contact_name: registration.emergency_contact_name,
+                contact_phone: registration.emergency_contact_phone,
+                contact_relation: registration.emergency_contact_relation,
+                vet_phone: registration.vet_phone,
+            },
+            documents: {
+                has_rg_document: registration.has_rg_document,
+                has_residence_proof: registration.has_residence_proof,
+                has_vaccination_card: registration.has_vaccination_card,
+                has_vet_certificate: registration.has_vet_certificate,
+                has_flea_tick_remedy: registration.has_flea_tick_remedy,
+                flea_tick_remedy_date: registration.flea_tick_remedy_date,
+                photo_authorization: registration.photo_authorization,
+                retrieve_at_checkout: registration.retrieve_at_checkout,
+                declaration_accepted: registration.declaration_accepted,
+                tutor_check_in_signature: registration.tutor_check_in_signature,
+                tutor_check_out_signature: registration.tutor_check_out_signature,
+                tutor_signature: (registration as any).tutor_signature ?? null,
+            },
+            health: {
+                preexisting_disease: registration.preexisting_disease,
+                allergies: registration.allergies,
+                behavior: registration.behavior,
+                fears_traumas: registration.fears_traumas,
+                wounds_marks: registration.wounds_marks,
+            },
+            food: {
+                brand: registration.food_brand,
+                quantity: registration.food_quantity,
+                feeding_frequency: registration.feeding_frequency,
+                observations: registration.food_observations,
+                accepts_treats: registration.accepts_treats,
+                special_food_care: registration.special_food_care,
+            },
+            schedule: {
+                check_in_date: registration.check_in_date,
+                check_in_time: registration.check_in_time,
+                check_out_date: registration.check_out_date,
+                check_out_time: registration.check_out_time,
+            },
+            services: {
+                bath: registration.service_bath,
+                transport: registration.service_transport,
+                daily_rate: registration.service_daily_rate,
+                extra_hour: registration.service_extra_hour,
+                vet: registration.service_vet,
+                training: registration.service_training,
+                extra_services: registration.extra_services ?? null,
+            },
+            pricing: {
+                total_services_price: registration.total_services_price,
+                invoice_total: invoiceTotal,
+            },
+            additional_info: registration.additional_info,
+            professional_name: registration.professional_name,
+        };
+        try {
+            await fetch('https://n8n.intelektus.tech/webhook/cobrancaHotelPet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+        } catch (err) {
+            console.warn('Falha ao enviar webhook cobrancaHotelPet', err);
+        }
+    };
 
         const handleRemoveExtraChip = async (registration: HotelRegistration, key: 'pernoite' | 'banho_tosa' | 'so_banho' | 'adestrador' | 'despesa_medica' | 'dias_extras') => {
             if (!registration.extra_services) return;
@@ -10493,6 +11085,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                 fetchRegistrations();
             }, 100);
             setExpandedHotelSections(prev => prev.includes(target) ? prev : [...prev, target]);
+            if (target === 'approved') { try { await sendHotelApprovalWebhook({ ...(registration as any), ...payload } as HotelRegistration); } catch {} }
         } else {
             alert(`Falha ao mover hospedagem: ${error.message || 'Erro desconhecido'}`);
             console.error('Erro ao mover hospedagem:', error);
@@ -10619,10 +11212,10 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                             const apNorm = (typeof apRaw === 'string' ? apRaw.trim() : 'pending').toLowerCase();
                             const map: Record<string, { bg: string; text: string; label: string }> = {
                                 'pending': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Em Análise' },
-                                'approved': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Aprovado' },
+                                'approved': { bg: 'bg-green-100', text: 'text-green-800', label: 'Aprovado' },
                                 'rejected': { bg: 'bg-red-100', text: 'text-red-800', label: 'Rejeitado' },
                                 'pendente': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Em Análise' },
-                                'aprovado': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Aprovado' },
+                                'aprovado': { bg: 'bg-green-100', text: 'text-green-800', label: 'Aprovado' },
                                 'rejeitado': { bg: 'bg-red-100', text: 'text-red-800', label: 'Rejeitado' },
                             };
                             if (currentCheckInStatus === 'checked_in') {
@@ -10680,22 +11273,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                             </span>
                         </div>
                     )}
-                    {registration.checked_in_at && (
-                        <div className="flex items-center gap-3 text-green-600 font-semibold">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span>Check-in: {new Date(registration.checked_in_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
-                    )}
-                    {registration.checked_out_at && (
-                        <div className="flex items-center gap-3 text-red-600 font-semibold">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span>Check-out: {new Date(registration.checked_out_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                )}
+                    
                 {registration.extra_services && (
                     <div className="pt-2">
                         <div className="flex flex-wrap gap-2">
@@ -10773,7 +11351,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                             return (
                                 <>
                                     <button 
-                                        onClick={() => handleToggleCheckIn(registration)}
+                                        onClick={async () => { await handleToggleCheckIn(registration); await sendHotelCheckoutWebhook(registration); }}
                                         disabled={isUpdating}
                                         className={`w-full py-1.5 px-2 rounded-md transition-colors ${getCheckInButtonStyle()} disabled:opacity-50 flex items-center justify-center gap-1.5 text-center whitespace-nowrap leading-none text-[11px] font-medium`}
                                     >
@@ -11052,7 +11630,8 @@ const EditHotelRegistrationModal: React.FC<{
             const checkbox = e.target as HTMLInputElement;
             setFormData(prev => ({ ...prev, [name]: checkbox.checked }));
         } else {
-            setFormData(prev => ({ ...prev, [name]: value }));
+            const shouldFormat = name === 'tutor_phone' || name === 'emergency_contact_phone' || name === 'vet_phone';
+            setFormData(prev => ({ ...prev, [name]: shouldFormat ? formatWhatsapp(value) : value }));
         }
     };
 
@@ -11557,6 +12136,9 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
     const [isUploadingDaycarePhoto, setIsUploadingDaycarePhoto] = useState(false);
     const [daycareUploadError, setDaycareUploadError] = useState<string | null>(null);
     const [selectedDaycarePhotoName, setSelectedDaycarePhotoName] = useState<string>('');
+    const [diaryFor, setDiaryFor] = useState<DaycareRegistration | null>(null);
+    const [diaryDate, setDiaryDate] = useState<string>(() => new Date().toISOString().slice(0,10));
+    const [daycarePaymentUpdatingId, setDaycarePaymentUpdatingId] = useState<string | null>(null);
 
     useEffect(() => {
         if (isUploadDaycarePhotoModalOpen) {
@@ -11599,8 +12181,33 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
         } else {
             setEnrollments(prev => prev.map(e => e.id === id ? data as DaycareRegistration : e));
             setSelectedEnrollment(data as DaycareRegistration);
+            if (status === 'Aprovado') {
+                try {
+                    await sendDaycareApprovalWebhook(data as DaycareRegistration);
+                } catch {}
+            }
         }
         setIsUpdatingStatus(false);
+    };
+
+    const handleToggleDaycarePaymentStatus = async (enrollment: DaycareRegistration) => {
+        if (!enrollment.id) return;
+        setDaycarePaymentUpdatingId(String(enrollment.id));
+        const current = (enrollment.payment_status === 'Pago') ? 'Pago' : 'Pendente';
+        const next = current === 'Pago' ? 'Pendente' : 'Pago';
+        const { data, error } = await supabase
+            .from('daycare_enrollments')
+            .update({ payment_status: next })
+            .eq('id', enrollment.id)
+            .select()
+            .single();
+        if (!error) {
+            const updatedId = data && (data as any).id !== undefined ? String((data as any).id) : String(enrollment.id);
+            setEnrollments(prev => prev.map(r => String(r.id) === updatedId ? { ...r, payment_status: next } : r));
+        } else {
+            alert('Erro ao atualizar status de pagamento');
+        }
+        setDaycarePaymentUpdatingId(null);
     };
 
     const handleConfirmDelete = async () => {
@@ -11637,6 +12244,66 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
         setEnrollments(prev => prev.map(e => e.id === updated.id ? updated : e));
         setIsExtraServicesModalOpen(false);
         setEnrollmentForExtraServices(null);
+    };
+
+    const sendDaycareApprovalWebhook = async (enrollment: DaycareRegistration) => {
+        const dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+        const planLabels: Record<string, string> = {
+            '4x_month': '4x no Mês', '8x_month': '8x no Mês', '12x_month': '12x no Mês', '16x_month': '16x no Mês', '20x_month': '20x no Mês',
+            '2x_week': '2x por Semana', '3x_week': '3x por Semana', '4x_week': '4x por Semana', '5x_week': '5x por Semana',
+        };
+        const invoiceTotal = calculateDaycareInvoiceTotal(enrollment);
+        const payload = {
+            id: enrollment.id,
+            status: enrollment.status,
+            approved_at: new Date().toISOString(),
+            pet: {
+                name: enrollment.pet_name,
+                breed: (enrollment as any).pet_breed ?? null,
+                age: (enrollment as any).pet_age ?? null,
+                sex: (enrollment as any).pet_sex ?? null,
+                neutered: (enrollment as any).is_neutered ?? null,
+                photo_url: (enrollment as any).pet_photo_url ?? null,
+            },
+            tutor: {
+                name: (enrollment as any).tutor_name ?? null,
+                phone: (enrollment as any).contact_phone ?? null,
+                address: (enrollment as any).address ?? null,
+                whatsapp_link: (function(phone: string | undefined){
+                    const digits = String(phone || '').replace(/\D/g, '');
+                    const withCountry = digits ? (digits.startsWith('55') ? digits : `55${digits}`) : '';
+                    return withCountry ? `https://wa.me/${withCountry}` : null;
+                })((enrollment as any).contact_phone)
+            },
+            enrollment: {
+                created_at: (enrollment as any).created_at ?? null,
+                contracted_plan_code: (enrollment as any).contracted_plan ?? null,
+                contracted_plan_label: (enrollment as any).contracted_plan ? planLabels[(enrollment as any).contracted_plan] : null,
+                attendance_days: Array.isArray((enrollment as any).attendance_days) 
+                    ? ((enrollment as any).attendance_days as any[]).map((idx: number) => dayNames[idx]) 
+                    : null
+            },
+            schedule: {
+                check_in_date: (enrollment as any).check_in_date ?? null,
+                check_in_time: (enrollment as any).check_in_time ?? null,
+                check_out_date: (enrollment as any).check_out_date ?? null,
+                check_out_time: (enrollment as any).check_out_time ?? null,
+            },
+            payment: {
+                payment_date: (enrollment as any).payment_date ?? null,
+            },
+            extra_services: (enrollment as any).extra_services ?? null,
+            invoice_total: invoiceTotal,
+        };
+        try {
+            await fetch('https://n8n.intelektus.tech/webhook/aprovacaoCreche', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+        } catch (err) {
+            console.warn('Falha ao enviar webhook aprovacaoCreche', err);
+        }
     };
 
     const handleDaycarePetPhotoUpload = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -11711,6 +12378,7 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
                 alert('Falha ao aprovar matrícula.');
             } else {
                 setEnrollments(prev => prev.map(en => en.id === id ? data as DaycareRegistration : en));
+                try { await sendDaycareApprovalWebhook(data as DaycareRegistration); } catch {}
             }
         } else if (source === 'approved' && target === 'inDaycare') {
             setPetsInDaycareNow(prev => [...prev, enrollmentToMove]);
@@ -11732,6 +12400,31 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
         const inDaycareIds = new Set(petsInDaycareNow.map(p => p.id));
         const approved = enrollments.filter(e => e.status === 'Aprovado' && !inDaycareIds.has(e.id));
         return { pending, approved };
+    }, [enrollments, petsInDaycareNow]);
+
+    const openDiary = (enrollment: DaycareRegistration) => {
+        setDiaryFor(enrollment);
+        try { window.history.pushState({ v: 'daycareDiary', id: enrollment.id }, '', `/admin/daycare/diario/${enrollment.id}`); } catch {}
+    };
+    const closeDiary = () => {
+        setDiaryFor(null);
+        try { window.history.pushState({ v: 'daycare' }, '', `/admin/daycare`); } catch {}
+    };
+    useEffect(() => {
+        const handlePop = () => {
+            const path = window.location.pathname;
+            const m = path.match(/\/admin\/daycare\/diario\/(.+)$/);
+            if (m) {
+                const id = m[1];
+                const found = [...enrollments, ...petsInDaycareNow].find(e => String(e.id) === id);
+                if (found) setDiaryFor(found);
+            } else if (path.startsWith('/admin/daycare')) {
+                setDiaryFor(null);
+            }
+        };
+        handlePop();
+        window.addEventListener('popstate', handlePop);
+        return () => window.removeEventListener('popstate', handlePop);
     }, [enrollments, petsInDaycareNow]);
     
     const AccordionSection: React.FC<{
@@ -11782,6 +12475,7 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
                                         <div key={enrollment.id} className="shrink-0 w-screen sm:w-[420px] lg:w-[460px] snap-center">
                                             <DaycareEnrollmentCard
                                                 enrollment={enrollment}
+                                                sectionId={sectionId}
                                                 isDraggable={true}
                                                 onDragStart={(e) => handleDragStart(e, enrollment, sectionId)}
                                                 onClick={() => { setSelectedEnrollment(enrollment); setIsDetailsModalOpen(true); }}
@@ -11789,6 +12483,10 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
                                                 onDelete={() => setEnrollmentToDelete(enrollment)}
                                                 onAddExtraServices={handleAddExtraServices}
                                                 onChangePhoto={(enr) => { setUploadTargetDaycareEnrollment(enr); setIsUploadDaycarePhotoModalOpen(true); }}
+                                                onOpenDiary={openDiary}
+                                                onApprove={(enr) => handleUpdateStatus(enr.id!, 'Aprovado')}
+                                                onTogglePaymentStatus={handleToggleDaycarePaymentStatus}
+                                                paymentUpdatingId={daycarePaymentUpdatingId}
                                             />
                                         </div>
                                     ))}
@@ -11803,6 +12501,9 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
         );
     };
     
+    if (diaryFor) {
+        return <DaycareDiaryPage enrollment={diaryFor} date={diaryDate} onDateChange={setDiaryDate} onBack={closeDiary} />
+    }
     if (isAddFormOpen) {
         return <DaycareRegistrationForm isAdmin onBack={() => setIsAddFormOpen(false)} onSuccess={handleEnrollmentAdded} />
     }
@@ -11872,18 +12573,16 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
             )}
             
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold text-gray-800 text-center" style={{fontFamily: 'Inter, sans-serif'}}>Matrículas da Creche</h2>
+                <h2 className="text-3xl font-bold text-gray-800 text-center" style={{fontFamily: 'Inter, sans-serif'}}>Creche Pet</h2>
                 <div className="flex gap-3">
-                    <button 
-                        onClick={() => setShowDaycareStatistics?.(true)} 
-                        className="flex items-center gap-2 bg-blue-600 text-white font-semibold py-3.5 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
+                    <Button variant="outline" size="lg" className="gap-2" onClick={() => setShowDaycareStatistics?.(true)}>
                         <ChartBarIcon className="w-5 h-5" />
                         <span className="hidden sm:inline">Estatísticas</span>
-                    </button>
-                    <button onClick={() => setIsAddFormOpen(true)} className="flex items-center gap-3 bg-pink-600 text-white font-semibold py-3.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
-                        <UserPlusIcon /> <span className="hidden sm:inline">Nova Matrícula</span>
-                    </button>
+                    </Button>
+                    <Button size="lg" className="gap-3" onClick={() => setIsAddFormOpen(true)}>
+                        <UserPlusIcon />
+                        <span className="hidden sm:inline">Nova Matrícula</span>
+                    </Button>
                 </div>
             </div>
             {loading ? <div className="flex justify-center py-16"><LoadingSpinner /></div> : (
@@ -11961,7 +12660,7 @@ const AdminDashboard: React.FC<{
                 setAppointments(combined);
             } catch (err) {
                 console.warn('Falha ao recarregar agendamentos após alteração de dados:', err);
-            }
+}
         };
 
         loadAllAdminAppointments();
@@ -12193,6 +12892,29 @@ const ScheduleClosedPage: React.FC<{ setView: (view: string) => void }> = ({ set
 };
 
 const App: React.FC = () => {
+    const path = typeof window !== 'undefined' ? window.location.pathname : '';
+    const publicDiaryMatch = path.match(/^\/diario\/([^/]+)$/);
+    const [publicDiaryEnrollment, setPublicDiaryEnrollment] = useState<DaycareRegistration | null>(null);
+    const [publicDiaryLoading, setPublicDiaryLoading] = useState(false);
+    const [publicDiaryDate, setPublicDiaryDate] = useState<string>(() => {
+        try { const p = new URLSearchParams(window.location.search); return p.get('date') || new Date().toISOString().slice(0,10); } catch { return new Date().toISOString().slice(0,10); }
+    });
+    useEffect(() => {
+        if (publicDiaryMatch) {
+            const id = publicDiaryMatch[1];
+            let cancelled = false;
+            const load = async () => {
+                setPublicDiaryLoading(true);
+                try {
+                    const { data, error } = await supabase.from('daycare_enrollments').select('*').eq('id', id).single();
+                    if (!cancelled && data) setPublicDiaryEnrollment(data as DaycareRegistration);
+                } catch {}
+                setPublicDiaryLoading(false);
+            };
+            load();
+            return () => { cancelled = true; };
+        }
+    }, [publicDiaryMatch?.[1]]);
     const [isObservationModalOpen, setObservationModalOpen] = useState(false);
     const [selectedAppointmentForObservation, setSelectedAppointmentForObservation] = useState<AdminAppointment | null>(null);
     const [observationText, setObservationText] = useState('');
@@ -12490,6 +13212,11 @@ const App: React.FC = () => {
         };
     }, [isAuthenticated]);
 
+    if (publicDiaryMatch) {
+        if (publicDiaryLoading && !publicDiaryEnrollment) return <div className="min-h-screen flex items-center justify-center bg-gray-100"><LoadingSpinner /></div>;
+        if (!publicDiaryEnrollment) return <div className="min-h-screen flex items-center justify-center bg-gray-100"><p className="text-gray-600">Diário não encontrado.</p></div>;
+        return <PublicDiaryPage enrollment={publicDiaryEnrollment} date={publicDiaryDate} onDateChange={setPublicDiaryDate} />;
+    }
     if (loadingAuth) {
         return <div className="min-h-screen flex items-center justify-center bg-gray-100"><LoadingSpinner /></div>;
     }
@@ -12737,6 +13464,640 @@ const VisitAppointmentForm: React.FC<{ serviceLabel: string; onBack: () => void;
                         <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:bg-gray-400">Agendar</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    );
+};
+const DaycareDiaryPage: React.FC<{ enrollment: DaycareRegistration; date: string; onDateChange: (d: string) => void; onBack: () => void }> = ({ enrollment, date, onDateChange, onBack }) => {
+    const [mood, setMood] = useState<'Animado'|'Normal'|'Sonolento'|'Agitado'|null>(null);
+    const [behavior, setBehavior] = useState<number>(3);
+    const [social, setSocial] = useState<{ outros:boolean; descanso:boolean; quieto:boolean}>({outros:false,descanso:false,quieto:false});
+    const [feeding, setFeeding] = useState<'Comeu tudo'|'Comeu pouco'|'Não comeu'|null>(null);
+    const [logs, setLogs] = useState<{ time:string; type:'Xixi'|'Cocô'}[]>([]);
+    const [obs, setObs] = useState<string>('');
+    const [media, setMedia] = useState<File[]>([]);
+    const [existingMediaUrls, setExistingMediaUrls] = useState<string[]>([]);
+    const [mediaPreviews, setMediaPreviews] = useState<string[]>([]);
+    const socialOptions = [
+        'Interagiu bem com os atendentes',
+        'Fez novos amigos',
+        'Mostrou timidez',
+        'Teve dificuldade em interagir',
+        'Brincou apenas com um pet específico',
+        'Mostrou empolgação ao chegar',
+        'Precisou de tempo para se adaptar',
+        'Ficou mais observador',
+        'Mostrou sinais de ansiedade',
+        'Participou de atividades em grupo',
+        'Preferiu brincar sozinho',
+        'Se mostrou protetor',
+        'Se aproximou de outros pets espontaneamente',
+        'Se manteve tranquilo perto de outros pets',
+        'Teve pequenos desentendimentos',
+        'Interagiu de forma carinhosa',
+        'Teve muita energia durante as interações',
+    ];
+    const [socialNotes, setSocialNotes] = useState<string[]>([]);
+    const emotionalOptions = [
+        'Estressado',
+        'Ansioso',
+        'Carente',
+        'Relaxado',
+        'Tranquilo com barulhos',
+        'Procurou atenção',
+    ];
+    const [emotionalNotes, setEmotionalNotes] = useState<string[]>([]);
+    const [copied, setCopied] = useState(false);
+    const [sendingShare, setSendingShare] = useState(false);
+    const [shareSent, setShareSent] = useState(false);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [hasEntry, setHasEntry] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const addLog = (type:'Xixi'|'Cocô') => {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2,'0');
+        const mm = String(now.getMinutes()).padStart(2,'0');
+        setLogs(prev => [...prev, { time: `${hh}:${mm}`, type }]);
+    };
+    const removeLog = (index: number) => {
+        setLogs(prev => prev.filter((_, i) => i !== index));
+    };
+    const handleAddMedia = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const f = Array.from(e.target.files || []);
+        setMedia(prev => [...prev, ...f]);
+    };
+    const removeSelectedMedia = (index: number) => {
+        setMedia(prev => prev.filter((_, i) => i !== index));
+    };
+    useEffect(() => {
+        const urls = media.map(file => URL.createObjectURL(file));
+        setMediaPreviews(urls);
+        return () => { urls.forEach(u => URL.revokeObjectURL(u)); };
+    }, [media]);
+    useEffect(() => {
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+        if (!date) onDateChange(todayStr);
+    }, []);
+    const moods: {label:'Animado'|'Normal'|'Sonolento'|'Agitado'; color:string; icon:string}[] = [
+        {label:'Animado', color:'bg-green-100', icon:'https://cdn-icons-png.flaticon.com/512/2172/2172006.png'},
+        {label:'Normal', color:'bg-yellow-100', icon:'https://cdn-icons-png.flaticon.com/512/2172/2172069.png'},
+        {label:'Sonolento', color:'bg-blue-100', icon:'https://cdn-icons-png.flaticon.com/512/13761/13761607.png'},
+        {label:'Agitado', color:'bg-red-100', icon:'https://cdn-icons-png.flaticon.com/512/2171/2171936.png'},
+    ];
+    const copyShareLink = async () => {
+        const url = `${window.location.origin}/diario/${enrollment.id}?date=${date}`;
+        try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(()=>setCopied(false), 1500); } catch {}
+    };
+    const sendDiaryWebhook = async () => {
+        if (!hasEntry) return;
+        setSendingShare(true);
+        setShareSent(false);
+        try {
+            const webhookUrl = 'https://n8n.intelektus.tech/webhook/diarioCrechePet';
+            const diaryLink = `${window.location.origin}/diario/${enrollment.id}?date=${date}`;
+            try { await navigator.clipboard.writeText(diaryLink); setCopied(true); setTimeout(()=>setCopied(false), 1500); } catch {}
+            const payload = {
+                type: 'daycare_diary_shared',
+                diary_link: diaryLink,
+                enrollment: {
+                    id: enrollment.id,
+                    pet_name: enrollment.pet_name,
+                    pet_breed: enrollment.pet_breed,
+                    pet_age: enrollment.pet_age,
+                    pet_sex: enrollment.pet_sex,
+                    is_neutered: enrollment.is_neutered,
+                    pet_photo_url: enrollment.pet_photo_url,
+                    gets_along_with_others: (enrollment as any).gets_along_with_others,
+                    has_allergies: (enrollment as any).has_allergies,
+                    allergies_description: (enrollment as any).allergies_description,
+                    needs_special_care: (enrollment as any).needs_special_care,
+                    special_care_description: (enrollment as any).special_care_description,
+                    contracted_plan: enrollment.contracted_plan,
+                    attendance_days: (enrollment as any).attendance_days,
+                    tutor_name: enrollment.tutor_name,
+                    contact_phone: (enrollment as any).contact_phone,
+                    tutor_email: (enrollment as any).tutor_email,
+                    address: (enrollment as any).address,
+                },
+                diary: {
+                    date,
+                    mood,
+                    behavior,
+                    social_outros: social.outros,
+                    social_descanso: social.descanso,
+                    social_quieto: social.quieto,
+                    social_notes: socialNotes,
+                    emotional_notes: emotionalNotes,
+                    feeding,
+                    needs_logs: logs,
+                    obs,
+                    media_urls: existingMediaUrls,
+                },
+            };
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 12000);
+            try {
+                const res = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    signal: controller.signal,
+                    keepalive: true,
+                });
+                clearTimeout(timeoutId);
+                if (!res.ok) throw new Error(String(res.status));
+                setShareSent(true);
+            } catch {
+                const ok = typeof navigator.sendBeacon === 'function' && navigator.sendBeacon(webhookUrl, new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+                if (ok) setShareSent(true);
+            }
+        } finally {
+            setSendingShare(false);
+        }
+    };
+    const formatDateBR = (s: string) => {
+        const [y, m, d] = s.split('-');
+        return `${d}/${m}/${y}`;
+    };
+    const formatPlanBR = (plan: string | null | undefined) => {
+        const s = String(plan || '').toLowerCase();
+        const m = s.match(/^(\d+)x_(week|month)$/);
+        if (m) {
+            const n = m[1];
+            const period = m[2] === 'week' ? 'semana' : 'mês';
+            return `${n}x por ${period}`;
+        }
+        return s.replace('_',' ');
+    };
+    const behaviorLabel = (n: number) => {
+        switch (n) {
+            case 1: return 'Anjinho';
+            case 2: return 'Arteirinho às vezes';
+            case 3: return 'Travesso na medida';
+            case 4: return 'Aprontador frequente';
+            case 5: return 'Travessura máxima';
+            default: return '';
+        }
+    };
+    const moodOptions: {label:'Animado'|'Normal'|'Sonolento'|'Agitado'; color:string; icon:string}[] = [
+        {label:'Animado', color:'bg-green-100', icon:'https://cdn-icons-png.flaticon.com/512/2172/2172006.png'},
+        {label:'Normal', color:'bg-yellow-100', icon:'https://cdn-icons-png.flaticon.com/512/2172/2172069.png'},
+        {label:'Sonolento', color:'bg-blue-100', icon:'https://cdn-icons-png.flaticon.com/512/13761/13761607.png'},
+        {label:'Agitado', color:'bg-red-100', icon:'https://cdn-icons-png.flaticon.com/512/2171/2171936.png'},
+    ];
+    const feedingOptionCards: {label:'Comeu tudo'|'Comeu pouco'|'Não comeu'; bg:string; ring:string; emoji:string}[] = [
+        {label:'Comeu tudo', bg:'bg-green-50', ring:'ring-green-400', emoji:'🍲'},
+        {label:'Comeu pouco', bg:'bg-yellow-50', ring:'ring-yellow-400', emoji:'🥣'},
+        {label:'Não comeu', bg:'bg-red-50', ring:'ring-red-400', emoji:'🚫'},
+    ];
+    useEffect(() => {
+        (async () => {
+            try {
+                setLoadError(null);
+                const { data, error } = await supabase
+                    .from('daycare_diary_entries')
+                    .select('*')
+                    .eq('enrollment_id', enrollment.id)
+                    .eq('date', date)
+                    .maybeSingle();
+                if (error) { setLoadError(error.message); return; }
+                if (data) {
+                    setHasEntry(true);
+                    setMood((data.mood as any) ?? null);
+                    setBehavior(data.behavior ?? 3);
+                    setSocial({ outros: !!data.social_outros, descanso: !!data.social_descanso, quieto: !!data.social_quieto });
+                    setFeeding((data.feeding as any) ?? null);
+                    setLogs(Array.isArray(data.needs_logs) ? data.needs_logs : []);
+                    setObs(data.obs || '');
+                    setExistingMediaUrls(Array.isArray(data.media_urls) ? data.media_urls : []);
+                    setSocialNotes(Array.isArray((data as any).social_notes) ? (data as any).social_notes : []);
+                    setEmotionalNotes(Array.isArray((data as any).emotional_notes) ? (data as any).emotional_notes : []);
+                } else {
+                    setHasEntry(false);
+                    setMood(null); setBehavior(3); setSocial({outros:false,descanso:false,quieto:false}); setFeeding(null); setLogs([]); setObs('');
+                    setExistingMediaUrls([]);
+                    setSocialNotes([]);
+                    setEmotionalNotes([]);
+                }
+            } catch {}
+        })();
+    }, [enrollment.id, date]);
+    const uploadMedia = async (): Promise<string[]> => {
+        const uploaded: string[] = [];
+        if (!media.length) return uploaded;
+        const bucket = supabase.storage.from('daycare_pet_photos');
+        for (const file of media) {
+            const ext = file.name.split('.').pop() || 'bin';
+            const name = (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Date.now())) + '.' + ext;
+            const path = `${enrollment.id}/${date}/${name}`;
+            const { error } = await bucket.upload(path, file, { contentType: file.type, upsert: false });
+            if (!error) {
+                const { data } = bucket.getPublicUrl(path);
+                if (data?.publicUrl) uploaded.push(data.publicUrl);
+            }
+        }
+        return uploaded;
+    };
+    const saveDiary = async () => {
+        setSaving(true);
+        const newUrls = await uploadMedia();
+        const payload: any = {
+            enrollment_id: enrollment.id,
+            date,
+            mood,
+            behavior,
+            social_outros: social.outros,
+            social_descanso: social.descanso,
+            social_quieto: social.quieto,
+            feeding,
+            needs_logs: logs,
+            obs,
+            media_urls: [...existingMediaUrls, ...newUrls],
+            social_notes: socialNotes,
+            emotional_notes: emotionalNotes,
+        };
+        const { error } = await supabase.from('daycare_diary_entries').upsert(payload, { onConflict: 'enrollment_id,date' });
+        setSaving(false);
+        if (error) {
+            alert('Erro ao salvar diário: ' + error.message);
+        } else {
+            setExistingMediaUrls(payload.media_urls || []);
+            setMedia([]);
+            setHasEntry(true);
+            setConfirmOpen(true);
+        }
+    };
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-100 to-white p-4 sm:p-6">
+            <div className="max-w-3xl mx-auto space-y-4">
+                <div className="flex items-center justify-between">
+                    <button onClick={onBack} className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Voltar</button>
+                    <h2 className="font-brand text-3xl font-bold text-pink-800 flex-1 text-center">Diário do Pet</h2>
+                    <div className="flex items-center gap-2">
+                        {hasEntry && (
+                            <>
+                                <button onClick={sendDiaryWebhook} disabled={sendingShare} className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-60">{sendingShare ? 'Enviando...' : 'Compartilhar'}</button>
+                                {shareSent && <span className="text-xs text-gray-700">Enviado!</span>}
+                            </>
+                        )}
+                    </div>
+                </div>
+                <div className="bg-white rounded-2xl shadow p-4 flex items-center gap-3">
+                    <img src={enrollment.pet_photo_url || 'https://cdn-icons-png.flaticon.com/512/3009/3009489.png'} alt={enrollment.pet_name} className="w-14 h-14 rounded-full object-cover" />
+                    <div className="flex-1">
+                        <p className="text-xl font-bold text-gray-900">{enrollment.pet_name}</p>
+                        <p className="text-sm text-gray-600">{enrollment.tutor_name}</p>
+                        <p className="text-xs text-gray-500">Plano: {formatPlanBR(enrollment.contracted_plan)}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button type="button" onClick={()=>{ const di = document.getElementById('diary_date_input') as any; try { di?.showPicker ? di.showPicker() : di?.focus(); } catch {} }} className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm flex items-center gap-2">
+                            {formatDateBR(date)}
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        </button>
+                        <input id="diary_date_input" type="date" value={date} onChange={(e)=>onDateChange(e.target.value)} className="sr-only" />
+                    </div>
+                </div>
+                <section className="bg-white rounded-2xl shadow p-4">
+                    <h3 className="text-lg font-semibold text-white mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg px-3 py-2">Humor do Pet</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {moods.map(m => (
+                            <button key={m.label} onClick={()=>setMood(m.label)} className={`flex flex-col items-center gap-2 p-3 rounded-xl ${m.color} ${mood===m.label?'ring-2 ring-purple-500':''}`}>
+                                <img src={m.icon} alt={m.label} className="w-8 h-8" />
+                                <span className="text-sm font-medium text-gray-800">{m.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                </section>
+                <section className="bg-white rounded-2xl shadow p-4">
+                    <h3 className="text-lg font-semibold text-white mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg px-3 py-2">Comportamento</h3>
+                    <div className="px-2">
+                        <div className="flex justify-between mb-2 px-1">
+                            {[1,2,3,4,5].map(n => (
+                                <button key={n} type="button" onClick={()=>setBehavior(n)} className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${behavior===n?'bg-purple-600 text-white':'bg-gray-200 text-gray-700'} transition-colors`}>
+                                    {n}
+                                </button>
+                            ))}
+                        </div>
+                        <input type="range" min={1} max={5} list="behaviorTicks" value={behavior} onChange={(e)=>setBehavior(Number(e.target.value))} className="w-full" />
+                        <div className="text-sm text-purple-700 font-medium text-center mt-1">{behaviorLabel(behavior)}</div>
+                        <datalist id="behaviorTicks">
+                            <option value="1" />
+                            <option value="2" />
+                            <option value="3" />
+                            <option value="4" />
+                            <option value="5" />
+                        </datalist>
+                    </div>
+                </section>
+                <section className="bg-white rounded-2xl shadow p-4">
+                    <h3 className="text-lg font-semibold text-white mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg px-3 py-2">Socialização</h3>
+                    <div className="overflow-x-auto">
+                        <div className="flex gap-3 min-w-max px-1">
+                            <label className="flex items-center gap-2 shrink-0"><input type="checkbox" checked={social.outros} onChange={(e)=>setSocial(s=>({...s,outros:e.target.checked}))} /><span>Brincou com outros pets</span></label>
+                            <label className="flex items-center gap-2 shrink-0"><input type="checkbox" checked={social.descanso} onChange={(e)=>setSocial(s=>({...s,descanso:e.target.checked}))} /><span>Precisou de descanso</span></label>
+                            <label className="flex items-center gap-2 shrink-0"><input type="checkbox" checked={social.quieto} onChange={(e)=>setSocial(s=>({...s,quieto:e.target.checked}))} /><span>Ficou mais quieto</span></label>
+                            {socialOptions.map(opt => (
+                                <label key={opt} className="flex items-center gap-2 shrink-0">
+                                    <input type="checkbox" checked={socialNotes.includes(opt)} onChange={(e)=> setSocialNotes(prev=> e.target.checked ? [...prev, opt] : prev.filter(x=>x!==opt))} />
+                                    <span>{opt}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+                <section className="bg-white rounded-2xl shadow p-4">
+                    <h3 className="text-lg font-semibold text-white mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg px-3 py-2">Bem-estar emocional</h3>
+                    <div className="overflow-x-auto">
+                        <div className="flex gap-3 min-w-max px-1">
+                            {emotionalOptions.map(opt => (
+                                <label key={opt} className="flex items-center gap-2 shrink-0">
+                                    <input type="checkbox" checked={emotionalNotes.includes(opt)} onChange={(e)=> setEmotionalNotes(prev=> e.target.checked ? [...prev, opt] : prev.filter(x=>x!==opt))} />
+                                    <span>{opt}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <section className="bg-white rounded-2xl shadow p-4">
+                        <h3 className="text-lg font-semibold text-white mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg px-3 py-2">Alimentação</h3>
+                        <div className="grid grid-cols-3 gap-3 px-2 py-2 overflow-x-auto">
+                            {feedingOptionCards.map(opt => (
+                                <button
+                                    key={opt.label}
+                                    onClick={()=>setFeeding(opt.label)}
+                                    className={`w-11/12 mx-auto min-w-0 p-1 rounded-xl border border-gray-200 ${opt.bg} ${feeding===opt.label?`ring-2 ${opt.ring} shadow-md`:'hover:shadow'} transition`}
+                                    aria-pressed={feeding===opt.label}
+                                >
+                                    <div className="flex flex-col items-center gap-1">
+                                        <div className="w-9 h-9 rounded-full bg-white/80 flex items-center justify-center text-xl">
+                                            <span>{opt.emoji}</span>
+                                        </div>
+                                        <span className="text-xs font-semibold text-gray-800 text-center">{opt.label}</span>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </section>
+                    <section className="bg-white rounded-2xl shadow p-4">
+                        <h3 className="text-lg font-semibold text-white mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg px-3 py-2">Necessidades</h3>
+                        <div className="flex gap-2 mb-3">
+                            <button onClick={()=>addLog('Xixi')} className="px-3 py-2 bg-green-600 text-white rounded-lg">Registrar xixi</button>
+                            <button onClick={()=>addLog('Cocô')} className="px-3 py-2 bg-green-600 text-white rounded-lg">Registrar cocô</button>
+                        </div>
+                        <div className="space-y-1 text-sm text-gray-700">
+                            {logs.map((l,i)=>(
+                                <div key={i} className="flex justify-between items-center bg-gray-50 p-2 rounded">
+                                    <span>{l.time} - {l.type}</span>
+                                    <button type="button" onClick={() => removeLog(i)} className="text-red-500 hover:text-red-700">
+                                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <path d="M6 6l12 12M6 18L18 6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            ))}
+                            {logs.length===0 && <div className="text-gray-500">Sem registros</div>}
+                        </div>
+                    </section>
+                </div>
+                <section className="bg-white rounded-2xl shadow p-4">
+                    <h3 className="text-lg font-semibold text-white mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg px-3 py-2">Observações gerais</h3>
+                    <textarea value={obs} onChange={(e)=>setObs(e.target.value)} placeholder="Digite observações gerais aqui..." className="w-full p-3 rounded-xl border border-gray-300" rows={3} />
+                </section>
+                <section className="bg-white rounded-2xl shadow p-4">
+                    <h3 className="text-lg font-semibold text-white mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg px-3 py-2">Mídias do dia</h3>
+                    <div className="rounded-2xl bg-gray-100 p-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                            {(() => {
+                                const items: {src?: string; type: 'image'|'video'}[] = [];
+                                existingMediaUrls.forEach(u => {
+                                    const isImg = /\.(png|jpg|jpeg|gif|webp)$/i.test(u);
+                                    const isVid = /\.(mp4|webm|ogg)$/i.test(u);
+                                    if (isImg) items.push({ src: u, type: 'image' });
+                                    else if (isVid) items.push({ src: u, type: 'video' });
+                                    else items.push({ src: u, type: 'image' });
+                                });
+                                media.forEach((f, i) => {
+                                    const preview = mediaPreviews[i];
+                                    const isImg = (f.type || '').startsWith('image/');
+                                    const isVid = (f.type || '').startsWith('video/');
+                                    if (isImg) items.push({ src: preview, type: 'image' });
+                                    else if (isVid) items.push({ src: preview, type: 'video' });
+                                    else items.push({ src: preview, type: 'image' });
+                                });
+                                const tiles = Array.from({ length: 4 }, (_, idx) => items[idx] || null);
+                                return (
+                                    <>
+                                        {tiles.map((item, i) => (
+                                            <div key={`tile-${i}`} className="relative h-20 rounded-xl bg-gray-200 flex items-center justify-center overflow-hidden">
+                                                {item ? (
+                                                    item.type === 'image' ? (
+                                                        <img src={item.src} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <video src={item.src} className="w-full h-full object-cover" />
+                                                    )
+                                                ) : (
+                                                    <div className="text-gray-500 flex items-center justify-center w-full h-full">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8"><path d="M2 6a2 2 0 012-2h16a2 2 0 012 2v11a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm3 1a1 1 0 00-1 1v9h16V8a1 1 0 00-1-1H5zm7 2a3 3 0 110 6 3 3 0 010-6z"/></svg>
+                                                    </div>
+                                                )}
+                                                <button type="button" onClick={()=>document.getElementById('diary_media_input')?.click()} className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-green-500 text-white text-base flex items-center justify-center">+</button>
+                                            </div>
+                                        ))}
+                                        <button type="button" onClick={()=>document.getElementById('diary_media_input')?.click()} className="h-20 rounded-xl border-2 border-green-500 bg-white flex items-center justify-center">
+                                            <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-green-700 font-semibold">
+                                                <CameraAddIcon className="w-6 h-6 text-green-600" />
+                                                <span className="text-center">Adicionar Mídia</span>
+                                            </div>
+                                        </button>
+                                    </>
+                                );
+                            })()}
+                        </div>
+                    </div>
+                    <input id="diary_media_input" type="file" accept="image/*,video/*" multiple className="sr-only" onChange={handleAddMedia} />
+                </section>
+                {!hasEntry && (
+                    <div className="flex justify-center">
+                        <button onClick={saveDiary} disabled={saving} className="px-6 py-3 bg-green-600 text-white rounded-2xl font-semibold hover:bg-green-700 disabled:opacity-60">
+                            {saving ? 'Salvando...' : 'Salvar registro'}
+                        </button>
+                    </div>
+                )}
+            {confirmOpen && (
+            <div className="fixed inset-0 z-50">
+                <div className="absolute inset-0 bg-black/30" />
+                <div className="relative min-h-screen">
+                    <div className="w-full py-3 px-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <button onClick={()=>setConfirmOpen(false)} className="p-1 rounded hover:bg-white/10" aria-label="Voltar">
+                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 19l-7-7 7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            </button>
+                            <span className="font-semibold">Confirmação de Registro</span>
+                        </div>
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9" strokeWidth="2"/></svg>
+                    </div>
+                    <div className="max-w-md mx-auto mt-10 px-4">
+                        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+                            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500 flex items-center justify-center">
+                                <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6L9 17l-5-5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            </div>
+                            <p className="text-lg font-semibold text-gray-800 mb-6">Registro Salvo com Sucesso!</p>
+                            <button onClick={()=>setConfirmOpen(false)} className="px-6 py-2.5 bg-green-600 text-white rounded-full font-medium hover:bg-green-700">Voltar ao Diário</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+            </div>
+        </div>
+    );
+};
+
+const PublicDiaryPage: React.FC<{ enrollment: DaycareRegistration; date: string; onDateChange: (d: string) => void }> = ({ enrollment, date, onDateChange }) => {
+    const [entry, setEntry] = useState<any | null>(null);
+    const [loading, setLoading] = useState(false);
+    const formatDateBR = (s: string) => {
+        const [y, m, d] = s.split('-');
+        return `${d}/${m}/${y}`;
+    };
+    const formatPlanBR = (plan: string | null | undefined) => {
+        const s = String(plan || '').toLowerCase();
+        const m = s.match(/^(\d+)x_(week|month)$/);
+        if (m) {
+            const n = m[1];
+            const period = m[2] === 'week' ? 'semana' : 'mês';
+            return `${n}x por ${period}`;
+        }
+        return s.replace('_',' ');
+    };
+    const behaviorLabel = (n: number) => {
+        switch (n) {
+            case 1: return 'Anjinho';
+            case 2: return 'Arteirinho às vezes';
+            case 3: return 'Travesso na medida';
+            case 4: return 'Aprontador frequente';
+            case 5: return 'Travessura máxima';
+            default: return '';
+        }
+    };
+    const moodOptions: {label:'Animado'|'Normal'|'Sonolento'|'Agitado'; color:string; icon:string}[] = [
+        {label:'Animado', color:'bg-green-100', icon:'https://cdn-icons-png.flaticon.com/512/2172/2172006.png'},
+        {label:'Normal', color:'bg-yellow-100', icon:'https://cdn-icons-png.flaticon.com/512/2172/2172069.png'},
+        {label:'Sonolento', color:'bg-blue-100', icon:'https://cdn-icons-png.flaticon.com/512/13761/13761607.png'},
+        {label:'Agitado', color:'bg-red-100', icon:'https://cdn-icons-png.flaticon.com/512/2171/2171936.png'},
+    ];
+    useEffect(() => {
+        (async () => {
+            setLoading(true);
+            const { data } = await supabase
+                .from('daycare_diary_entries')
+                .select('*')
+                .eq('enrollment_id', enrollment.id)
+                .eq('date', date)
+                .maybeSingle();
+            setEntry(data || null);
+            setLoading(false);
+        })();
+    }, [enrollment.id, date]);
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-100 to-white p-4 sm:p-6">
+            <div className="max-w-3xl mx-auto space-y-4">
+                <div className="flex items-center justify-between">
+                    <h2 className="font-brand text-3xl font-bold text-pink-800 flex-1 text-center">Diário do Pet</h2>
+                    <div className="flex items-center gap-2">
+                        <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">{formatDateBR(date)}</span>
+                    </div>
+                </div>
+                <div className="bg-white rounded-2xl shadow p-4 flex items-center gap-3">
+                    <img src={enrollment.pet_photo_url || 'https://cdn-icons-png.flaticon.com/512/3009/3009489.png'} alt={enrollment.pet_name} className="w-14 h-14 rounded-full object-cover" />
+                    <div className="flex-1">
+                        <p className="text-xl font-bold text-gray-900">{enrollment.pet_name}</p>
+                        <p className="text-sm text-gray-600">{enrollment.tutor_name}</p>
+                        <p className="text-xs text-gray-500">Plano: {formatPlanBR(enrollment.contracted_plan)}</p>
+                    </div>
+                </div>
+                <section className="bg-white rounded-2xl shadow p-4">
+                    <h3 className="text-lg font-semibold text-white mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg px-3 py-2">Humor do Pet</h3>
+                    {typeof entry?.mood === 'string' ? (
+                        (() => {
+                            const m = moodOptions.find(x => x.label === entry!.mood);
+                            return m ? (
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 justify-center justify-items-center">
+                                    <div className={`flex flex-col items-center gap-2 p-3 rounded-xl ${m.color}`}>
+                                        <img src={m.icon} alt={m.label} className="w-8 h-8" />
+                                        <span className="text-sm font-medium text-gray-800">{m.label}</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-gray-600">Sem registros</p>
+                            );
+                        })()
+                    ) : (
+                        <p className="text-gray-600">Sem registros</p>
+                    )}
+                </section>
+                <section className="bg-white rounded-2xl shadow p-4">
+                    <h3 className="text-lg font-semibold text-white mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg px-3 py-2">Comportamento</h3>
+                    <p className="text-gray-600">{typeof entry?.behavior === 'number' ? behaviorLabel(entry.behavior) : 'Sem registros'}</p>
+                </section>
+                <section className="bg-white rounded-2xl shadow p-4">
+                    <h3 className="text-lg font-semibold text-white mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg px-3 py-2">Socialização</h3>
+                    {!entry ? (<p className="text-gray-600">Sem registros</p>) : (
+                        <ul className="text-gray-700 text-sm space-y-1">
+                            {entry.social_outros && <li>Brincou com outros pets</li>}
+                            {entry.social_descanso && <li>Precisou de descanso</li>}
+                            {entry.social_quieto && <li>Ficou mais quieto</li>}
+                            {(entry.social_notes || []).map((t:string, i:number)=>(<li key={i}>{t}</li>))}
+                            {!entry.social_outros && !entry.social_descanso && !entry.social_quieto && !((entry.social_notes||[]).length) && <li>Sem registros</li>}
+                        </ul>
+                    )}
+                </section>
+                <section className="bg-white rounded-2xl shadow p-4">
+                    <h3 className="text-lg font-semibold text-white mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg px-3 py-2">Bem-estar emocional</h3>
+                    {entry?.emotional_notes?.length ? (
+                        <ul className="text-gray-700 text-sm space-y-1">
+                            {entry.emotional_notes.map((t:string,i:number)=>(<li key={i}>{t}</li>))}
+                        </ul>
+                    ) : (<p className="text-gray-600">Sem registros</p>)}
+                </section>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <section className="bg-white rounded-2xl shadow p-4">
+                        <h3 className="text-lg font-semibold text-white mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg px-3 py-2">Alimentação</h3>
+                        <p className="text-gray-600">{entry?.feeding || 'Sem registros'}</p>
+                    </section>
+                    <section className="bg-white rounded-2xl shadow p-4">
+                        <h3 className="text-lg font-semibold text-white mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg px-3 py-2">Necessidades</h3>
+                        {entry?.needs_logs?.length ? (
+                            <div className="space-y-1 text-sm text-gray-700">
+                                {entry.needs_logs.map((l:any,i:number)=>(<div key={i} className="flex justify-between bg-gray-50 p-2 rounded"><span>{l.time} - {l.type}</span></div>))}
+                            </div>
+                        ) : (<p className="text-gray-600">Sem registros</p>)}
+                    </section>
+                </div>
+                <section className="bg-white rounded-2xl shadow p-4">
+                    <h3 className="text-lg font-semibold text-white mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg px-3 py-2">Observações gerais</h3>
+                    <p className="text-gray-600">{entry?.obs || 'Sem registros'}</p>
+                </section>
+                <section className="bg-white rounded-2xl shadow p-4">
+                    <h3 className="text-lg font-semibold text-white mb-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg px-3 py-2">Mídias do dia</h3>
+                    {entry?.media_urls?.length ? (
+                        <div className="flex flex-wrap gap-3 justify-center">
+                            {entry.media_urls.map((u:string,i:number)=>{
+                                const isImg = /\.(png|jpg|jpeg|gif|webp)$/i.test(u);
+                                const isVid = /\.(mp4|webm|ogg)$/i.test(u);
+                                return (
+                                    <a key={i} href={u} target="_blank" className="w-28 h-28 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
+                                        {isImg ? (<img src={u} alt={`Midia ${i+1}`} className="w-full h-full object-cover" />) : isVid ? (<video src={u} className="w-full h-full object-cover" />) : (<span className="text-xs text-gray-600">Midia {i+1}</span>)}
+                                    </a>
+                                );
+                            })}
+                        </div>
+                    ) : (<p className="text-gray-600">Sem registros</p>)}
+                </section>
             </div>
         </div>
     );

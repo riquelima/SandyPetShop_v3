@@ -167,6 +167,7 @@ export interface DaycareRegistration {
     };
     total_price?: number;
     payment_date: string;
+    payment_status?: 'Pendente' | 'Pago';
     status: 'Pendente' | 'Aprovado' | 'Rejeitado';
 }
 

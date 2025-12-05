@@ -12,6 +12,14 @@ export default defineConfig(({ mode }) => {
         port: 5000,
         host: '0.0.0.0',
         allowedHosts: true,
+        proxy: {
+          '/api/n8n': {
+            target: 'https://n8n.intelektus.tech',
+            changeOrigin: true,
+            secure: true,
+            rewrite: (path) => path.replace(/^\/api\/n8n/, ''),
+          },
+        },
       },
       preview: {
         port: 5000,
@@ -28,4 +36,4 @@ export default defineConfig(({ mode }) => {
         }
       }
     };
-});
+  });
