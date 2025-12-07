@@ -2316,6 +2316,8 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
     const initialSaoPauloDate = getSaoPauloTimeParts(new Date(appointment.appointment_time));
     const [datePart, setDatePart] = useState(new Date(Date.UTC(initialSaoPauloDate.year, initialSaoPauloDate.month, initialSaoPauloDate.date)).toISOString().split('T')[0]);
     const [timePart, setTimePart] = useState(initialSaoPauloDate.hour);
+    const visitDaycareLabel = SERVICES[ServiceType.VISIT_DAYCARE].label;
+    const visitHotelLabel = SERVICES[ServiceType.VISIT_HOTEL].label;
 
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -2334,12 +2336,13 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
         const newAppointmentTime = toSaoPauloUTC(year, month - 1, day, timePart);
 
         const { pet_name, owner_name, whatsapp, service, weight, price, status } = formData;
+        const normalizedService = service === 'Creche Pet' ? visitDaycareLabel : (service === 'Hotel Pet' ? visitHotelLabel : service);
         
         const updatePayload = {
             pet_name,
             owner_name,
             whatsapp,
-            service,
+            service: normalizedService,
             weight,
             price: Number(price),
             status,
@@ -2398,7 +2401,7 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
                         <div>
                             <label className="font-semibold text-gray-600">Hora</label>
                             <select value={timePart} onChange={e => setTimePart(Number(e.target.value))} className="w-full mt-1 px-5 py-4 border rounded-lg bg-white">
-                                {WORKING_HOURS.map(h => <option key={h} value={h}>{`${h}:00`}</option>)}
+                                {( ['Creche Pet','Hotel Pet', visitDaycareLabel, visitHotelLabel].includes(formData.service) ? VISIT_WORKING_HOURS : WORKING_HOURS ).map(h => <option key={h} value={h}>{`${h}:00`}</option>)}
                             </select>
                         </div>
                         <div className="md:col-span-2">

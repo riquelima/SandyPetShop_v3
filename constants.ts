@@ -14,12 +14,12 @@ export const SERVICES = {
     duration: 2, // in hours
   },
   [ServiceType.VISIT_DAYCARE]: {
-    label: 'Creche Pet',
-    duration: 1, // in hours
+    label: 'Visita — Creche Pet',
+    duration: 1,
   },
   [ServiceType.VISIT_HOTEL]: {
-    label: 'Hotel Pet',
-    duration: 1, // in hours
+    label: 'Visita — Hotel Pet',
+    duration: 1,
   },
   [ServiceType.PET_MOBILE_BATH]: {
     label: 'Banho (Pet Móvel)',
@@ -104,6 +104,6 @@ export const HOTEL_EXTRA_SERVICES_PRICES: Record<string, number> = {
 };
 
 export const WORKING_HOURS: number[] = [9, 10, 11, 12, 14, 15, 16, 17];
-export const VISIT_WORKING_HOURS: number[] = [9, 10, 11, 12, 14, 15, 16];
+export const VISIT_WORKING_HOURS: number[] = [9, 10, 11, 12, 14, 15, 16, 17, 18, 19];
 export const LUNCH_HOUR = 13;
 export const MAX_CAPACITY_PER_SLOT = 2; // Two groomers
