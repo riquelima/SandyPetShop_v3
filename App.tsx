@@ -534,18 +534,18 @@ const LockClosedIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="
 const LockOpenIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>;
 
 // --- NEW ADMIN MENU ICONS ---
-const BathTosaIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/13702/13702805.png" alt="Banho & Tosa Icon" className="h-7 w-7" />;
+const BathTosaIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/14969/14969909.png" alt="Banho & Tosa Icon" className="h-7 w-7" />;
 const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
         <path d="M6 9l6 6 6-6" />
     </svg>
 );
 // ChevronRightIcon já está definido acima; evitando redefinição
-const DaycareIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/14257/14257709.png" alt="Creche Pet Icon" className="h-7 w-7" />;
-const ClientsMenuIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/1077/1077063.png" alt="Clientes Icon" className="h-7 w-7" />;
-const MonthlyIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/14242/14242317.png" alt="Mensalistas Icon" className="h-7 w-7" />;
-const HotelIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/18921/18921660.png" alt="Hotel Pet Icon" className="h-7 w-7" />;
-const PetMovelIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/6995/6995953.png" alt="Pet Móvel Icon" className="h-7 w-7" />;
+const DaycareIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/11201/11201086.png" alt="Creche Pet Icon" className="h-7 w-7" />;
+const ClientsMenuIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/1192/1192913.png" alt="Clientes Icon" className="h-7 w-7" />;
+const MonthlyIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/13731/13731277.png" alt="Mensalistas Icon" className="h-7 w-7" />;
+const HotelIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/1131/1131938.png" alt="Hotel Pet Icon" className="h-7 w-7" />;
+const PetMovelIcon = () => <img src="https://cdn-icons-png.flaticon.com/512/10754/10754045.png" alt="Pet Móvel Icon" className="h-7 w-7" />;
 
 
 // --- ADMIN COMPONENTS ---
@@ -3793,6 +3793,7 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isStatisticsModalOpen, setIsStatisticsModalOpen] = useState(false);
     const [isCloseDayModalOpen, setIsCloseDayModalOpen] = useState(false);
+    const [showCalendar, setShowCalendar] = useState(true);
     const [closeDaysMonth, setCloseDaysMonth] = useState<string>(() => {
         const d = new Date();
         const y = d.getFullYear();
@@ -3899,6 +3900,15 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
         
         setDeletingAppointmentId(null);
         setAppointmentToDelete(null);
+    };
+
+    const handleToggleAdminView = () => {
+        if (adminView === 'daily') {
+            setAdminView('all');
+        } else {
+            setAdminView('daily');
+            setShowCalendar(true);
+        }
     };
 
     const filteredAppointments = useMemo(() => {
@@ -4008,40 +4018,85 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
                 </div>
             )}
 
-            <div className="flex flex-col gap-4 mb-6">
-                <div className="relative flex-grow">
-                    <input type="text" placeholder="Buscar por pet, dono ou serviço..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500" />
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><SearchIcon /></div>
-                </div>
-                <div className="w-full flex flex-row items-center justify-between sm:justify-center gap-3 sm:gap-3 mx-auto flex-wrap sm:flex-nowrap">
-                    <button onClick={handleOpenAddModal} title="Adicionar Agendamento" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
-                        <img alt="Adicionar Agendamento" className="h-6 w-6" src="https://i.imgur.com/ZimMFxY.png" />
-                    </button>
-                    <button onClick={() => setIsStatisticsModalOpen(true)} title="Estatísticas" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                    </button>
-                    <button onClick={() => setIsCloseDayModalOpen(true)} title="Bloquear Dias" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
-                        <img
-                            alt="Bloquear Dias"
-                            className="h-6 w-6"
-                            src="https://i.imgur.com/BaVdolX.png"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://cdn-icons-png.flaticon.com/512/16253/16253757.png'; }}
-                        />
-                    </button>
-                    <button onClick={() => setAdminView(adminView === 'daily' ? 'all' : 'daily')} title={adminView === 'daily' ? 'Ver Todos' : 'Ver Calendário'} className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
+            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-50 mb-6">
+                <div className="space-y-3">
+                    <div className="space-y-1">
+                        <h2 className="text-4xl font-bold text-pink-600 text-center" style={{fontFamily: 'Lobster Two, cursive'}}>Banho & Tosa</h2>
+                        <p className="text-sm text-gray-600 text-center">Agenda Banho & Tosa - Pet Móvel - Mensalistas</p>
+                    </div>
+                    <div className="flex gap-2 flex-wrap justify-center">
+                        <button onClick={handleOpenAddModal} title="Adicionar Agendamento" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
+                            <img alt="Adicionar Agendamento" className="h-6 w-6" src="https://i.imgur.com/ZimMFxY.png" />
+                        </button>
+                        <button onClick={() => setIsStatisticsModalOpen(true)} title="Estatísticas" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                        </button>
+                        <button onClick={() => setIsCloseDayModalOpen(true)} title="Bloquear Dias" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
+                            <img
+                                alt="Bloquear Dias"
+                                className="h-6 w-6"
+                                src="https://i.imgur.com/BaVdolX.png"
+                                onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://cdn-icons-png.flaticon.com/512/16253/16253757.png'; }}
+                            />
+                        </button>
+                    <button onClick={handleToggleAdminView} title={adminView === 'daily' ? 'Ver Todos' : 'Ver Calendário'} className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
                         <img alt="Ver Todos" className="h-6 w-6" src="https://i.imgur.com/y2cVM07.png" onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://i.imgur.com/iexNNE5.png'; }} />
                     </button>
+                    </div>
                 </div>
+
+                <div className="mt-4">
+                    <div className="relative">
+                        <input type="text" placeholder="Buscar por pet, dono ou serviço..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent" />
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><SearchIcon /></div>
+                    </div>
+                </div>
+                {searchTerm.trim() && (
+                    <div className="mt-4 bg-white rounded-xl shadow-sm border border-gray-200 p-3 max-h-[50vh] overflow-y-auto">
+                        {filteredAppointments.length > 0 ? (
+                            <div className="space-y-3">
+                                {filteredAppointments.slice(0,5).map(app => (
+                                    <div key={app.id} className="w-full">
+                                        <AppointmentCard 
+                                            appointment={app} 
+                                            onUpdateStatus={handleUpdateStatus} 
+                                            isUpdating={updatingStatusId === app.id} 
+                                            onEdit={handleOpenEditModal} 
+                                            onDelete={handleRequestDelete} 
+                                            isDeleting={deletingAppointmentId === app.id}
+                                            onOpenActionMenu={onOpenActionMenu}
+                                            onDeleteObservation={onDeleteObservation}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-4">
+                                <p className="text-gray-500">Nenhum resultado encontrado</p>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
-            {loading ? <div className="flex justify-center py-16"><LoadingSpinner /></div> : (
+            {!searchTerm.trim() && (loading ? <div className="flex justify-center py-16"><LoadingSpinner /></div> : (
                 <>
                     {adminView === 'daily' ? (
                         <>
-                            <section className="mb-8 p-4 bg-white rounded-2xl shadow-sm animate-fadeIn"><Calendar selectedDate={selectedAdminDate} onDateChange={setSelectedAdminDate} /></section>
+                            {showCalendar && (
+                                <section className="mb-8 p-4 bg-white rounded-2xl shadow-sm animate-fadeIn"><Calendar selectedDate={selectedAdminDate} onDateChange={(d: Date) => { setSelectedAdminDate(d); setShowCalendar(false); }} /></section>
+                            )}
                             <section className="animate-fadeInUp">
-                                <h2 className="text-2xl font-bold text-gray-700 mb-4 pb-2 border-b-2 border-pink-200 whitespace-nowrap truncate">Agendamentos - {selectedAdminDate.toLocaleDateString('pt-BR')}</h2>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h2 className="text-2xl font-bold text-gray-700 pb-2 border-b-2 border-pink-200 whitespace-nowrap truncate">Agendamentos - {selectedAdminDate.toLocaleDateString('pt-BR')}</h2>
+                                    {!showCalendar && (
+                                        <button onClick={() => setShowCalendar(true)} className="inline-flex items-center justify-center gap-2 bg-gray-100 text-gray-700 font-semibold py-2 px-3 rounded-lg hover:bg-gray-200 transition-colors">
+                                            <CalendarIcon className="h-5 w-5" />
+                                            <span className="hidden sm:inline">Mostrar Calendário</span>
+                                        </button>
+                                    )}
+                                </div>
                                 {dailyAppointments.length > 0 ? (
                                     <>
                                         <h3 className="text-lg font-semibold text-gray-700 mb-3">Agendados</h3>
@@ -4051,44 +4106,44 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
                                                      <AppointmentCard appointment={app} onUpdateStatus={handleUpdateStatus} isUpdating={updatingStatusId === app.id} onEdit={handleOpenEditModal} onDelete={handleRequestDelete} isDeleting={deletingAppointmentId === app.id} onOpenActionMenu={onOpenActionMenu} onDeleteObservation={onDeleteObservation} />
                                                  </div>
                                              ))}
-                                         </div>
+                                             </div>
 
-                                        <div className="mt-8">
-                                            <h3 className="text-lg font-semibold text-gray-700 mb-3">Concluídos</h3>
-                                            {dailyCompleted.length > 0 ? (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                     {dailyCompleted.map(app => (
-                                                        <div key={app.id} className="w-full">
-                                                             <AppointmentCard appointment={app} onUpdateStatus={handleUpdateStatus} isUpdating={updatingStatusId === app.id} onEdit={handleOpenEditModal} onDelete={handleRequestDelete} isDeleting={deletingAppointmentId === app.id} onOpenActionMenu={onOpenActionMenu} onDeleteObservation={onDeleteObservation} />
+                                            <div className="mt-8">
+                                                <h3 className="text-lg font-semibold text-gray-700 mb-3">Concluídos</h3>
+                                                {dailyCompleted.length > 0 ? (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                         {dailyCompleted.map(app => (
+                                                            <div key={app.id} className="w-full">
+                                                                 <AppointmentCard appointment={app} onUpdateStatus={handleUpdateStatus} isUpdating={updatingStatusId === app.id} onEdit={handleOpenEditModal} onDelete={handleRequestDelete} isDeleting={deletingAppointmentId === app.id} onOpenActionMenu={onOpenActionMenu} onDeleteObservation={onDeleteObservation} />
+                                                             </div>
+                                                         ))}
                                                          </div>
-                                                     ))}
-                                                 </div>
-                                            ) : (
-                                                <div className="text-center py-6 bg-white rounded-lg shadow-sm">
-                                                    <p className="text-gray-500">Nenhum concluído para este dia.</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="text-center py-16 bg-white rounded-lg shadow-sm"><p className="text-gray-500 text-lg">Nenhum agendamento para este dia.</p></div>
-                                )}
-                            </section>
-                        </>
-                    ) : (
-                        <div className="space-y-12 animate-fadeIn">
-                            <section>
-                                <h2 className="text-2xl font-bold text-gray-700 mb-4 pb-2 border-b-2 border-pink-200">Próximos Agendamentos</h2>
-                                {upcomingAppointments.length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{renderAppointments(upcomingAppointments)}</div> : <div className="text-center py-12 bg-white rounded-lg shadow-sm"><p className="text-gray-500">Nenhum próximo agendamento encontrado.</p></div>}
-                            </section>
-                            <section>
-                                <h2 className="text-2xl font-bold text-gray-700 mb-4 pb-2 border-b-2 border-pink-200">Agendamentos Anteriores</h2>
-                                {pastAppointments.length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{renderAppointments(pastAppointments)}</div> : <div className="text-center py-12 bg-white rounded-lg shadow-sm"><p className="text-gray-500">Nenhum agendamento anterior encontrado.</p></div>}
-                            </section>
-                        </div>
-                    )}
+                                                ) : (
+                                                    <div className="text-center py-6 bg-white rounded-lg shadow-sm">
+                                                        <p className="text-gray-500">Nenhum concluído para este dia.</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="text-center py-16 bg-white rounded-lg shadow-sm"><p className="text-gray-500 text-lg">Nenhum agendamento para este dia.</p></div>
+                                    )}
+                                </section>
+                            </>
+                        ) : (
+                            <div className="space-y-12 animate-fadeIn">
+                                <section>
+                                    <h2 className="text-2xl font-bold text-gray-700 mb-4 pb-2 border-b-2 border-pink-200">Próximos Agendamentos</h2>
+                                    {upcomingAppointments.length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{renderAppointments(upcomingAppointments)}</div> : <div className="text-center py-12 bg-white rounded-lg shadow-sm"><p className="text-gray-500">Nenhum próximo agendamento encontrado.</p></div>}
+                                </section>
+                                <section>
+                                    <h2 className="text-2xl font-bold text-gray-700 mb-4 pb-2 border-b-2 border-pink-200">Agendamentos Anteriores</h2>
+                                    {pastAppointments.length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{renderAppointments(pastAppointments)}</div> : <div className="text-center py-12 bg-white rounded-lg shadow-sm"><p className="text-gray-500">Nenhum agendamento anterior encontrado.</p></div>}
+                                </section>
+                            </div>
+                        )}
                 </>
-            )}
+            ))}
         </>
     );
 };
@@ -5162,16 +5217,25 @@ const ClientsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
         <div className="space-y-8">
             {editingClient && <EditClientModal client={editingClient} onClose={() => setEditingClient(null)} onClientUpdated={handleClientUpdated} />}
             {clientToDelete && <ConfirmationModal isOpen={!!clientToDelete} onClose={() => setClientToDelete(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o cliente ${clientToDelete.name}?`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
-            {/* Botão mobile para abrir/fechar o formulário de novo cliente */}
-            <div className="sm:hidden p-4 bg-white rounded-2xl shadow-sm">
-                <button
-                    type="button"
-                    onClick={() => setIsAddClientOpenMobile(prev => !prev)}
-                    className="w-full bg-pink-600 text-white font-semibold py-3.5 px-6 rounded-lg hover:bg-pink-700 transition-colors"
-                >
-                    Adicionar Cliente
-                </button>
+
+            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-50 mb-6">
+                <div className="space-y-3">
+                    <div className="space-y-1">
+                        <h2 className="text-4xl font-bold text-pink-600 text-center" style={{fontFamily: 'Lobster Two, cursive'}}>Meus Clientes</h2>
+                        <p className="text-sm text-gray-600 text-center">Agenda de Clientes</p>
+                    </div>
+                    <div className="flex gap-2 flex-wrap justify-center">
+                        <button
+                            onClick={() => setIsAddClientOpenMobile(prev => !prev)}
+                            title="Adicionar Cliente"
+                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors"
+                        >
+                            <img alt="Adicionar Cliente" className="h-6 w-6" src="https://i.imgur.com/19QrZ6g.png" />
+                        </button>
+                    </div>
+                </div>
             </div>
+            
 
             {/* Formulário: oculto no mobile até clicar no botão; visível sempre em sm+ */}
             <div className={`p-6 bg-white rounded-2xl shadow-sm ${isAddClientOpenMobile ? 'block' : 'hidden sm:block'}`}>
@@ -6354,107 +6418,47 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
             {editingClient && <EditMonthlyClientAdvancedModal client={editingClient} onClose={() => setEditingClient(null)} onMonthlyClientUpdated={handleUpdateSuccess} />}
             {deletingClient && <ConfirmationModal isOpen={!!deletingClient} onClose={() => setDeletingClient(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o mensalista ${deletingClient.pet_name}? Todos os seus agendamentos futuros também serão removidos.`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
             
-            <div className="mb-6">
-                <h2 className="text-3xl font-bold text-gray-800 mb-4 text-center" style={{fontFamily: 'Inter, sans-serif'}}>Clientes Mensalistas</h2>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 mb-4">
-                    {/* Desktop: input 3x maior */}
-                    <div className="relative hidden md:block md:flex-[3]">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M10 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></svg>
-                        </div>
-                        <input
-                            type="text"
-                            placeholder="Buscar por nome do pet ou dono..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="block w-full pl-12 pr-12 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-base"
-                        />
-                        {searchTerm && (
-                            <button
-                                onClick={() => setSearchTerm('')}
-                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                                aria-label="Limpar"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                            </button>
-                        )}
+            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-50 mb-6">
+                <div className="space-y-3">
+                    <div className="space-y-1">
+                        <h2 className="text-4xl font-bold text-pink-600 text-center" style={{fontFamily: 'Lobster Two, cursive'}}>Mensalistas</h2>
+                        <p className="text-sm text-gray-600 text-center">Meus Clientes Mensalistas</p>
                     </div>
-
-                    {/* Mobile: ícone de lupa que expande */}
-                    <div className="relative md:hidden w-full">
-                        <div className="flex items-center gap-2">
-                            <button
-                                type="button"
-                                aria-label="Abrir busca"
-                                onClick={() => setMonthlyMobileSearchOpen((v) => !v)}
-                                className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100"
-                            >
-                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M10 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></svg>
-                            </button>
-                            <div className={`relative flex-1 transition-all duration-300 ${monthlyMobileSearchOpen ? 'max-w-full' : 'max-w-0'} overflow-hidden`}>
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M10 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></svg>
-                                </div>
-                                <input
-                                    type="text"
-                                    placeholder="Buscar por nome do pet ou dono..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="block w-full pl-12 pr-10 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-base"
-                                />
-                                {searchTerm && (
-                                    <button
-                                        onClick={() => setSearchTerm('')}
-                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                                        aria-label="Limpar"
-                                    >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                    </button>
-                                )}
-                            </div>
-                        </div>
+                    <div className="flex gap-2 flex-wrap justify-center">
+                        <button
+                            onClick={onAddClient}
+                            title="Adicionar Mensalista"
+                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors"
+                        >
+                            <img alt="Adicionar Mensalista" className="h-6 w-6" src="https://i.imgur.com/19QrZ6g.png" />
+                        </button>
+                        <button
+                            onClick={() => setShowFilterPanel(!showFilterPanel)}
+                            title="Filtros"
+                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-gray-100 text-gray-700 font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                            <img alt="Filtros" className="h-6 w-6" src="https://cdn-icons-png.flaticon.com/512/9702/9702724.png" />
+                        </button>
+                        <button
+                            onClick={() => setShowStatisticsModal(true)}
+                            title="Estatísticas"
+                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors"
+                        >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                        </button>
                     </div>
+                </div>
 
-                    {/* Linha única no mobile: Grupo de Botões */}
-                    <div className="flex w-full items-center justify-end gap-2 md:flex-[1]">
-                        {/* Grupo de botões (Filtro, Estatísticas, Adicionar) */}
-                        <div className="flex justify-center items-center gap-2 sm:gap-3 flex-nowrap flex-none">
-                            {/* Botão de Filtro */}
-                            <button 
-                                onClick={() => setShowFilterPanel(!showFilterPanel)}
-                                className={`px-3 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-colors flex items-center justify-center ${
-                                    showFilterPanel 
-                                    ? 'bg-blue-600 text-white' 
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
-                                title="Filtros"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                                </svg>
-                            </button>
-                            
-                            {/* Botão de Estatísticas */}
-                            <button 
-                                onClick={() => setShowStatisticsModal(true)}
-                                className="bg-green-600 text-white font-semibold py-2 sm:py-2.5 px-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
-                                title="Estatísticas"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                </svg>
-                            </button>
-
-                            
-                            
-                            {/* Botão Adicionar Mensalista */}
-                            <button onClick={onAddClient} className="bg-pink-600 text-white font-semibold py-2 sm:py-2.5 px-3 rounded-lg hover:bg-pink-700 transition-colors flex items-center justify-center">
-                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
+                <div className="mt-4">
+                    <input
+                        type="text"
+                        placeholder="Buscar por nome do pet ou dono..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                    />
                 </div>
             </div>
             
@@ -11451,30 +11455,31 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
         <div className="space-y-6">
             <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-50">
                 <div className="space-y-3">
-                    <h2 className="text-3xl font-bold text-gray-800 text-center" style={{fontFamily: 'Inter, sans-serif'}}>Hotel Pet</h2>
+                    <div className="space-y-1">
+                        <h2 className="text-4xl font-bold text-pink-600 text-center" style={{fontFamily: 'Lobster Two, cursive'}}>Hotel Pet</h2>
+                        <p className="text-sm text-gray-600 text-center">Clientes Hotel Pet</p>
+                    </div>
                     <div className="flex gap-2 flex-wrap justify-center">
                         <button
-                            onClick={() => setShowHotelStatistics?.(true)}
-                            className="bg-blue-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1.5 text-sm"
+                            onClick={() => setIsAddFormOpen(true)}
+                            title="Novo Check-in"
+                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors"
                         >
-                            <ChartBarIcon className="w-4 h-4" />
-                            <span>Estatísticas</span>
+                            <img alt="Adicionar Agendamento" className="h-6 w-6" src="https://i.imgur.com/ZimMFxY.png" />
                         </button>
                         <button
                             onClick={() => setShowHotelFilterPanel(prev => !prev)}
-                            className="bg-gray-100 text-gray-700 font-medium py-2 px-3 rounded-md hover:bg-gray-200 transition-colors flex items-center gap-1.5 text-sm"
+                            title="Filtros"
+                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-gray-100 text-gray-700 font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-gray-200 transition-colors"
                         >
-                            <FunnelIcon className="w-4 h-4" />
-                            <span>Filtrar</span>
+                            <img alt="Filtros" className="h-6 w-6" src="https://cdn-icons-png.flaticon.com/512/9702/9702724.png" />
                         </button>
                         <button
-                            onClick={() => setIsAddFormOpen(true)}
-                            className="bg-pink-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-pink-700 transition-colors flex items-center gap-1.5 text-sm"
+                            onClick={() => setShowHotelStatistics?.(true)}
+                            title="Estatísticas"
+                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors"
                         >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                            Novo Check-in
+                            <ChartBarIcon className="w-6 h-6" />
                         </button>
                     </div>
                 </div>
@@ -12581,17 +12586,25 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
                 />
             )}
             
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold text-gray-800 text-center" style={{fontFamily: 'Inter, sans-serif'}}>Creche Pet</h2>
-                <div className="flex gap-3">
-                    <Button variant="outline" size="lg" className="gap-2" onClick={() => setShowDaycareStatistics?.(true)}>
-                        <ChartBarIcon className="w-5 h-5" />
-                        <span className="hidden sm:inline">Estatísticas</span>
-                    </Button>
-                    <Button size="lg" className="gap-3" onClick={() => setIsAddFormOpen(true)}>
-                        <UserPlusIcon />
-                        <span className="hidden sm:inline">Nova Matrícula</span>
-                    </Button>
+            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-50 mb-6">
+                <div className="space-y-3">
+                    <div className="space-y-1">
+                        <h2 className="text-4xl font-bold text-pink-600 text-center" style={{fontFamily: 'Lobster Two, cursive'}}>Creche Pet</h2>
+                        <p className="text-sm text-gray-600 text-center">Clientes Creche Pet</p>
+                    </div>
+                    <div className="flex gap-2 flex-wrap justify-center">
+                        <button
+                            onClick={() => setShowDaycareStatistics?.(true)}
+                            title="Estatísticas"
+                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors"
+                        >
+                            <ChartBarIcon className="w-6 h-6" />
+                        </button>
+                        <Button size="lg" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center gap-3" onClick={() => setIsAddFormOpen(true)}>
+                            <UserPlusIcon />
+                            <span className="hidden sm:inline">Nova Matrícula</span>
+                        </Button>
+                    </div>
                 </div>
             </div>
             {loading ? <div className="flex justify-center py-16"><LoadingSpinner /></div> : (
@@ -12619,6 +12632,21 @@ const AdminDashboard: React.FC<{
     const [activeView, setActiveView] = useState('appointments');
     const [dataKey, setDataKey] = useState(Date.now()); // Used to force re-fetches
     const [showMobileMenu, setShowMobileMenu] = useState(false);
+    const [isDrawerVisible, setIsDrawerVisible] = useState(false);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    const openMobileMenu = () => {
+        setShowMobileMenu(true);
+        setIsDrawerVisible(true);
+        requestAnimationFrame(() => setIsDrawerOpen(true));
+    };
+    const closeMobileMenu = () => {
+        setIsDrawerOpen(false);
+        setTimeout(() => {
+            setIsDrawerVisible(false);
+            setShowMobileMenu(false);
+        }, 250);
+    };
     const [showDaycareStatistics, setShowDaycareStatistics] = useState(false);
     const [showHotelStatistics, setShowHotelStatistics] = useState(false);
 
@@ -12706,7 +12734,7 @@ const AdminDashboard: React.FC<{
                     active={activeView === item.id}
                     icon={item.icon}
                     label={item.label}
-                    onClick={() => { setActiveView(item.id); setShowMobileMenu(false); }}
+                    onClick={() => { setActiveView(item.id); closeMobileMenu(); }}
                 />
             ))}
         </Menu>
@@ -12744,7 +12772,7 @@ const AdminDashboard: React.FC<{
                         <div className="md:hidden flex items-center gap-2">
                             <NotificationBell />
                             {!showMobileMenu && (
-                                <button onClick={() => setShowMobileMenu(true)} className="p-3 rounded-xl text-gray-500 hover:bg-pink-50 hover:text-pink-600 transition-colors" aria-label="Menu">
+                                <button onClick={openMobileMenu} className="p-3 rounded-xl text-gray-500 hover:bg-pink-50 hover:text-pink-600 transition-colors" aria-label="Menu">
                                     <MenuIcon />
                                 </button>
                             )}
@@ -12753,22 +12781,27 @@ const AdminDashboard: React.FC<{
                 </div>
             </header>
 
-            {showMobileMenu && (
-                 <div className="fixed inset-0 bg-gray-800 bg-opacity-50 z-[9998] md:hidden" onClick={() => setShowMobileMenu(false)}></div>
+            {isDrawerVisible && (
+                <div 
+                    className={`fixed inset-0 z-[9998] md:hidden bg-gray-800/50 transition-opacity duration-300 ${isDrawerOpen ? 'opacity-100' : 'opacity-0'}`}
+                    onClick={closeMobileMenu}
+                ></div>
             )}
 
-            {showMobileMenu && (
-                <div className="fixed left-0 top-0 h-full w-[85vw] max-w-sm bg-white shadow-2xl z-[9999] md:hidden overflow-y-auto p-4">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-gray-800">Menu</h3>
-                        <button onClick={() => setShowMobileMenu(false)} className="p-2 rounded-lg hover:bg-gray-100" aria-label="Fechar menu">
+            {isDrawerVisible && (
+                <div className={`fixed left-0 top-0 h-full w-[72vw] max-w-[18rem] sm:max-w-[20rem] bg-white shadow-2xl z-[9999] md:hidden p-4 rounded-r-2xl transform transition-transform duration-300 ease-out ${isDrawerOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col overflow-y-hidden`}>
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-lg font-bold text-pink-600" style={{fontFamily: 'Lobster Two, cursive'}}>Menu</h3>
+                        <button onClick={closeMobileMenu} className="p-2 rounded-lg hover:bg-gray-100" aria-label="Fechar menu">
                             <CloseIcon className="w-5 h-5 text-gray-600" />
                         </button>
                     </div>
-                    <NavMenu />
-                    <div className="mt-6 space-y-3">
+                    <div className="flex-1 overflow-y-auto">
+                        <NavMenu />
+                    </div>
+                    <div className="mt-3 space-y-3 pt-3 border-t border-gray-100 shrink-0">
                         <button 
-                            onClick={() => { setIsScheduleOpen(!isScheduleOpen); setShowMobileMenu(false); }}
+                            onClick={() => { setIsScheduleOpen(!isScheduleOpen); closeMobileMenu(); }}
                             className={`w-full flex items-center gap-3 text-sm font-semibold px-3 py-2 rounded-lg transition-all ${
                                 isScheduleOpen 
                                     ? 'text-green-700 bg-green-50 hover:bg-green-100' 
@@ -12778,7 +12811,7 @@ const AdminDashboard: React.FC<{
                             {isScheduleOpen ? <LockOpenIcon /> : <LockClosedIcon />}
                             {isScheduleOpen ? 'Fechar Agenda' : 'Abrir Agenda'}
                         </button>
-                        <button onClick={() => { onLogout(); setShowMobileMenu(false); }} className="w-full flex items-center gap-4 text-base font-semibold text-gray-600 hover:text-pink-600 transition-colors p-2 rounded-lg hover:bg-gray-100">
+                        <button onClick={() => { onLogout(); closeMobileMenu(); }} className="w-full flex items-center gap-4 text-base font-semibold text-gray-600 hover:text-pink-600 transition-colors p-2 rounded-lg hover:bg-gray-100">
                             <LogoutIcon/> Sair
                         </button>
                     </div>

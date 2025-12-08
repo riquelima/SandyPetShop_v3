@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { BellIcon, BellAlertIcon, CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { supabase } from './supabaseClient';
 
@@ -172,8 +173,8 @@ export const NotificationBell: React.FC = () => {
         )}
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      {open && createPortal(
+        <div className="fixed inset-0 z-[10002] flex items-start justify-center p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
           <div className="absolute inset-0 bg-gray-800/40" onClick={() => setOpen(false)} />
           <div ref={panelRef} className="relative w-full max-w-[95vw] sm:max-w-md md:max-w-lg bg-white border border-pink-100 rounded-2xl shadow-xl p-3">
             <div className="flex items-center justify-between px-2 py-1">
@@ -228,7 +229,8 @@ export const NotificationBell: React.FC = () => {
               ))}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
