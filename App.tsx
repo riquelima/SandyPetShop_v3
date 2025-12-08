@@ -100,6 +100,47 @@ const formatDateToBR = (dateString: string | null): string => {
     return `${day}/${month}/${year}`;
 };
 
+
+const getPlanLabel = (client: MonthlyClient) => {
+    switch (client.recurrence_type) {
+        case 'weekly': return 'Semanal';
+        case 'bi-weekly': return 'Quinzenal';
+        case 'monthly': return 'Mensal';
+        default: return 'Não definido';
+    }
+};
+
+const getNextAppointmentDateText = (client: MonthlyClient) => {
+    const now = new Date();
+    const recurrenceDay = parseInt(String(client.recurrence_day), 10);
+    const recurrenceTime = parseInt(String(client.recurrence_time), 10);
+    if (client.recurrence_type === 'weekly' || client.recurrence_type === 'bi-weekly') {
+        let firstDate = new Date();
+        const todaySaoPaulo = getSaoPauloTimeParts(firstDate);
+        const firstDateDayOfWeek = todaySaoPaulo.day === 0 ? 7 : todaySaoPaulo.day;
+        let daysToAdd = (recurrenceDay - firstDateDayOfWeek + 7) % 7;
+        if (daysToAdd === 0 && todaySaoPaulo.hour >= recurrenceTime) {
+            daysToAdd = 7;
+        }
+        firstDate.setDate(firstDate.getDate() + daysToAdd);
+        const appointmentTime = toSaoPauloUTC(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), recurrenceTime);
+        const dateStr = appointmentTime.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Sao_Paulo' });
+        const timeStr = appointmentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+        return `${dateStr} às ${timeStr}`;
+    } else {
+        let targetDate = new Date();
+        const todaySaoPaulo = getSaoPauloTimeParts(targetDate);
+        targetDate.setDate(recurrenceDay);
+        if (targetDate < now || (isSameSaoPauloDay(targetDate, now) && todaySaoPaulo.hour >= recurrenceTime)) {
+            targetDate.setMonth(targetDate.getMonth() + 1);
+        }
+        const appointmentTime = toSaoPauloUTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), recurrenceTime);
+        const dateStr = appointmentTime.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Sao_Paulo' });
+        const timeStr = appointmentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+        return `${dateStr} às ${timeStr}`;
+    }
+};
+
 const formatDateToISO = (dateString: string | null): string => {
     if (!dateString) return '';
     // Handles both date (YYYY-MM-DD) and datetime (YYYY-MM-DDTHH:mm:ss.sssZ) strings
@@ -4560,8 +4601,25 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
         return groups;
     }, [monthlyClients, searchTerm]);
 
+    const condoScrollRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const toggleCondo = (condoName: string) => {
-        setExpandedCondos(prev => prev.includes(condoName) ? prev.filter(c => c !== condoName) : [...prev, condoName]);
+        setExpandedCondos(prev => {
+            const next = prev.includes(condoName) ? prev.filter(c => c !== condoName) : [...prev, condoName];
+            if (!prev.includes(condoName)) {
+                setTimeout(() => {
+                    const container = condoScrollRefs.current[condoName];
+                    if (container) {
+                        const first = container.querySelector('[data-card-item]') as HTMLDivElement | null;
+                        if (first) {
+                            const width = container.clientWidth;
+                            const cardWidth = first.clientWidth;
+                            container.scrollLeft = first.offsetLeft + (cardWidth / 2) - (width / 2);
+                        }
+                    }
+                }, 0);
+            }
+            return next;
+        });
     };
 
     // Expandir automaticamente todos os condomínios quando há busca ativa
@@ -4572,109 +4630,54 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
         }
     }, [searchTerm, groupedClients]);
 
+    const adminTitleFull = "Sandy's Pet Admin";
+    const [adminTitle, setAdminTitle] = useState('');
+    useEffect(() => {
+        let i = 0;
+        const timer = setInterval(() => {
+            setAdminTitle(adminTitleFull.slice(0, i + 1));
+            i++;
+            if (i >= adminTitleFull.length) {
+                clearInterval(timer);
+            }
+        }, 45);
+        return () => clearInterval(timer);
+    }, []);
+
     return (
-        <div className="animate-fadeIn bg-gray-50 min-h-screen p-6">
+        <div className="animate-fadeIn bg-gray-50 min-h-screen px-0 sm:px-2 py-4">
             {selectedForEdit && <EditMonthlyClientAdvancedModal client={selectedForEdit} onClose={() => setSelectedForEdit(null)} onMonthlyClientUpdated={handleClientUpdated} />}
             {selectedForDelete && <ConfirmationModal isOpen={!!selectedForDelete} onClose={() => setSelectedForDelete(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o mensalista ${selectedForDelete.pet_name}?`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
             
-            {/* Header com título e estatísticas */}
-            <div className="bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl p-6 text-white shadow-lg mb-6">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div>
-            <h2 className="text-3xl font-bold mb-2 text-center" style={{fontFamily: 'Inter, sans-serif'}}>Pet Móvel</h2>
-                        <p className="text-pink-100">Gerencie seus clientes Pet Móvel</p>
+            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-40 mb-6">
+                <div className="space-y-3">
+                    <div className="space-y-1">
+                        <h2 className="text-4xl font-bold text-pink-600 text-center" style={{fontFamily: 'Lobster Two, cursive'}}>Pet Móvel</h2>
+                        <p className="text-sm text-gray-600 text-center">Gerencie seus clientes Pet Móvel</p>
                     </div>
-                    <div className="flex flex-wrap gap-4">
-                        <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 text-center min-w-[100px]">
-                            <div className="text-2xl font-bold">{Object.values(groupedClients).reduce((total, clients) => total + Object.values(clients).reduce((sum, list) => sum + list.length, 0), 0)}</div>
-                            <div className="text-sm text-pink-100">Total Clientes</div>
+                    <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                        <div className="bg-gray-100 rounded-lg p-3 text-center">
+                            <div className="text-2xl font-bold text-gray-800">{Object.values(groupedClients).reduce((total, clients) => total + Object.values(clients).reduce((sum, list) => sum + list.length, 0), 0)}</div>
+                            <div className="text-sm text-gray-600">Total Clientes</div>
                         </div>
-                        <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 text-center min-w-[100px]">
-                            <div className="text-2xl font-bold">{Object.keys(groupedClients).length}</div>
-                            <div className="text-sm text-pink-100">Condomínios</div>
+                        <div className="bg-gray-100 rounded-lg p-3 text-center">
+                            <div className="text-2xl font-bold text-gray-800">{Object.keys(groupedClients).length}</div>
+                            <div className="text-sm text-gray-600">Condomínios</div>
                         </div>
+                    </div>
+                    <div className="mt-2">
+                        <input
+                            type="text"
+                            placeholder="Buscar por nome do pet ou dono..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                        />
                     </div>
                 </div>
             </div>
 
-            {/* Barra de busca e filtros */}
-            <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-                <div className="flex flex-col lg:flex-row gap-4">
-                    {/* Desktop: input mais comprido */}
-                    <div className="relative hidden md:block md:flex-1 md:max-w-full">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <SearchIcon className="h-5 w-5 text-gray-400" />
-                        </div>
-                        <input
-                            type="text"
-                            placeholder="Digite sua busca"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="block w-full pl-12 pr-12 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-base"
-                        />
-                        {searchTerm && (
-                            <button
-                                onClick={() => setSearchTerm('')}
-                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                            >
-                                <CloseIcon />
-                            </button>
-                        )}
-                    </div>
-                    {/* Mobile: ícone que expande para input */}
-                    <div className="relative md:hidden w-full">
-                        <div className="flex items-center gap-2">
-                            <button
-                                type="button"
-                                aria-label="Abrir busca"
-                                onClick={() => setMobileSearchOpen((v) => !v)}
-                                className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100"
-                            >
-                                <SearchIcon className="h-5 w-5" />
-                            </button>
-                            <div className={`relative flex-1 transition-all duration-300 ${mobileSearchOpen ? 'max-w-full' : 'max-w-0'} overflow-hidden`}>
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <SearchIcon className="h-5 w-5 text-gray-400" />
-                                </div>
-                                <input
-                                    type="text"
-                                    placeholder="Digite sua busca"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="block w-full pl-12 pr-10 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-base"
-                                />
-                                {searchTerm && (
-                                    <button
-                                        onClick={() => { setSearchTerm(''); setMobileSearchOpen(false); }}
-                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                                    >
-                                        <CloseIcon />
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
-                        
-                        {viewMode === 'list' && (
-                            <div className="flex gap-2 w-full sm:w-auto">
-                                <button 
-                                    onClick={() => setExpandedCondos(Object.keys(groupedClients))}
-                                    className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-pink-100 text-pink-700 rounded-lg hover:bg-pink-200 transition-colors font-medium text-sm sm:text-base"
-                                >
-                                    Expandir Todos
-                                </button>
-                                <button 
-                                    onClick={() => setExpandedCondos([])}
-                                    className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm sm:text-base"
-                                >
-                                    Recolher Todos
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
+            
             
             {loading ? (
                 <div className="flex justify-center py-16">
@@ -4715,7 +4718,7 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                             return a.localeCompare(b);
                         })
                         .map(([condo, clients]) => (
-                        <div key={condo} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+                        <div key={condo} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200 w-full">
                             <button 
                                 onClick={() => toggleCondo(condo)} 
                                 className="w-full text-left p-6 flex justify-between items-center hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-colors"
@@ -4738,12 +4741,11 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                             
                             {expandedCondos.includes(condo) && (
                                 <div className="border-t border-gray-100 bg-gray-50/50 animate-fadeIn">
-                                    {Object.entries(clients).map(([number, clientList]) => (
-                                        <div key={number} className="p-6 border-b border-gray-100 last:border-b-0">
-                                            <div className="overflow-x-auto snap-x snap-mandatory -mx-6 md:mx-0">
-                                                <div className="flex gap-4 pb-2">
-                                                    {clientList.map(client => (
-                                        <div key={client.id} className="shrink-0 w-screen sm:w-[420px] lg:w-[460px] snap-center">
+                                    <div className="p-6">
+                                        <div className="overflow-x-auto snap-x snap-mandatory -mx-6" ref={(el) => { condoScrollRefs.current[condo] = el; }}>
+                                            <div className="flex gap-4 pb-2 justify-start">
+                                                {Object.values(clients).flat().map((client) => (
+                                                    <div key={client.id} data-card-item className="flex-none min-w-full snap-center" style={{ scrollSnapStop: 'always' }}>
                                                         <div 
                                                             className="bg-white rounded-2xl shadow-sm p-6 min-h-[380px] hover:shadow-md transition-shadow border border-gray-200 cursor-pointer flex flex-col"
                                                             onClick={() => handleOpenAppointmentsModal(client)}
@@ -4808,11 +4810,10 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    ))}
-                                                </div>
-                                                </div>
+                                                ))}
                                             </div>
-                                    ))}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -6590,6 +6591,12 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                                                 <p className="text-xs text-pink-800 bg-pink-100 font-semibold py-1 px-2 rounded-full truncate">
                                                    {getRecurrenceText(client)}
                                                </p>
+                                               <p className="text-xs text-purple-800 bg-purple-100 font-semibold py-1 px-2 rounded-full truncate">
+                                                   Plano: {getPlanLabel(client)}
+                                               </p>
+                                               <p className="text-xs text-green-800 bg-green-100 font-semibold py-1 px-2 rounded-full truncate">
+                                                   Próximo: {getNextAppointmentDateText(client)}
+                                               </p>
                                                {client.payment_due_date && (
                                                    <p className="text-xs text-blue-800 bg-blue-100 font-semibold py-1 px-2 rounded-full truncate">
                                                        Vencimento: {formatDateToBR(client.payment_due_date)}
@@ -6871,6 +6878,17 @@ const MonthlyClientCard: React.FC<{
                     <span className="text-sm font-semibold text-pink-700 bg-pink-50 px-3 py-1 rounded-full">
                         {getRecurrenceText(client)}
                     </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Plano</p>
+                        <p className="text-gray-800 font-medium">{getPlanLabel(client)}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Próximo agendamento</p>
+                        <p className="text-gray-800 font-medium">{getNextAppointmentDateText(client)}</p>
+                    </div>
                 </div>
 
                 {/* Data de Pagamento (exibe data de vencimento como referência de pagamento) */}
@@ -12650,6 +12668,20 @@ const AdminDashboard: React.FC<{
     const [showDaycareStatistics, setShowDaycareStatistics] = useState(false);
     const [showHotelStatistics, setShowHotelStatistics] = useState(false);
 
+    const adminTitleFull = "Sandy's Pet Admin";
+    const [adminTitle, setAdminTitle] = useState('');
+    useEffect(() => {
+        let i = 0;
+        const timer = setInterval(() => {
+            setAdminTitle(adminTitleFull.slice(0, i + 1));
+            i++;
+            if (i >= adminTitleFull.length) {
+                clearInterval(timer);
+            }
+        }, 45);
+        return () => clearInterval(timer);
+    }, []);
+
     const handleDataChanged = () => setDataKey(Date.now());
     const handleAddMonthlyClient = () => setActiveView('addMonthlyClient');
 
@@ -12747,10 +12779,12 @@ const AdminDashboard: React.FC<{
                     <div className="flex justify-between items-center h-20">
                         <div className="flex items-center gap-4">
                              <img src="https://i.imgur.com/M3Gt3OA.png" alt="Logo" className="h-12 w-12 drop-shadow-md"/>
-                             <div>
-                                 <h1 className="font-brand text-4xl text-pink-800 hidden sm:block leading-none">Sandy's Pet Shop</h1>
-                                 <span className="text-pink-600 text-sm font-semibold hidden lg:block">Painel Administrativo</span>
-                             </div>
+                            <div>
+                                <div className="font-brand text-pink-800 leading-none whitespace-nowrap text-[clamp(1.25rem,7vw,2.25rem)] hidden md:block">{adminTitle}</div>
+                            </div>
+                            <div className="flex-1 flex items-center justify-end pr-6 md:hidden">
+                                <div className="font-brand text-pink-800 leading-none whitespace-nowrap text-[clamp(1rem,6vw,1.5rem)]">{adminTitle}</div>
+                            </div>
                         </div>
                         <div className="hidden md:flex items-center gap-3">
                             <button 
