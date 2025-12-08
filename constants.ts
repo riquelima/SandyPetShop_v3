@@ -58,12 +58,9 @@ export const SERVICE_PRICES: Record<PetWeight, { [key in ServiceType.BATH | Serv
 };
 
 export const ADDON_SERVICES: AddonService[] = [
-  // Rule: Only available for pets up to 5kg.
-  { id: 'tosa_tesoura', label: 'Tosa na Tesoura', price: 160, requiresWeight: [PetWeight.UP_TO_5]},
+  { id: 'tosa_tesoura', label: 'Tosa na Tesoura', price: 160 },
   { id: 'aparacao', label: 'Aparação Contorno', price: 35 },
-  // Rule: Only available for pets over 5kg.
-  { id: 'hidratacao', label: 'Hidratação', price: 25, excludesWeight: [PetWeight.UP_TO_5] },
-  // Ajuste: Tosa Higiênica não deve somar valor adicional (R$ 0)
+  { id: 'hidratacao', label: 'Hidratação', price: 25 },
   { id: 'tosa_higienica', label: 'Tosa Higiênica', price: 0 },
   { id: 'botinhas', label: 'Botinhas', price: 25 },
   { id: 'desembolo', label: 'Desembolo', price: 25 }, 
