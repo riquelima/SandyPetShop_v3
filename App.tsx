@@ -560,7 +560,7 @@ const AlertModal: React.FC<{
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-fadeIn">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[10001] p-4 animate-fadeIn">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-full sm:max-w-md animate-scaleIn text-center border-4" style={{ borderColor: variant === 'success' ? '#86EFAC' : '#FCA5A5' }}>
                 <div className="p-8">
                      <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full shadow-lg" style={{ backgroundColor: variant === 'success' ? '#D1FAE5' : '#FEE2E2' }}>
@@ -602,7 +602,7 @@ const ConfirmationModal: React.FC<{
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[10001] p-4 animate-fadeIn">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-full sm:max-w-md animate-scaleIn border-2 border-gray-200">
                 <div className="p-8">
                     <h2 className="text-4xl font-bold text-gray-800">{title}</h2>
@@ -648,7 +648,7 @@ const ViewHotelRegistrationModal: React.FC<{
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[10001] overflow-y-auto">
             <div className="bg-white rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-start mb-4">
                     <h3 className="text-2xl font-bold text-gray-800">Detalhes do Registro</h3>
@@ -1488,7 +1488,7 @@ const StatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({ 
     );
 
     return (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4 animate-fadeIn">
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-[10001] p-2 sm:p-4 animate-fadeIn">
             <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-6xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
                 <div className="sticky top-0 bg-white border-b border-gray-200 p-4 sm:p-6 rounded-t-xl sm:rounded-t-2xl">
                     <div className="flex justify-between items-center">
@@ -1690,7 +1690,7 @@ const MonthlyClientsStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4 animate-fadeIn">
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-[10001] p-2 sm:p-4 animate-fadeIn">
             <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-6xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
                 <div className="sticky top-0 bg-white border-b border-gray-200 p-4 sm:p-6 rounded-t-xl sm:rounded-t-2xl">
                     <div className="flex justify-between items-center">
@@ -1946,7 +1946,7 @@ const DaycareStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }
     );
 
     return (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4 animate-fadeIn">
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-[10001] p-2 sm:p-4 animate-fadeIn">
             <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-6xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
                 <div className="sticky top-0 bg-white border-b border-gray-200 p-4 sm:p-6 rounded-t-xl sm:rounded-t-2xl">
                     <div className="flex justify-between items-center">
@@ -2251,7 +2251,7 @@ const HotelStatisticsModal: React.FC<{ isOpen: boolean; onClose: () => void; }> 
     );
 
     return (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4 animate-fadeIn">
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-[10001] p-2 sm:p-4 animate-fadeIn">
             <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-6xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
                 <div className="sticky top-0 bg-white border-b border-gray-200 p-4 sm:p-6 rounded-t-xl sm:rounded-t-2xl">
                     <div className="flex justify-between items-center">
@@ -2390,7 +2390,7 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
     };
 
     return (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fadeIn">
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-[10001] p-4 animate-fadeIn">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-scaleIn">
                 <form onSubmit={handleSubmit}>
                     <div className="p-6 border-b">
@@ -2844,7 +2844,7 @@ const AdminAddAppointmentModal: React.FC<{
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[10001]">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="p-6">
                     <div className="flex justify-between items-center mb-6">
@@ -4018,7 +4018,7 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
                 </div>
             )}
 
-            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-50 mb-6">
+            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-40 mb-6">
                 <div className="space-y-3">
                     <div className="space-y-1">
                         <h2 className="text-4xl font-bold text-pink-600 text-center" style={{fontFamily: 'Lobster Two, cursive'}}>Banho & Tosa</h2>
@@ -5023,7 +5023,7 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
             
             {/* Modal de Detalhes do Agendamento do Calendário */}
             {selectedAppointment && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10001] p-4">
                     <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
                         <div className="p-6">
                             <div className="flex justify-between items-center mb-4">
@@ -5218,7 +5218,7 @@ const ClientsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
             {editingClient && <EditClientModal client={editingClient} onClose={() => setEditingClient(null)} onClientUpdated={handleClientUpdated} />}
             {clientToDelete && <ConfirmationModal isOpen={!!clientToDelete} onClose={() => setClientToDelete(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o cliente ${clientToDelete.name}?`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
 
-            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-50 mb-6">
+            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-40 mb-6">
                 <div className="space-y-3">
                     <div className="space-y-1">
                         <h2 className="text-4xl font-bold text-pink-600 text-center" style={{fontFamily: 'Lobster Two, cursive'}}>Meus Clientes</h2>
@@ -6418,7 +6418,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
             {editingClient && <EditMonthlyClientAdvancedModal client={editingClient} onClose={() => setEditingClient(null)} onMonthlyClientUpdated={handleUpdateSuccess} />}
             {deletingClient && <ConfirmationModal isOpen={!!deletingClient} onClose={() => setDeletingClient(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o mensalista ${deletingClient.pet_name}? Todos os seus agendamentos futuros também serão removidos.`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
             
-            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-50 mb-6">
+            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-40 mb-6">
                 <div className="space-y-3">
                     <div className="space-y-1">
                         <h2 className="text-4xl font-bold text-pink-600 text-center" style={{fontFamily: 'Lobster Two, cursive'}}>Mensalistas</h2>
@@ -11453,7 +11453,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
 
     return (
         <div className="space-y-6">
-            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-50">
+            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-40">
                 <div className="space-y-3">
                     <div className="space-y-1">
                         <h2 className="text-4xl font-bold text-pink-600 text-center" style={{fontFamily: 'Lobster Two, cursive'}}>Hotel Pet</h2>
@@ -12586,7 +12586,7 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
                 />
             )}
             
-            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-50 mb-6">
+            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-40 mb-6">
                 <div className="space-y-3">
                     <div className="space-y-1">
                         <h2 className="text-4xl font-bold text-pink-600 text-center" style={{fontFamily: 'Lobster Two, cursive'}}>Creche Pet</h2>
@@ -12791,7 +12791,7 @@ const AdminDashboard: React.FC<{
             {isDrawerVisible && (
                 <div className={`fixed left-0 top-0 h-full w-[72vw] max-w-[18rem] sm:max-w-[20rem] bg-white shadow-2xl z-[9999] md:hidden p-4 rounded-r-2xl transform transition-transform duration-300 ease-out ${isDrawerOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col overflow-y-hidden`}>
                     <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-lg font-bold text-pink-600" style={{fontFamily: 'Lobster Two, cursive'}}>Menu</h3>
+                        <h3 className="text-2xl font-bold text-pink-600" style={{fontFamily: 'Lobster Two, cursive'}}>Menu</h3>
                         <button onClick={closeMobileMenu} className="p-2 rounded-lg hover:bg-gray-100" aria-label="Fechar menu">
                             <CloseIcon className="w-5 h-5 text-gray-600" />
                         </button>
