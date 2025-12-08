@@ -50,6 +50,12 @@ const getSaoPauloTimeParts = (date: Date) => {
     }
 }
 
+// Parse YYYY-MM-DD as a São Paulo wall-clock date using midday to avoid DST/offset edge cases
+const parseISODateAsSaoPaulo = (isoDate: string): Date => {
+    const [y, m, d] = isoDate.split('-').map(Number);
+    return toSaoPauloUTC(y, (m - 1), d, 12, 0, 0);
+};
+
 const isSameSaoPauloDay = (date1: Date, date2: Date): boolean => {
   const d1Parts = getSaoPauloTimeParts(date1);
   const d2Parts = getSaoPauloTimeParts(date2);
@@ -1038,7 +1044,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
             const now = new Date();
             
             // Use service start date as the reference date instead of current date
-            const serviceStartDateObj = serviceStartDate ? new Date(serviceStartDate + 'T00:00:00') : new Date();
+            const serviceStartDateObj = serviceStartDate ? parseISODateAsSaoPaulo(serviceStartDate) : new Date();
 
             if (recurrence.type === 'weekly' || recurrence.type === 'bi-weekly') {
                 let firstDate = new Date(serviceStartDateObj);
@@ -1047,7 +1053,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                 let daysToAdd = (recurrenceDay - firstDateDayOfWeek + 7) % 7;
                 firstDate.setDate(firstDate.getDate() + daysToAdd);
 
-                const intervalDays = recurrence.type === 'weekly' ? 7 : 15;
+                const intervalDays = recurrence.type === 'weekly' ? 7 : 14;
                 const endLimit = new Date(Date.UTC(2026, 11, 31, 23, 59, 59));
 
                 let cursor = new Date(firstDate);
@@ -5721,7 +5727,7 @@ const RenewMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => 
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const startObj = serviceStartDate ? new Date(serviceStartDate + 'T00:00:00') : new Date();
+            const startObj = serviceStartDate ? parseISODateAsSaoPaulo(serviceStartDate) : new Date();
             const parts = getSaoPauloTimeParts(startObj);
             let startDay = parts.day === 0 ? 7 : parts.day;
             const endLimit = new Date(Date.UTC(2026, 11, 31, 23, 59, 59));
@@ -5730,7 +5736,7 @@ const RenewMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => 
                 const addDays = (dayOfWeek - startDay + 7) % 7;
                 const firstDate = new Date(startObj);
                 firstDate.setDate(firstDate.getDate() + addDays);
-                const intervalDays = recurrenceType === 'weekly' ? 7 : 15;
+                const intervalDays = recurrenceType === 'weekly' ? 7 : 14;
                 let cursor = new Date(firstDate);
                 while (cursor <= endLimit) {
                     const iso = toSaoPauloUTC(cursor.getFullYear(), cursor.getMonth(), cursor.getDate(), time).toISOString();
