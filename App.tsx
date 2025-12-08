@@ -4031,11 +4031,7 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
                         />
                     </button>
                     <button onClick={() => setAdminView(adminView === 'daily' ? 'all' : 'daily')} title={adminView === 'daily' ? 'Ver Todos' : 'Ver Calendário'} className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
-                        {adminView === 'daily' ? (
-                            <img alt="Ver Todos" className="h-6 w-6" src="https://i.imgur.com/y2cVM07.png" onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://i.imgur.com/iexNNE5.png'; }} />
-                        ) : (
-                            <CalendarIcon />
-                        )}
+                        <img alt="Ver Todos" className="h-6 w-6" src="https://i.imgur.com/y2cVM07.png" onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://i.imgur.com/iexNNE5.png'; }} />
                     </button>
                 </div>
             </div>
