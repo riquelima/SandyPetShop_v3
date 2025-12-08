@@ -7637,9 +7637,12 @@ const EditDaycareEnrollmentModal: React.FC<{
                                     <label className="block text-base font-semibold text-gray-700">Horário de Entrada</label>
                                     <select name="check_in_time" value={formData.check_in_time || ''} onChange={handleInputChange} className="mt-1 block w-full p-2 bg-gray-50 border rounded-md">
                                         <option value="">Selecionar</option>
-                                        {WORKING_HOURS.map(h => (
-                                            <option key={h} value={`${String(h).padStart(2,'0')}:00`}>{`${String(h).padStart(2,'0')}:00`}</option>
-                                        ))}
+                                        {Array.from({ length: ((19 - 7) * 2) + 1 }, (_, i) => {
+                                            const h = 7 + Math.floor(i / 2);
+                                            const m = i % 2 ? '30' : '00';
+                                            const t = `${String(h).padStart(2,'0')}:${m}`;
+                                            return (<option key={t} value={t}>{t}</option>);
+                                        })}
                                     </select>
                                 </div>
                                 <div>
@@ -7650,9 +7653,12 @@ const EditDaycareEnrollmentModal: React.FC<{
                                     <label className="block text-base font-semibold text-gray-700">Horário de Saída</label>
                                     <select name="check_out_time" value={formData.check_out_time || ''} onChange={handleInputChange} className="mt-1 block w-full p-2 bg-gray-50 border rounded-md">
                                         <option value="">Selecionar</option>
-                                        {WORKING_HOURS.map(h => (
-                                            <option key={h} value={`${String(h).padStart(2,'0')}:00`}>{`${String(h).padStart(2,'0')}:00`}</option>
-                                        ))}
+                                        {Array.from({ length: ((19 - 7) * 2) + 1 }, (_, i) => {
+                                            const h = 7 + Math.floor(i / 2);
+                                            const m = i % 2 ? '30' : '00';
+                                            const t = `${String(h).padStart(2,'0')}:${m}`;
+                                            return (<option key={t} value={t}>{t}</option>);
+                                        })}
                                     </select>
                                 </div>
                             </div>
