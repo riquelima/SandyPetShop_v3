@@ -528,7 +528,7 @@ const SuccessAlertIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className
 
 // FIX: CalendarIcon uses requested PNG asset instead of inline SVG
 const CalendarIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <img src="https://cdn-icons-png.flaticon.com/512/10755/10755360.png" alt="Calendário" className={className || 'h-5 w-5'} />
+    <img src="https://cdn-icons-png.flaticon.com/512/4288/4288266.png" alt="Calendário" className={className || 'h-6 w-6'} />
 );
 const LockClosedIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>;
 const LockOpenIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>;
@@ -4013,30 +4013,28 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
                     <input type="text" placeholder="Buscar por pet, dono ou serviço..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500" />
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><SearchIcon /></div>
                 </div>
-                <div className="flex flex-row items-center justify-center gap-3 sm:gap-4 mx-auto overflow-x-auto flex-nowrap">
-                    <button onClick={handleOpenAddModal} className="flex-shrink-0 inline-flex items-center justify-center gap-2 sm:gap-3 bg-green-600 text-white font-bold w-auto h-12 sm:w-auto sm:h-auto px-3 sm:py-4 sm:px-6 rounded-lg hover:bg-green-700 transition-colors shadow-lg border-2 border-green-500 sm:min-w-[200px]">
-                        <UserPlusIcon />
-                        <span className="inline text-xs sm:text-sm">Adicionar Agendamento</span>
+                <div className="w-full flex flex-row items-center justify-between sm:justify-center gap-3 sm:gap-3 mx-auto flex-wrap sm:flex-nowrap">
+                    <button onClick={handleOpenAddModal} title="Adicionar Agendamento" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
+                        <img alt="Adicionar Agendamento" className="h-6 w-6" src="https://i.imgur.com/ZimMFxY.png" />
                     </button>
-                    <button onClick={() => setIsStatisticsModalOpen(true)} className="flex-shrink-0 inline-flex items-center justify-center gap-2 sm:gap-3 bg-blue-600 text-white font-bold w-auto h-12 sm:w-auto sm:h-auto px-3 sm:py-4 sm:px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-lg border-2 border-blue-500 sm:min-w-[160px]">
-                        <span className="text-lg">📊</span>
-                        <span className="inline text-xs sm:text-sm">Estatísticas</span>
+                    <button onClick={() => setIsStatisticsModalOpen(true)} title="Estatísticas" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
                     </button>
-                    <button onClick={() => setIsCloseDayModalOpen(true)} className="flex-shrink-0 inline-flex items-center justify-center gap-2 sm:gap-3 bg-blue-600 text-white font-bold w-auto h-12 sm:w-auto sm:h-auto px-3 sm:py-4 sm:px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-lg border-2 border-blue-500 sm:min-w-[160px]">
-                        <CalendarIcon />
-                        <span className="inline text-xs sm:text-sm">Bloquear Dias</span>
+                    <button onClick={() => setIsCloseDayModalOpen(true)} title="Bloquear Dias" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
+                        <img
+                            alt="Bloquear Dias"
+                            className="h-6 w-6"
+                            src="https://i.imgur.com/BaVdolX.png"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://cdn-icons-png.flaticon.com/512/16253/16253757.png'; }}
+                        />
                     </button>
-                    <button onClick={() => setAdminView(adminView === 'daily' ? 'all' : 'daily')} className="flex-shrink-0 inline-flex items-center justify-center gap-2 sm:gap-3 bg-pink-100 text-pink-800 font-semibold w-auto h-12 sm:w-auto sm:h-auto px-3 sm:py-3 sm:px-5 rounded-lg hover:bg-pink-200 transition-colors">
+                    <button onClick={() => setAdminView(adminView === 'daily' ? 'all' : 'daily')} title={adminView === 'daily' ? 'Ver Todos' : 'Ver Calendário'} className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
                         {adminView === 'daily' ? (
-                            <>
-                                <ListIcon />
-                                <span className="inline text-xs sm:text-sm">Ver Todos</span>
-                            </>
+                            <img alt="Ver Todos" className="h-6 w-6" src="https://i.imgur.com/y2cVM07.png" onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://i.imgur.com/iexNNE5.png'; }} />
                         ) : (
-                            <>
-                                <CalendarIcon />
-                                <span className="inline text-xs sm:text-sm">Ver Calendário</span>
-                            </>
+                            <CalendarIcon />
                         )}
                     </button>
                 </div>
@@ -6556,7 +6554,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                         // Visualização em Cards com carrossel horizontal no mobile
                         <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory md:mx-0 md:px-0 md:grid md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
                             {filteredClients.map(client => (
-                                <div key={client.id} className="flex-none w-screen sm:w-[420px] lg:w-[460px] md:min-w-0 snap-center">
+                                <div key={client.id} className="flex-none w-full max-w-[420px] lg:max-w-[460px] md:min-w-0 snap-center px-4">
                                     <MonthlyClientCard
                                         client={client}
                                         onEdit={() => setEditingClient(client)}
@@ -6768,7 +6766,7 @@ const MonthlyClientCard: React.FC<{
 
     return (
         <div 
-            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform md:hover:scale-[1.02] cursor-pointer overflow-hidden border border-gray-100 w-full max-w-full min-h-[65vh] sm:min-h-0 flex flex-col"
+            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform md:hover:scale-[1.02] cursor-pointer overflow-hidden border border-gray-100 w-full max-w-full mx-auto min-h-0 md:min-h-[65vh] flex flex-col"
             onClick={() => onClick(client)}
         >
             {/* Header do Card */}

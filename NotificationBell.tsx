@@ -158,7 +158,7 @@ export const NotificationBell: React.FC = () => {
       <button
         onClick={() => setOpen(o => !o)}
         className={`relative flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm hover:shadow ${
-          open ? 'text-pink-700 bg-pink-50' : 'text-gray-700 bg-gray-50 hover:bg-pink-50 hover:text-pink-700'
+          open ? 'text-pink-700 bg-pink-50' : 'text-gray-700 bg-white hover:bg-pink-50 hover:text-pink-700'
         }`}
         aria-label="Notificações"
         title="Notificações"
