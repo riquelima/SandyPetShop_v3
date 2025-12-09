@@ -4206,7 +4206,7 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
                 </div>
             )}
 
-            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-40 mb-6">
+            <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
                 <div className="space-y-3">
                     <div className="space-y-1">
                         <h2 className="text-4xl font-bold text-pink-600 text-center" style={{fontFamily: 'Lobster Two, cursive'}}>Banho & Tosa</h2>
@@ -4818,7 +4818,7 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
             {selectedForEdit && <EditMonthlyClientAdvancedModal client={selectedForEdit} onClose={() => setSelectedForEdit(null)} onMonthlyClientUpdated={handleClientUpdated} />}
             {selectedForDelete && <ConfirmationModal isOpen={!!selectedForDelete} onClose={() => setSelectedForDelete(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o mensalista ${selectedForDelete.pet_name}?`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
             
-            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-40 mb-6">
+            <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
                 <div className="space-y-3">
                     <div className="space-y-1">
                         <h2 className="text-4xl font-bold text-pink-600 text-center" style={{fontFamily: 'Lobster Two, cursive'}}>Pet Móvel</h2>
@@ -5388,7 +5388,7 @@ const ClientsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
             {editingClient && <EditClientModal client={editingClient} onClose={() => setEditingClient(null)} onClientUpdated={handleClientUpdated} />}
             {clientToDelete && <ConfirmationModal isOpen={!!clientToDelete} onClose={() => setClientToDelete(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o cliente ${clientToDelete.name}?`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
 
-            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-40 mb-6">
+            <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
                 <div className="space-y-3">
                     <div className="space-y-1">
                         <h2 className="text-4xl font-bold text-pink-600 text-center" style={{fontFamily: 'Lobster Two, cursive'}}>Meus Clientes</h2>
@@ -6067,7 +6067,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
     const [isDeleting, setIsDeleting] = useState(false);
     const [alertInfo, setAlertInfo] = useState<{ title: string; message: string; variant: 'success' | 'error' } | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
+    const [viewMode, setViewMode] = useState<'cards' | 'stack' | 'list'>('cards');
     // Filtro de status de pagamento: '' (Todos), 'Pendente' ou 'Pago'
     const [filterPaymentStatus, setFilterPaymentStatus] = useState<'' | 'Pendente' | 'Pago'>('');
     const [monthlyMobileSearchOpen, setMonthlyMobileSearchOpen] = useState(false);
@@ -6396,7 +6396,7 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
             {editingClient && <EditMonthlyClientAdvancedModal client={editingClient} onClose={() => setEditingClient(null)} onMonthlyClientUpdated={handleUpdateSuccess} />}
             {deletingClient && <ConfirmationModal isOpen={!!deletingClient} onClose={() => setDeletingClient(null)} onConfirm={handleConfirmDelete} title="Confirmar Exclusão" message={`Tem certeza que deseja excluir o mensalista ${deletingClient.pet_name}? Todos os seus agendamentos futuros também serão removidos.`} confirmText="Excluir" variant="danger" isLoading={isDeleting} />}
             
-            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-40 mb-6">
+            <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
                 <div className="space-y-3">
                     <div className="space-y-1">
                         <h2 className="text-4xl font-bold text-pink-600 text-center" style={{fontFamily: 'Lobster Two, cursive'}}>Mensalistas</h2>
@@ -6410,12 +6410,20 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                         >
                             <img alt="Adicionar Mensalista" className="h-6 w-6" src="https://i.imgur.com/19QrZ6g.png" />
                         </button>
+                        
                         <button
                             onClick={() => setShowFilterPanel(!showFilterPanel)}
                             title="Filtros"
                             className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-gray-100 text-gray-700 font-semibold h-11 px-5 text-base rounded-lg hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none"
                         >
                             <img alt="Filtros" className="h-6 w-6" src="https://cdn-icons-png.flaticon.com/512/9702/9702724.png" />
+                        </button>
+                        <button
+                            onClick={() => setViewMode(prev => prev === 'cards' ? 'stack' : prev === 'stack' ? 'list' : 'cards')}
+                            title="Visualização"
+                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold h-11 px-5 text-base rounded-lg hover:bg-pink-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none"
+                        >
+                            <img alt="Visualização" className="w-6 h-6" src={viewMode === 'cards' ? 'https://i.imgur.com/JsRhJWq.png' : (viewMode === 'stack' ? 'https://i.imgur.com/oz6qjaI.png' : 'https://i.imgur.com/vRrOtbI.png')} />
                         </button>
                         <button
                             onClick={() => setShowStatisticsModal(true)}
@@ -6533,6 +6541,23 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                         <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory md:mx-0 md:px-0 md:grid md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
                             {filteredClients.map(client => (
                                 <div key={client.id} className="flex-none w-full max-w-[420px] lg:max-w-[460px] md:min-w-0 snap-center px-4">
+                                    <MonthlyClientCard
+                                        client={client}
+                                        onEdit={() => setEditingClient(client)}
+                                        onDelete={() => setDeletingClient(client)}
+                                        onAddExtraServices={() => handleAddExtraServices(client)}
+                                        onTogglePaymentStatus={(clientArg, e) => handleTogglePaymentStatus(clientArg, e)}
+                                        isClientInDaycare={isClientInDaycare(client)}
+                                        onChangePhoto={(mc) => { setUploadTargetMonthlyClient(mc); setIsUploadMonthlyPhotoModalOpen(true); }}
+                                        onView={(mc) => setViewingClient(mc)}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    ) : viewMode === 'stack' ? (
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            {filteredClients.map(client => (
+                                <div key={client.id} className="px-4">
                                     <MonthlyClientCard
                                         client={client}
                                         onEdit={() => setEditingClient(client)}
@@ -11427,7 +11452,7 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
 
     return (
         <div className="space-y-6">
-            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-40">
+            <div className="bg-white rounded-2xl shadow-md p-6">
                 <div className="space-y-3">
                     <div className="space-y-1">
                         <h2 className="text-4xl font-bold text-pink-600 text-center" style={{fontFamily: 'Lobster Two, cursive'}}>Hotel Pet</h2>
@@ -12560,7 +12585,7 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
                 />
             )}
             
-            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-0 z-40 mb-6">
+            <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
                 <div className="space-y-3">
                     <div className="space-y-1">
                         <h2 className="text-4xl font-bold text-pink-600 text-center" style={{fontFamily: 'Lobster Two, cursive'}}>Creche Pet</h2>
@@ -12775,7 +12800,7 @@ const AdminDashboard: React.FC<{
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-pink-50/20 to-gray-100">
-            <header className="bg-white border-b-2 border-pink-100 shadow-lg sticky top-0 z-40 backdrop-blur-sm bg-white/95">
+            <header className="bg-white border-b-2 border-pink-100 shadow-lg fixed top-0 left-0 right-0 z-50 backdrop-blur-sm bg-white/95">
                 <div className="w-full px-2">
                     <div className="flex justify-between items-center h-20">
                         <div className="flex items-center gap-4">
@@ -12853,11 +12878,11 @@ const AdminDashboard: React.FC<{
                 </div>
             )}
 
-            <div className="w-full px-2 sm:px-3 md:px-4 py-4">
+            <div className="w-full px-2 sm:px-3 md:px-4 pt-24 pb-4">
                 <div className="flex flex-col md:flex-row gap-8">
                     <aside className={`
                         md:w-64 flex-shrink-0
-                        md:sticky md:top-24 md:h-[calc(100vh-6rem)] md:bg-transparent md:p-0 md:z-10
+                        md:sticky md:top-20 md:h-[calc(100vh-5rem)] md:bg-transparent md:p-0 md:z-10
                         hidden md:block
                     `}>
                         <NavMenu />
@@ -12878,7 +12903,7 @@ const AdminDashboard: React.FC<{
                             </button>
                         </div>
                     </aside>
-                    <main className="flex-1 overflow-y-auto">
+                    <main className="flex-1">
                         {renderActiveView()}
                     </main>
                 </div>
