@@ -25,6 +25,153 @@ const planLabels: Record<string, string> = {
   '5x_week': '5 X SEMANA',
 };
 
+const AiChatView: React.FC<{ key?: number }> = () => {
+    const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>(() => {
+        try {
+            const cached = localStorage.getItem('ai_chat_messages');
+            if (cached) return JSON.parse(cached);
+        } catch {}
+        return [{ role: 'assistant', content: 'Olá! Sou sua assistente. Como posso ajudar hoje?' }];
+    });
+    const [input, setInput] = useState('');
+    const [isSending, setIsSending] = useState(false);
+    const listRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        try { localStorage.setItem('ai_chat_messages', JSON.stringify(messages)); } catch {}
+        if (listRef.current) {
+            listRef.current.scrollTop = listRef.current.scrollHeight;
+        }
+    }, [messages]);
+
+    const sendSystemDataToWebhook = async (mensagem: string): Promise<{ ok: boolean; status: number; message: string; reply?: string }> => {
+        try {
+            const [appointmentsRes, petMovelRes, monthlyRes, hotelRes, daycareRes, clientsRes] = await Promise.all([
+                supabase.from('appointments').select('*'),
+                supabase.from('pet_movel_appointments').select('*'),
+                supabase.from('monthly_clients').select('*'),
+                supabase.from('hotel_registrations').select('*'),
+                supabase.from('daycare_enrollments').select('*'),
+                supabase.from('clients').select('*'),
+            ]);
+
+            const payload = {
+                gerado_em: new Date().toISOString(),
+                origem: 'SandyPetShop_v3',
+                mensagem,
+                agendamentos: appointmentsRes.data || [],
+                agendamentos_pet_movel: petMovelRes.data || [],
+                mensalistas: monthlyRes.data || [],
+                registros_hotel: hotelRes.data || [],
+                matriculas_creche: daycareRes.data || [],
+                clientes: clientsRes.data || [],
+                estatisticas: {
+                    total_agendamentos: (appointmentsRes.data || []).length,
+                    total_agendamentos_pet_movel: (petMovelRes.data || []).length,
+                    total_mensalistas: (monthlyRes.data || []).length,
+                    total_registros_hotel: (hotelRes.data || []).length,
+                    total_matriculas_creche: (daycareRes.data || []).length,
+                    total_clientes: (clientsRes.data || []).length,
+                }
+            };
+
+            const hookUrl = 'https://n8n.intelektus.tech/webhook/sandypetrobo';
+            const res = await fetch(hookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const ok = res.ok;
+            const status = res.status;
+            let reply: string | undefined = undefined;
+            try {
+                const ct = res.headers.get('content-type') || '';
+                if (ct.includes('application/json')) {
+                    const body = await res.json();
+                    reply = String(body?.reply || body?.resposta || body?.mensagem || body?.message || JSON.stringify(body));
+                } else {
+                    reply = await res.text();
+                }
+            } catch {}
+            if (!ok) {
+                return { ok, status, message: reply || 'Falha ao enviar para webhook.', reply };
+            }
+            return { ok, status, message: 'Dados enviados com sucesso ao webhook.', reply };
+        } catch (err: any) {
+            return { ok: false, status: 0, message: err?.message || 'Erro inesperado ao enviar dados.' };
+        }
+    };
+
+    const sendMessage = async () => {
+        const text = input.trim();
+        if (!text || isSending) return;
+        setIsSending(true);
+        setMessages(prev => [...prev, { role: 'user', content: text }]);
+        setInput('');
+        // Exporta todos os dados do sistema para o webhook
+        const exportResult = await sendSystemDataToWebhook(text);
+        if (exportResult.reply) {
+            setMessages(prev => [...prev, { role: 'assistant', content: exportResult.reply! }]);
+        } else {
+            setMessages(prev => [...prev, { role: 'assistant', content: exportResult.ok ? `Webhook: ${exportResult.message} (status ${exportResult.status})` : `Webhook erro (status ${exportResult.status}): ${exportResult.message}` }]);
+        }
+
+        const endpoint = import.meta.env.VITE_AI_CHAT_ENDPOINT || '';
+        try {
+            if (endpoint && !exportResult.reply) {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages }),
+                });
+                const data = await res.json();
+                const reply = String(data?.reply || 'Sem resposta.');
+                setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
+            } else {
+                if (!exportResult.reply) {
+                    const reply = `Você disse: "${text}". Para respostas reais, configure VITE_AI_CHAT_ENDPOINT.`;
+                    setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
+                }
+            }
+        } catch {
+            setMessages(prev => [...prev, { role: 'assistant', content: 'Falha ao conectar à IA.' }]);
+        } finally {
+            setIsSending(false);
+        }
+    };
+
+    return (
+        <div className="animate-fadeIn">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Chat com IA</h2>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 flex flex-col h-[70vh]">
+                <div ref={listRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+                    {messages.map((m, idx) => (
+                        <div key={idx} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${m.role === 'user' ? 'bg-pink-600 text-white rounded-br-sm' : 'bg-gray-100 text-gray-800 rounded-bl-sm'}`}>{m.content}</div>
+                        </div>
+                    ))}
+                </div>
+                <div className="p-3 border-t flex items-center gap-2">
+                    <input
+                        value={input}
+                        onChange={e => setInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') sendMessage(); }}
+                        placeholder="Digite sua mensagem..."
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    />
+                    <button
+                        onClick={sendMessage}
+                        disabled={isSending}
+                        className="px-4 py-2 rounded-lg bg-pink-600 text-white font-semibold disabled:opacity-50"
+                    >
+                        Enviar
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // --- TIMEZONE-AWARE HELPER FUNCTIONS (UTC-3 / SÃO PAULO) ---
 const SAO_PAULO_OFFSET_MS = 3 * 60 * 60 * 1000;
 
@@ -12660,10 +12807,8 @@ const AdminDashboard: React.FC<{
     };
     const closeMobileMenu = () => {
         setIsDrawerOpen(false);
-        setTimeout(() => {
-            setIsDrawerVisible(false);
-            setShowMobileMenu(false);
-        }, 250);
+        setIsDrawerVisible(false);
+        setShowMobileMenu(false);
     };
     const [showDaycareStatistics, setShowDaycareStatistics] = useState(false);
     const [showHotelStatistics, setShowHotelStatistics] = useState(false);
