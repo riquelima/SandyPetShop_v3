@@ -4213,15 +4213,15 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
                         <p className="text-sm text-gray-600 text-center">Agenda Banho & Tosa - Pet Móvel - Mensalistas</p>
                     </div>
                     <div className="flex gap-2 flex-wrap justify-center">
-                        <button onClick={handleOpenAddModal} title="Adicionar Agendamento" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
+                        <button onClick={handleOpenAddModal} title="Adicionar Agendamento" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold h-11 px-5 text-base rounded-lg hover:bg-pink-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none">
                             <img alt="Adicionar Agendamento" className="h-6 w-6" src="https://i.imgur.com/ZimMFxY.png" />
                         </button>
-                        <button onClick={() => setIsStatisticsModalOpen(true)} title="Estatísticas" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
+                        <button onClick={() => setIsStatisticsModalOpen(true)} title="Estatísticas" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold h-11 px-5 text-base rounded-lg hover:bg-pink-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none">
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                             </svg>
                         </button>
-                        <button onClick={() => setIsCloseDayModalOpen(true)} title="Bloquear Dias" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
+                        <button onClick={() => setIsCloseDayModalOpen(true)} title="Bloquear Dias" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold h-11 px-5 text-base rounded-lg hover:bg-pink-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none">
                             <img
                                 alt="Bloquear Dias"
                                 className="h-6 w-6"
@@ -4229,7 +4229,7 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
                                 onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://cdn-icons-png.flaticon.com/512/16253/16253757.png'; }}
                             />
                         </button>
-                    <button onClick={handleToggleAdminView} title={adminView === 'daily' ? 'Ver Todos' : 'Ver Calendário'} className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors">
+                    <button onClick={handleToggleAdminView} title={adminView === 'daily' ? 'Ver Todos' : 'Ver Calendário'} className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold h-11 px-5 text-base rounded-lg hover:bg-pink-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none">
                         <img alt="Ver Todos" className="h-6 w-6" src="https://i.imgur.com/y2cVM07.png" onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://i.imgur.com/iexNNE5.png'; }} />
                     </button>
                     </div>
@@ -4576,7 +4576,29 @@ const PetMovelView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                 console.error('Error fetching client appointments:', error);
                 setClientAppointments([]);
             } else {
-                setClientAppointments(data as AdminAppointment[]);
+                const rows = (data as AdminAppointment[]) || [];
+                const map = new Map<string, AdminAppointment[]>();
+                for (const r of rows) {
+                    const t = new Date(r.appointment_time);
+                    const key = `${t.getUTCFullYear()}-${String(t.getUTCMonth()+1).padStart(2,'0')}-${String(t.getUTCDate()).padStart(2,'0')} ${String(t.getUTCHours()).padStart(2,'0')}:${String(t.getUTCMinutes()).padStart(2,'0')}`;
+                    const g = map.get(key) || [];
+                    g.push(r);
+                    map.set(key, g);
+                }
+                const toDelete: string[] = [];
+                const unique: AdminAppointment[] = [];
+                for (const [, list] of map.entries()) {
+                    if (list.length > 1) {
+                        unique.push(list[0]);
+                        for (let i = 1; i < list.length; i++) toDelete.push(list[i].id);
+                    } else {
+                        unique.push(list[0]);
+                    }
+                }
+                if (toDelete.length > 0) {
+                    await supabase.from('appointments').delete().in('id', toDelete);
+                }
+                setClientAppointments(unique);
             }
         } catch (error) {
             console.error('Error fetching client appointments:', error);
@@ -5376,7 +5398,7 @@ const ClientsView: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
                         <button
                             onClick={() => setIsAddClientOpenMobile(prev => !prev)}
                             title="Adicionar Cliente"
-                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors"
+                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold h-11 px-5 text-base rounded-lg hover:bg-pink-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none"
                         >
                             <img alt="Adicionar Cliente" className="h-6 w-6" src="https://i.imgur.com/19QrZ6g.png" />
                         </button>
@@ -6576,21 +6598,21 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                         <button
                             onClick={onAddClient}
                             title="Adicionar Mensalista"
-                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors"
+                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold h-11 px-5 text-base rounded-lg hover:bg-pink-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none"
                         >
                             <img alt="Adicionar Mensalista" className="h-6 w-6" src="https://i.imgur.com/19QrZ6g.png" />
                         </button>
                         <button
                             onClick={() => setShowFilterPanel(!showFilterPanel)}
                             title="Filtros"
-                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-gray-100 text-gray-700 font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-gray-200 transition-colors"
+                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-gray-100 text-gray-700 font-semibold h-11 px-5 text-base rounded-lg hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none"
                         >
                             <img alt="Filtros" className="h-6 w-6" src="https://cdn-icons-png.flaticon.com/512/9702/9702724.png" />
                         </button>
                         <button
                             onClick={() => setShowStatisticsModal(true)}
                             title="Estatísticas"
-                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors"
+                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold h-11 px-5 text-base rounded-lg hover:bg-pink-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none"
                         >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -11635,14 +11657,14 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
                         <button
                             onClick={() => setShowHotelFilterPanel(prev => !prev)}
                             title="Filtros"
-                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-gray-100 text-gray-700 font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-gray-200 transition-colors"
+                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-gray-100 text-gray-700 font-semibold h-11 px-5 text-base rounded-lg hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none"
                         >
                             <img alt="Filtros" className="h-6 w-6" src="https://cdn-icons-png.flaticon.com/512/9702/9702724.png" />
                         </button>
                         <button
                             onClick={() => setShowHotelStatistics?.(true)}
                             title="Estatísticas"
-                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors"
+                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold h-11 px-5 text-base rounded-lg hover:bg-pink-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none"
                         >
                             <ChartBarIcon className="w-6 h-6" />
                         </button>
@@ -12758,17 +12780,16 @@ const DaycareView: React.FC<{ refreshKey?: number; setShowDaycareStatistics?: (s
                         <p className="text-sm text-gray-600 text-center">Clientes Creche Pet</p>
                     </div>
                     <div className="flex gap-2 flex-wrap justify-center">
+                        <Button size="lg" title="Nova Matrícula" aria-label="Nova Matrícula" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center" onClick={() => setIsAddFormOpen(true)}>
+                            <UserPlusIcon />
+                        </Button>
                         <button
                             onClick={() => setShowDaycareStatistics?.(true)}
                             title="Estatísticas"
-                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold py-3 sm:py-2.5 px-4 rounded-lg hover:bg-pink-700 transition-colors"
+                            className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center bg-pink-600 text-white font-semibold h-11 px-5 text-base rounded-lg hover:bg-pink-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none"
                         >
                             <ChartBarIcon className="w-6 h-6" />
                         </button>
-                        <Button size="lg" className="flex-1 sm:flex-shrink-0 inline-flex items-center justify-center gap-3" onClick={() => setIsAddFormOpen(true)}>
-                            <UserPlusIcon />
-                            <span className="hidden sm:inline">Nova Matrícula</span>
-                        </Button>
                     </div>
                 </div>
             </div>
@@ -12844,6 +12865,53 @@ const AdminDashboard: React.FC<{
                     .select('*');
                 if (petMovelError) console.warn('Erro ao buscar pet_movel_appointments:', petMovelError);
 
+                // Remover duplicados por mensalista e mesmo minuto de appointment_time, mantendo o mais antigo
+                const dedupeMonthlyByMinute = async (srcA: any[] | null | undefined, srcB: any[] | null | undefined) => {
+                    const all: { id: string; table: 'appointments' | 'pet_movel_appointments'; monthly_client_id?: string; appointment_time: string; created_at?: string; raw: any }[] = [];
+                    for (const r of (srcA || [])) {
+                        all.push({ id: r.id, table: 'appointments', monthly_client_id: r.monthly_client_id, appointment_time: r.appointment_time, created_at: r.created_at, raw: r });
+                    }
+                    for (const r of (srcB || [])) {
+                        all.push({ id: r.id, table: 'pet_movel_appointments', monthly_client_id: r.monthly_client_id, appointment_time: r.appointment_time, created_at: r.created_at, raw: r });
+                    }
+
+                    const groups = new Map<string, typeof all>();
+                    for (const r of all) {
+                        if (!r.monthly_client_id) continue;
+                        const t = new Date(r.appointment_time);
+                        const key = `${r.monthly_client_id}|${t.getUTCFullYear()}-${String(t.getUTCMonth()+1).padStart(2,'0')}-${String(t.getUTCDate()).padStart(2,'0')} ${String(t.getUTCHours()).padStart(2,'0')}:${String(t.getUTCMinutes()).padStart(2,'0')}`;
+                        const g = groups.get(key) || [] as any[];
+                        g.push(r);
+                        groups.set(key, g);
+                    }
+
+                    const toDeleteByTable: Record<'appointments' | 'pet_movel_appointments', string[]> = { appointments: [], pet_movel_appointments: [] };
+                    const keptSet = new Set<string>();
+                    for (const [, list] of groups.entries()) {
+                        if (list.length > 1) {
+                            list.sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+                            const keep = list[0];
+                            keptSet.add(`${keep.table}:${keep.id}`);
+                            for (let i = 1; i < list.length; i++) {
+                                toDeleteByTable[list[i].table].push(list[i].id);
+                            }
+                        } else {
+                            keptSet.add(`${list[0].table}:${list[0].id}`);
+                        }
+                    }
+
+                    if (toDeleteByTable.appointments.length) {
+                        await supabase.from('appointments').delete().in('id', toDeleteByTable.appointments);
+                    }
+                    if (toDeleteByTable.pet_movel_appointments.length) {
+                        await supabase.from('pet_movel_appointments').delete().in('id', toDeleteByTable.pet_movel_appointments);
+                    }
+
+                    const filteredA = (srcA || []).filter(r => keptSet.has(`appointments:${r.id}`));
+                    const filteredB = (srcB || []).filter(r => keptSet.has(`pet_movel_appointments:${r.id}`));
+                    return { filteredA, filteredB };
+                };
+
                 const normalize = (arr: any[] | null | undefined): AdminAppointment[] => {
                     if (!arr) return [];
                     return arr.map((rec: any) => ({
@@ -12866,9 +12934,10 @@ const AdminDashboard: React.FC<{
                     }));
                 };
 
+                const { filteredA, filteredB } = await dedupeMonthlyByMinute(bathAppointments, petMovelAppointments);
                 const combined = [
-                    ...normalize(bathAppointments),
-                    ...normalize(petMovelAppointments),
+                    ...normalize(filteredA),
+                    ...normalize(filteredB),
                 ].sort((a, b) => new Date(a.appointment_time).getTime() - new Date(b.appointment_time).getTime());
 
                 setAppointments(combined);
