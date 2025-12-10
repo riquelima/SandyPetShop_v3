@@ -6769,6 +6769,9 @@ const MonthlyClientCard: React.FC<{
             if (client.extra_services.adestrador?.enabled) {
                 total += Number(client.extra_services.adestrador.value || 0);
             }
+            if ((client.extra_services as any).hidratacao?.enabled) {
+                total += Number((client.extra_services as any).hidratacao?.value || 0);
+            }
             if (client.extra_services.despesa_medica?.enabled) {
                 total += Number(client.extra_services.despesa_medica.value || 0);
             }
@@ -6919,6 +6922,7 @@ const MonthlyClientCard: React.FC<{
                             (ex?.so_banho?.enabled || ex?.so_banho === true) ||
                             (ex?.adestrador?.enabled || ex?.adestrador === true) ||
                             (ex?.despesa_medica?.enabled || ex?.despesa_medica === true) ||
+                            (ex?.hidratacao?.enabled || ex?.hidratacao === true) ||
                             (((ex?.dias_extras?.quantity ?? 0) > 0))
                         );
                         if (!hasExtras) return null;
@@ -6940,6 +6944,9 @@ const MonthlyClientCard: React.FC<{
                                     )}
                                     {(ex?.despesa_medica?.enabled || ex?.despesa_medica === true) && (
                                         <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">Despesa médica</span>
+                                    )}
+                                    {(ex?.hidratacao?.enabled || ex?.hidratacao === true) && (
+                                        <span className="px-2 py-1 bg-teal-100 text-teal-700 text-xs rounded-full">Hidratação</span>
                                     )}
                                     {((ex?.dias_extras?.quantity ?? 0) > 0) && (
                                         <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">{ex?.dias_extras?.quantity} dia{ex?.dias_extras?.quantity > 1 ? 's' : ''} extra{ex?.dias_extras?.quantity > 1 ? 's' : ''}</span>

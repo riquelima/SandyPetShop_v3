@@ -8,6 +8,7 @@ interface ExtraServicesData {
   banho_tosa: { enabled: boolean; value: string | number };
   so_banho: { enabled: boolean; value: string | number };
   adestrador: { enabled: boolean; value: string | number };
+  hidratacao: { enabled: boolean; value: string | number };
   despesa_medica: { enabled: boolean; value: string | number };
   dias_extras: { enabled: boolean; quantity: string | number; value: string | number };
 }
@@ -45,6 +46,10 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
     adestrador: { 
       enabled: data.extra_services?.adestrador?.enabled || false, 
       value: data.extra_services?.adestrador?.value || '' 
+    },
+    hidratacao: {
+      enabled: data.extra_services?.hidratacao?.enabled || false,
+      value: data.extra_services?.hidratacao?.value || ''
     },
     despesa_medica: { 
       enabled: data.extra_services?.despesa_medica?.enabled || false, 
@@ -107,6 +112,7 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
     if (extraServices.banho_tosa.enabled) total += Number(extraServices.banho_tosa.value) || 0;
     if (extraServices.so_banho.enabled) total += Number(extraServices.so_banho.value) || 0;
     if (extraServices.adestrador.enabled) total += Number(extraServices.adestrador.value) || 0;
+    if (extraServices.hidratacao.enabled) total += Number(extraServices.hidratacao.value) || 0;
     if (extraServices.despesa_medica.enabled) total += Number(extraServices.despesa_medica.value) || 0;
     if (extraServices.dias_extras.enabled && Number(extraServices.dias_extras.quantity) > 0) {
       total += Number(extraServices.dias_extras.quantity) * (Number(extraServices.dias_extras.value) || 0);
@@ -146,6 +152,10 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
         adestrador: { 
           enabled: extraServices.adestrador.enabled, 
           value: extraServices.adestrador.value === '' ? undefined : Number(extraServices.adestrador.value)
+        },
+        hidratacao: {
+          enabled: extraServices.hidratacao.enabled,
+          value: extraServices.hidratacao.value === '' ? undefined : Number(extraServices.hidratacao.value)
         },
         despesa_medica: { 
           enabled: extraServices.despesa_medica.enabled, 
@@ -320,6 +330,33 @@ const ExtraServicesModal: React.FC<ExtraServicesModalProps> = ({
                   step="0.01"
                   value={extraServices.adestrador.value}
                   onChange={(e) => handleValueChange('adestrador', e.target.value)}
+                  className="w-24 px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-pink-500 focus:border-pink-500"
+                  placeholder="0,00"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Hidratação */}
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                checked={extraServices.hidratacao.enabled}
+                onChange={() => handleServiceToggle('hidratacao')}
+                className="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded"
+              />
+              <label className="text-sm font-medium text-gray-700">Hidratação</label>
+            </div>
+            {extraServices.hidratacao.enabled && (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">R$</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={extraServices.hidratacao.value}
+                  onChange={(e) => handleValueChange('hidratacao', e.target.value)}
                   className="w-24 px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-pink-500 focus:border-pink-500"
                   placeholder="0,00"
                 />

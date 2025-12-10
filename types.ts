@@ -62,6 +62,7 @@ export interface AdminAppointment {
     banho_tosa: { enabled: boolean; value: number };
     so_banho: { enabled: boolean; value: number };
     adestrador: { enabled: boolean; value: number };
+    hidratacao: { enabled: boolean; value: number };
     despesa_medica: { enabled: boolean; value: number };
     dias_extras: { quantity: number; value: number };
   };
@@ -105,6 +106,7 @@ export interface MonthlyClient {
     banho_tosa: { enabled: boolean; value: number };
     so_banho: { enabled: boolean; value: number };
     adestrador: { enabled: boolean; value: number };
+    hidratacao: { enabled: boolean; value: number };
     despesa_medica: { enabled: boolean; value: number };
     dias_extras: { quantity: number; value: number };
   };
@@ -242,6 +244,7 @@ export interface HotelRegistration {
         banho_tosa: { enabled: boolean; value: number };
         so_banho: { enabled: boolean; value: number };
         adestrador: { enabled: boolean; value: number };
+        hidratacao: { enabled: boolean; value: number };
         despesa_medica: { enabled: boolean; value: number };
         dias_extras: { quantity: number; value: number };
     };
