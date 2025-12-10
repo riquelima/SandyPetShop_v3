@@ -1308,20 +1308,39 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
             ];
             const primaryType = primaryServiceOrder.find(s => Number(serviceQuantities[s] || 0) > 0) || null;
             const unitPrice = getUnitPriceByType(selectedWeight!, primaryType || null) || finalPrice;
-            const supabasePayloads = appointmentsToCreate.map(app => ({
-                owner_name: formData.ownerName,
-                pet_name: formData.petName,
-                service: serviceString,
-                appointment_time: app.appointment_time,
-                status: 'AGENDADO',
-                price: unitPrice,
-                whatsapp: formData.whatsapp,
-                pet_breed: formData.petBreed,
-                owner_address: formData.ownerAddress,
-                weight: PET_WEIGHT_OPTIONS[selectedWeight!],
-                condominium: formData.condominium,
-                monthly_client_id: newClient.id
-            }));
+            const { data: existingAppts } = await supabase
+                .from('appointments')
+                .select('appointment_time')
+                .eq('monthly_client_id', newClient.id);
+            const { data: existingPetMovelAppts } = await supabase
+                .from('pet_movel_appointments')
+                .select('appointment_time')
+                .eq('monthly_client_id', newClient.id);
+
+            const existingTimes = new Set<string>();
+            (existingAppts || []).forEach((r: any) => {
+                try { existingTimes.add(new Date(r.appointment_time).toISOString()); } catch {}
+            });
+            (existingPetMovelAppts || []).forEach((r: any) => {
+                try { existingTimes.add(new Date(r.appointment_time).toISOString()); } catch {}
+            });
+
+            const supabasePayloads = appointmentsToCreate
+                .filter(app => !existingTimes.has(app.appointment_time))
+                .map(app => ({
+                    owner_name: formData.ownerName,
+                    pet_name: formData.petName,
+                    service: serviceString,
+                    appointment_time: app.appointment_time,
+                    status: isPastSaoPauloDate(new Date(app.appointment_time)) ? 'CONCLUÍDO' : 'AGENDADO',
+                    price: unitPrice,
+                    whatsapp: formData.whatsapp,
+                    pet_breed: formData.petBreed,
+                    owner_address: formData.ownerAddress,
+                    weight: PET_WEIGHT_OPTIONS[selectedWeight!],
+                    condominium: formData.condominium,
+                    monthly_client_id: newClient.id
+                }));
 
             // Check if any of the selected services is a Pet Móvel service
             const isPetMovelService = Object.keys(serviceQuantities).some(serviceKey => 
@@ -1332,19 +1351,21 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
             if (supabasePayloads.length > 0) {
                 if (isPetMovelService) {
                     // For Pet Móvel services, create specific payloads for pet_movel_appointments
-                    const petMovelPayloads = appointmentsToCreate.map(app => ({
-                        owner_name: formData.ownerName,
-                        pet_name: formData.petName,
-                        pet_breed: formData.petBreed,
-                        service: serviceString,
-                        appointment_time: app.appointment_time,
-                        status: 'AGENDADO',
-                        price: unitPrice,
-                        whatsapp: formData.whatsapp,
-                        owner_address: formData.ownerAddress,
-                        condominium: formData.condominium,
-                        monthly_client_id: newClient.id
-                    }));
+                    const petMovelPayloads = appointmentsToCreate
+                        .filter(app => !existingTimes.has(app.appointment_time))
+                        .map(app => ({
+                            owner_name: formData.ownerName,
+                            pet_name: formData.petName,
+                            pet_breed: formData.petBreed,
+                            service: serviceString,
+                            appointment_time: app.appointment_time,
+                            status: isPastSaoPauloDate(new Date(app.appointment_time)) ? 'CONCLUÍDO' : 'AGENDADO',
+                            price: unitPrice,
+                            whatsapp: formData.whatsapp,
+                            owner_address: formData.ownerAddress,
+                            condominium: formData.condominium,
+                            monthly_client_id: newClient.id
+                        }));
                     
                     // Insert into BOTH tables with appropriate payloads
                     const [appointmentsResult, petMovelResult] = await Promise.all([
@@ -1422,7 +1443,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                             <div>
                                 <h3 className="text-md font-semibold text-gray-700 mb-2">1. Serviço(s)</h3>
                                 <div className="space-y-3">
-                                {Object.entries(SERVICES).filter(([key]) => ![ServiceType.VISIT_DAYCARE, ServiceType.VISIT_HOTEL].includes(key as ServiceType)).map(([key, { label }]) => (
+                                {Object.entries(SERVICES).filter(([key]) => [ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_GROOMING_ONLY, ServiceType.PET_MOBILE_BATH_AND_GROOMING].includes(key as ServiceType)).map(([key, { label }]) => (
                                     <div key={key} className="flex items-center justify-between p-6 sm:p-5 rounded-lg bg-white border-2 border-gray-200">
                                         <span className="font-semibold text-gray-800">{label}</span>
                                         <div className="flex items-center gap-2">
@@ -9565,84 +9586,19 @@ const TimeSlotPicker: React.FC<{
     disablePastTimes?: boolean;
   }> = ({ selectedDate, selectedService, appointments, onTimeSelect, selectedTime, workingHours, isPetMovel, allowedDays, selectedCondo, disablePastTimes }) => {
     const [selectedVisualKey, setSelectedVisualKey] = useState<string | null>(null);
-
-  const bookingsByHour = useMemo(() => {
-      const regular = new Map<number, { bath: number; bathGroom: number; grooming: number }>();
-      const mobile = new Map<number, { bath: number; bathGroom: number; grooming: number }>();
-      const monthlyBathRegular = new Map<number, number>();
-      workingHours.forEach(h => { regular.set(h, { bath: 0, bathGroom: 0, grooming: 0 }); mobile.set(h, { bath: 0, bathGroom: 0, grooming: 0 }); });
-
-      const selectedDayParts = getSaoPauloTimeParts(selectedDate);
-
-      appointments.forEach(app => {
-        const ap = getSaoPauloTimeParts(app.appointmentTime);
-        if (ap.year !== selectedDayParts.year || ap.month !== selectedDayParts.month || ap.date !== selectedDayParts.date) return;
-        const isRegular = [ServiceType.BATH, ServiceType.BATH_AND_GROOMING, ServiceType.GROOMING_ONLY].includes(app.service);
-        const target = isRegular ? regular : mobile;
-        const current = target.get(ap.hour) || { bath: 0, bathGroom: 0, grooming: 0 };
-        switch (app.service) {
-          case ServiceType.BATH: current.bath += 1; break;
-          case ServiceType.BATH_AND_GROOMING: current.bathGroom += 1; break;
-          case ServiceType.GROOMING_ONLY: current.grooming += 1; break;
-          case ServiceType.PET_MOBILE_BATH: current.bath += 1; break;
-          case ServiceType.PET_MOBILE_BATH_AND_GROOMING: current.bathGroom += 1; break;
-          case ServiceType.PET_MOBILE_GROOMING_ONLY: current.grooming += 1; break;
-          default: break;
-        }
-        if (isRegular && app.service === ServiceType.BATH && app.monthly_client_id) {
-          monthlyBathRegular.set(ap.hour, (monthlyBathRegular.get(ap.hour) || 0) + 1);
-        }
-        target.set(ap.hour, current);
-      });
-
-      return { regular, mobile, monthlyBathRegular };
-    }, [appointments, selectedDate, workingHours, selectedCondo]);
-    
     return (
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
         {workingHours.flatMap(hour => {
-          const { day: dayOfWeek } = getSaoPauloTimeParts(selectedDate);
-          const isPastDay = isPastSaoPauloDate(selectedDate);
-          const baseDisabled = isPastDay || !!(allowedDays && !allowedDays.includes(dayOfWeek));
-          let bookedCount = 0;
-          if (isPetMovel) {
-            const entry = bookingsByHour.mobile.get(hour) || { bath: 0, bathGroom: 0, grooming: 0 };
-            // Contabiliza ocupação total de Pet Móvel (independente do tipo de serviço)
-            bookedCount = (entry.bath + entry.bathGroom + entry.grooming);
-            // Se houver mensalistas regulares de banho na clínica, bloqueia totalmente o slot para Pet Móvel
-            const monthlyBlock = (bookingsByHour.monthlyBathRegular.get(hour) || 0) > 0;
-            if (monthlyBlock) bookedCount = MAX_CAPACITY_PER_SLOT;
-          } else {
-            const entry = bookingsByHour.regular.get(hour) || { bath: 0, bathGroom: 0, grooming: 0 };
-            if (selectedService === ServiceType.BATH) {
-              const prev = bookingsByHour.regular.get(hour - 1) || { bath: 0, bathGroom: 0, grooming: 0 };
-              bookedCount = entry.bath + prev.bathGroom;
-            } else if (selectedService === ServiceType.BATH_AND_GROOMING) {
-              bookedCount = entry.bathGroom;
-            } else if (selectedService === ServiceType.GROOMING_ONLY) {
-              bookedCount = entry.grooming;
-            }
-          }
-
-          const now = new Date();
-          const todaySp = getSaoPauloTimeParts(now);
-          const isSameDay = isSameSaoPauloDay(selectedDate, now);
-
           return Array.from({ length: MAX_CAPACITY_PER_SLOT }, (_, slotIndex) => {
             const visualKey = `${hour}-${slotIndex}`;
-            const isSlotBooked = slotIndex < bookedCount;
-            const isPastTime = !!disablePastTimes && isSameDay && hour <= todaySp.hour;
-            const isDisabled = baseDisabled || isSlotBooked || isPastTime;
-
             return (
               <button
                 key={visualKey}
                 type="button"
-                disabled={isDisabled}
-                onClick={() => { if (!isDisabled) { setSelectedVisualKey(visualKey); onTimeSelect(hour); } }}
+                onClick={() => { setSelectedVisualKey(visualKey); onTimeSelect(hour); }}
                 className={`px-3 py-2 rounded-md text-center font-medium transition-colors border
                     ${selectedVisualKey === visualKey ? 'bg-pink-600 text-white border-pink-600' : 'bg-white hover:bg-pink-50 border-gray-200'}
-                    disabled:bg-gray-100 disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed leading-tight text-sm
+                    leading-tight text-sm
                   `}
               >
                 {`${hour}:00`}
@@ -9931,79 +9887,6 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
 
     const isPetMovelSubmit = !!selectedCondo;
     const targetTable = isPetMovelSubmit ? 'pet_movel_appointments' : 'appointments';
-    
-    // Capacity check com regra especial:
-    // - Para Banho, considerar ocupação do horário + 1 slot consumido por Banho & Tosa no horário anterior
-    // - Para Banho & Tosa, considerar ocupação do próprio horário
-    try {
-        if (!isPetMovelSubmit && selectedService === ServiceType.BATH) {
-        const { data: bathAtHour, error: bathErr } = await supabase
-          .from(targetTable)
-          .select('id')
-          .eq('appointment_time', appointmentTime.toISOString())
-          .eq('service', SERVICES[ServiceType.BATH].label);
-        if (bathErr) throw bathErr;
-        const prevHourTime = toSaoPauloUTC(year, month, day, selectedTime - 1);
-        const { data: bathGroomPrev, error: bgErr } = await supabase
-          .from(targetTable)
-          .select('id')
-          .eq('appointment_time', prevHourTime.toISOString())
-          .eq('service', SERVICES[ServiceType.BATH_AND_GROOMING].label);
-        if (bgErr) throw bgErr;
-        const total = (Array.isArray(bathAtHour) ? bathAtHour.length : 0) + (Array.isArray(bathGroomPrev) ? bathGroomPrev.length : 0);
-        if (total >= MAX_CAPACITY_PER_SLOT) {
-          alert('Este horário está completo para Banho. Selecione outro horário.');
-          setIsSubmitting(false);
-          return;
-        }
-      } else if (selectedService === ServiceType.BATH_AND_GROOMING) {
-        const { data: bgtAtHour, error: bgtErr } = await supabase
-          .from(targetTable)
-          .select('id')
-          .eq('appointment_time', appointmentTime.toISOString())
-          .eq('service', SERVICES[ServiceType.BATH_AND_GROOMING].label);
-        if (bgtErr) throw bgtErr;
-        const count = Array.isArray(bgtAtHour) ? bgtAtHour.length : 0;
-        if (count >= MAX_CAPACITY_PER_SLOT) {
-          alert('Este horário está completo para Banho & Tosa. Selecione outro horário.');
-          setIsSubmitting(false);
-          return;
-        }
-      } else {
-        const { data: existingAtTime, error: countError } = await supabase
-          .from(targetTable)
-          .select('id')
-          .eq('appointment_time', appointmentTime.toISOString())
-          .eq('service', SERVICES[selectedService].label);
-        if (countError) throw countError;
-        const count = Array.isArray(existingAtTime) ? existingAtTime.length : 0;
-        if (count >= MAX_CAPACITY_PER_SLOT) {
-          alert('Este horário está completo. Selecione outro horário.');
-          setIsSubmitting(false);
-          return;
-        }
-      }
-      if (isPetMovelSubmit) {
-        const { data: monthlyBathAtTime, error: mbErr } = await supabase
-          .from('appointments')
-          .select('id')
-          .eq('appointment_time', appointmentTime.toISOString())
-          .eq('service', SERVICES[ServiceType.BATH].label)
-          .not('monthly_client_id', 'is', null);
-        if (mbErr) throw mbErr;
-        const mbCount = Array.isArray(monthlyBathAtTime) ? monthlyBathAtTime.length : 0;
-        if (mbCount > 0) {
-          alert('Horário indisponível devido a mensalistas de banho. Selecione outro horário.');
-          setIsSubmitting(false);
-          return;
-        }
-      }
-    } catch (err) {
-      console.error('Erro ao validar capacidade do horário:', err);
-      alert('Não foi possível validar a disponibilidade deste horário. Tente outro horário.');
-      setIsSubmitting(false);
-      return;
-    }
     
     const basePayload = {
       appointment_time: appointmentTime.toISOString(),
@@ -10482,22 +10365,23 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
           )}
 
           <div className="mt-10 flex justify-between items-center gap-4">
-            {step > 1 ? (
-              <button type="button" onClick={() => {
-                  if (step === 2 && serviceStepView !== 'main') {
-                      if (serviceStepView === 'pet_movel') {
-                          setServiceStepView('pet_movel_condo');
-                      } else {
-                          setServiceStepView('main');
-                      }
-                      setSelectedService(null);
-                  } else {
-                      changeStep(step - 1);
-                  }
-              }} className="w-full md:w-[220px] bg-white border-2 border-gray-300 text-gray-700 font-bold py-4 px-8 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm hover:shadow">
-                ← Voltar
-              </button>
-            ) : <div />}
+            <button type="button" onClick={() => {
+                if (step === 1) {
+                    setServiceStepView('main');
+                    setSelectedService(null);
+                } else if (step === 2 && serviceStepView !== 'main') {
+                    if (serviceStepView === 'pet_movel') {
+                        setServiceStepView('pet_movel_condo');
+                    } else {
+                        setServiceStepView('main');
+                    }
+                    setSelectedService(null);
+                } else {
+                    changeStep(step - 1);
+                }
+            }} className="w-full md:w-[220px] bg-white border-2 border-gray-300 text-gray-700 font-bold py-4 px-8 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm hover:shadow">
+              ← Voltar
+            </button>
 
             {step < 4 && <button type="button" onClick={() => changeStep(step + 1)} disabled={(step === 1 && !isStep1Valid) || (step === 2 && !isStep2Valid) || (step === 3 && !isStep3Valid)} className="w-full md:w-[220px] bg-gradient-to-r from-pink-600 to-pink-700 text-white font-bold py-4 px-8 rounded-xl hover:from-pink-700 hover:to-pink-800 transition-all shadow-lg hover:shadow-xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed">
               Próximo →
@@ -12719,8 +12603,9 @@ const AdminDashboard: React.FC<{
                         await supabase.from('pet_movel_appointments').delete().in('id', toDeleteByTable.pet_movel_appointments);
                     }
 
-                    const filteredA = (srcA || []).filter(r => keptSet.has(`appointments:${r.id}`));
-                    const filteredB = (srcB || []).filter(r => keptSet.has(`pet_movel_appointments:${r.id}`));
+                    // Keep all non-mensalista records untouched; only filter duplicates for mensalistas
+                    const filteredA = (srcA || []).filter(r => r?.monthly_client_id ? keptSet.has(`appointments:${r.id}`) : true);
+                    const filteredB = (srcB || []).filter(r => r?.monthly_client_id ? keptSet.has(`pet_movel_appointments:${r.id}`) : true);
                     return { filteredA, filteredB };
                 };
 
