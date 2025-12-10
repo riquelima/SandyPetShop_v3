@@ -257,6 +257,15 @@ const getPlanLabel = (client: MonthlyClient) => {
     }
 };
 
+const getCurrentMonthPaymentDueISO = (): string => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const monthIndex = now.getMonth();
+    const day = monthIndex === 1 ? '28' : '30';
+    const month = String(monthIndex + 1).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 const getNextAppointmentDateText = (client: MonthlyClient) => {
     const now = new Date();
     const recurrenceDay = parseInt(String(client.recurrence_day), 10);
@@ -1017,7 +1026,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
     const [selectedAddons, setSelectedAddons] = useState<Record<string, boolean>>({});
     const [packagePrice, setPackagePrice] = useState(0);
     const [recurrence, setRecurrence] = useState<{ type: 'weekly' | 'bi-weekly' | 'monthly', day: number, time: number }>({ type: 'weekly', day: 1, time: 9 });
-    const [paymentDueDate, setPaymentDueDate] = useState('');
+  
     const [serviceStartDate, setServiceStartDate] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [alertInfo, setAlertInfo] = useState<{ title: string; message: string; variant: 'success' | 'error' } | null>(null);
@@ -1308,6 +1317,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
             ];
             const primaryType = primaryServiceOrder.find(s => Number(serviceQuantities[s] || 0) > 0) || null;
             const unitPrice = getUnitPriceByType(selectedWeight!, primaryType || null) || finalPrice;
+            const canonicalServiceLabel = primaryType ? SERVICES[primaryType].label : SERVICES[ServiceType.BATH].label;
             const { data: existingAppts } = await supabase
                 .from('appointments')
                 .select('appointment_time')
@@ -1330,7 +1340,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                 .map(app => ({
                     owner_name: formData.ownerName,
                     pet_name: formData.petName,
-                    service: serviceString,
+                    service: canonicalServiceLabel,
                     appointment_time: app.appointment_time,
                     status: isPastSaoPauloDate(new Date(app.appointment_time)) ? 'CONCLUÍDO' : 'AGENDADO',
                     price: unitPrice,
@@ -1357,12 +1367,13 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                             owner_name: formData.ownerName,
                             pet_name: formData.petName,
                             pet_breed: formData.petBreed,
-                            service: serviceString,
+                            service: canonicalServiceLabel,
                             appointment_time: app.appointment_time,
                             status: isPastSaoPauloDate(new Date(app.appointment_time)) ? 'CONCLUÍDO' : 'AGENDADO',
                             price: unitPrice,
                             whatsapp: formData.whatsapp,
                             owner_address: formData.ownerAddress,
+                            weight: PET_WEIGHT_OPTIONS[selectedWeight!],
                             condominium: formData.condominium,
                             monthly_client_id: newClient.id
                         }));
@@ -1443,16 +1454,25 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                             <div>
                                 <h3 className="text-md font-semibold text-gray-700 mb-2">1. Serviço(s)</h3>
                                 <div className="space-y-3">
-                                {Object.entries(SERVICES).filter(([key]) => [ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_GROOMING_ONLY, ServiceType.PET_MOBILE_BATH_AND_GROOMING].includes(key as ServiceType)).map(([key, { label }]) => (
+                                {Object.entries(SERVICES).filter(([key]) => [ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_GROOMING_ONLY, ServiceType.PET_MOBILE_BATH_AND_GROOMING].includes(key as ServiceType)).map(([key, { label }]) => {
+                                    const displayLabel = (key === ServiceType.PET_MOBILE_BATH)
+                                        ? 'Banho'
+                                        : (key === ServiceType.PET_MOBILE_BATH_AND_GROOMING)
+                                            ? 'Banho & Tosa'
+                                            : (key === ServiceType.PET_MOBILE_GROOMING_ONLY)
+                                                ? 'Só Tosa'
+                                                : label;
+                                    return (
                                     <div key={key} className="flex items-center justify-between p-6 sm:p-5 rounded-lg bg-white border-2 border-gray-200">
-                                        <span className="font-semibold text-gray-800">{label}</span>
+                                        <span className="font-semibold text-gray-800">{displayLabel}</span>
                                         <div className="flex items-center gap-2">
                                             <button type="button" onClick={() => handleQuantityChange(key as ServiceType, -1)} className="w-8 h-8 rounded-full bg-gray-200 text-lg font-bold hover:bg-gray-300">-</button>
                                             <span className="w-10 text-center font-semibold text-lg">{serviceQuantities[key] || 0}</span>
                                             <button type="button" onClick={() => handleQuantityChange(key as ServiceType, 1)} className="w-8 h-8 rounded-full bg-pink-500 text-white text-lg font-bold hover:bg-pink-600">+</button>
                                         </div>
                                     </div>
-                                ))}
+                                );
+                                })}
                                 </div>
                             </div>
                              <div>
@@ -1504,16 +1524,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                                 <select name="time" onChange={handleRecurrenceChange} value={recurrence.time} className="w-full px-5 py-4 border rounded-lg bg-gray-50">
                                     {WORKING_HOURS.map(h => <option key={h} value={h}>{`${h}:00`}</option>)}
                                 </select>
-                                <div>
-                                    <DatePicker 
-                                        value={paymentDueDate} 
-                                        onChange={setPaymentDueDate}
-                                        label="Data de Vencimento do Pagamento"
-                                        required
-                                        className="mt-1"
-                                        disableWeekends={false}
-                                    />
-                                </div>
+                                
                                 <div>
                                     <DatePicker 
                                         value={serviceStartDate} 
@@ -6618,11 +6629,9 @@ const MonthlyClientsView: React.FC<{ onAddClient: () => void; onDataChanged: () 
                                                <p className="text-xs text-green-800 bg-green-100 font-semibold py-1 px-2 rounded-full truncate">
                                                    Próximo: {getNextAppointmentDateText(client)}
                                                </p>
-                                               {client.payment_due_date && (
-                                                   <p className="text-xs text-blue-800 bg-blue-100 font-semibold py-1 px-2 rounded-full truncate">
-                                                       Vencimento: {formatDateToBR(client.payment_due_date)}
-                                                   </p>
-                                               )}
+                                               <p className="text-xs text-blue-800 bg-blue-100 font-semibold py-1 px-2 rounded-full truncate">
+                                                   Vencimento: {formatDateToBR(getCurrentMonthPaymentDueISO())}
+                                               </p>
                                                <button
                                                     onClick={(e) => handleTogglePaymentStatus(client, e)}
                                                     className={`px-2 py-1 text-xs font-bold rounded-full whitespace-nowrap transition-colors ${
@@ -6897,7 +6906,7 @@ const MonthlyClientCard: React.FC<{
                 <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Data de pagamento</p>
-                        <p className="text-gray-800 font-medium">{client.payment_due_date ? formatDateToBR(client.payment_due_date) : 'Não informado'}</p>
+                        <p className="text-gray-800 font-medium">{formatDateToBR(getCurrentMonthPaymentDueISO())}</p>
                     </div>
                 </div>
 
