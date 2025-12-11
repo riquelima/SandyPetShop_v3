@@ -204,9 +204,9 @@ const parseISODateAsSaoPaulo = (isoDate: string): Date => {
 };
 
 const isSameSaoPauloDay = (date1: Date, date2: Date): boolean => {
-  const d1Parts = getSaoPauloTimeParts(date1);
-  const d2Parts = getSaoPauloTimeParts(date2);
-  return d1Parts.year === d2Parts.year && d1Parts.month === d2Parts.month && d1Parts.date === d2Parts.date;
+  const d1 = date1.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+  const d2 = date2.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+  return d1 === d2;
 };
 
 const isPastSaoPauloDate = (date: Date): boolean => {
