@@ -4086,6 +4086,11 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
     const handleCloseEditModal = () => { setEditingAppointment(null); setIsEditModalOpen(false); };
     const handleAppointmentUpdated = (updatedAppointment: AdminAppointment) => {
         setAppointments(prev => prev.map(app => app.id === updatedAppointment.id ? updatedAppointment : app));
+        try {
+            const sp = getSaoPauloTimeParts(new Date(updatedAppointment.appointment_time));
+            const nextSelected = new Date(Date.UTC(sp.year, sp.month, sp.date));
+            setSelectedAdminDate(nextSelected);
+        } catch {}
         handleCloseEditModal();
     };
     const handleOpenAddModal = () => {
