@@ -3703,8 +3703,15 @@ const Calendar: React.FC<{
           <button
             key={day}
             type="button"
-            disabled={isDisabled}
-            onClick={() => !isDisabled && onDateChange(date)}
+            onClick={() => {
+              if (isDisabled) {
+                if (!!disabledDates && disabledDates.includes(ymd)) {
+                  alert('Atendimento Indisponível');
+                }
+                return;
+              }
+              onDateChange(date);
+            }}
             className={`p-2 w-10 h-10 rounded-full text-center transition-colors flex items-center justify-center
               ${isSelected ? 'bg-pink-300 text-black font-bold border border-pink-600' : 'hover:bg-pink-100'}
               ${isDisabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-700'}
@@ -4183,7 +4190,7 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({ refreshKey, onAddOb
                                     const m = Number(mStr) - 1;
                                     const firstDay = new Date(y, m, 1).getDay();
                                     const daysInMonth = new Date(y, m + 1, 0).getDate();
-                                    const cells: JSX.Element[] = [];
+                                    const cells: React.ReactNode[] = [];
                                     for (let i = 0; i < firstDay; i++) cells.push(<div key={`empty-${i}`} className="p-2 w-10 h-10" />);
                                     for (let d = 1; d <= daysInMonth; d++) {
                                         const dateStr = `${yStr}-${mStr}-${String(d).padStart(2, '0')}`;
@@ -9740,6 +9747,19 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
   }, []);
 
   useEffect(() => { loadDisabledDates(); }, [loadDisabledDates]);
+  useEffect(() => {
+    try {
+      const channel = supabase
+        .channel('disabled_dates_changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'disabled_dates' }, (_payload) => {
+          loadDisabledDates();
+        })
+        .subscribe();
+      return () => {
+        try { supabase.removeChannel(channel); } catch {}
+      };
+    } catch {}
+  }, [loadDisabledDates]);
 
   useEffect(() => {
     let authSub: any = null;
@@ -9900,6 +9920,21 @@ const Scheduler: React.FC<{ setView: (view: 'scheduler' | 'login' | 'daycareRegi
     e.preventDefault();
     if (!selectedService || !selectedTime) return;
     setIsSubmitting(true);
+    
+    const sp = getSaoPauloTimeParts(selectedDate);
+    const ymd = `${String(sp.year)}-${String(sp.month + 1).padStart(2, '0')}-${String(sp.date).padStart(2, '0')}`;
+    const isBathGroomService = [ServiceType.BATH, ServiceType.GROOMING_ONLY, ServiceType.BATH_AND_GROOMING].includes(selectedService);
+    const isPetMovelService = [ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_BATH_AND_GROOMING, ServiceType.PET_MOBILE_GROOMING_ONLY].includes(selectedService);
+    if (isBathGroomService && disabledBathGroomDates.includes(ymd)) {
+      alert('A data selecionada está indisponível para Banho & Tosa.');
+      setIsSubmitting(false);
+      return;
+    }
+    if (isPetMovelService && disabledPetMovelDates.includes(ymd)) {
+      alert('A data selecionada está indisponível para Pet Móvel.');
+      setIsSubmitting(false);
+      return;
+    }
     
     const year = selectedDate.getFullYear();
     const month = selectedDate.getMonth();
