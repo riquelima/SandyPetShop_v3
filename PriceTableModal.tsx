@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import petshopPriceImg from './sandypet_novovalor petshop.jpeg';
+import crechePriceImg from './sandypet_crechepet.jpeg';
 
 interface PriceTableModalProps {
   isOpen: boolean;
@@ -66,17 +68,16 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({ isOpen, onClose }) =>
         {/* Images Container */}
         <div className="p-6 sm:p-10 flex flex-col items-center overflow-y-auto space-y-8 relative z-10">
           
-          {/* Imagem Superior */}
+          {/* Imagem Superior - Tabela Pet Shop */}
           <div className="w-full flex justify-center relative group">
             <div className="absolute inset-0 bg-pink-200/20 rounded-[1.5rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <div className="relative w-full rounded-[1.5rem] p-2 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/80 transition-transform duration-500 hover:-translate-y-1">
               {!img1Error ? (
                 <img 
-                  src="https://i.imgur.com/gluvjS2.jpeg" 
-                  alt="Banho & Tosa - Preço" 
+                  src={petshopPriceImg} 
+                  alt="Sandy Pet Shop - Tabela de Preços" 
                   className="w-full h-auto rounded-[1rem] object-contain"
                   loading="eager"
-                  referrerPolicy="no-referrer"
                   onError={() => setImg1Error(true)}
                 />
               ) : (
@@ -88,17 +89,16 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({ isOpen, onClose }) =>
             </div>
           </div>
 
-          {/* Imagem Inferior */}
+          {/* Imagem Inferior - Tabela Creche Pet */}
           <div className="w-full flex justify-center relative group">
              <div className="absolute inset-0 bg-pink-200/20 rounded-[1.5rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
              <div className="relative w-full rounded-[1.5rem] p-2 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/80 transition-transform duration-500 hover:-translate-y-1">
               {!img2Error ? (
                 <img 
-                  src="https://i.imgur.com/ep7MZ0P.jpeg" 
-                  alt="Creche Pet - Preço" 
+                  src={crechePriceImg} 
+                  alt="Creche Pet - Tabela de Preços" 
                   className="w-full h-auto rounded-[1rem] object-contain"
                   loading="eager"
-                  referrerPolicy="no-referrer"
                   onError={() => setImg2Error(true)}
                 />
               ) : (
