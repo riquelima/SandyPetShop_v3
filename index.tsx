@@ -41,7 +41,7 @@ function renderApp() {
   const path = window.location.pathname;
   const useMobileDemo = hash === '#mobile-ui-demo';
   const useFeedback = hash.startsWith('#feedback');
-  const useAvailableTimes = hash.startsWith('#horarios');
+  const useAvailableTimes = hash.startsWith('#horarios') || hash.startsWith('#horários') || path === '/horarios' || path === '/horários' || path === '/horarios/' || path === '/horários/';
   const useManageAppointment = path === '/gerenciar' || path === '/manage';
   const searchParams = new URLSearchParams(window.location.search);
   const prefillService = searchParams.get('service');
