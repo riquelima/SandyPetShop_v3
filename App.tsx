@@ -12314,7 +12314,69 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
         }
     };
 
-    const [isWeeklyScheduleOpen, setIsWeeklyScheduleOpen] = useState(false);
+    // Helper para verificar se a rota atual corresponde à agenda semanal
+    const isAgendaRoute = () => {
+        try {
+            const rawPath = window.location.pathname;
+            const path = decodeURIComponent(rawPath).toLowerCase().replace(/\/+$/, '');
+            const rawHash = window.location.hash;
+            const hash = decodeURIComponent(rawHash).toLowerCase();
+            return (
+                path === '/agenda' ||
+                path === '/agenda-semanal' ||
+                path === '/agendasemanal' ||
+                hash === '#agenda' ||
+                hash === '#agenda-semanal' ||
+                hash === '#agendasemanal'
+            );
+        } catch {
+            const path = window.location.pathname.toLowerCase().replace(/\/+$/, '');
+            return path === '/agenda' || path === '/agenda-semanal';
+        }
+    };
+
+    const [isWeeklyScheduleOpen, setIsWeeklyScheduleOpen] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return isAgendaRoute();
+        }
+        return false;
+    });
+
+    // Efeito para sincronizar a URL com a Agenda Semanal (/agenda)
+    useEffect(() => {
+        const handlePop = () => {
+            if (isAgendaRoute()) {
+                setIsWeeklyScheduleOpen(true);
+            } else {
+                setIsWeeklyScheduleOpen(false);
+            }
+        };
+        handlePop(); // Check on mount
+        window.addEventListener('popstate', handlePop);
+        window.addEventListener('hashchange', handlePop);
+        return () => {
+            window.removeEventListener('popstate', handlePop);
+            window.removeEventListener('hashchange', handlePop);
+        };
+    }, []);
+
+    const openWeeklySchedule = () => {
+        if (!isAgendaRoute()) {
+            window.history.pushState({}, '', '/agenda');
+            window.dispatchEvent(new PopStateEvent('popstate'));
+        } else {
+            setIsWeeklyScheduleOpen(true);
+        }
+    };
+
+    const closeWeeklySchedule = () => {
+        if (isAgendaRoute()) {
+            window.history.pushState({}, '', '/');
+            window.dispatchEvent(new PopStateEvent('popstate'));
+        } else {
+            setIsWeeklyScheduleOpen(false);
+        }
+    };
 
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [banhoTosaOnlyAppointments, setBanhoTosaOnlyAppointments] = useState<Appointment[]>([]);
@@ -12951,7 +13013,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                             <span className="text-base sm:text-xl">📸</span>
                             <span className="uppercase tracking-wider text-[9px] xs:text-[10px] sm:text-xs font-black">Álbum</span>
                         </button>
-                        <button onClick={() => setIsWeeklyScheduleOpen(true)} className="group flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 w-full py-2.5 sm:py-3 bg-white/60 backdrop-blur-xl text-pink-800 font-bold rounded-2xl sm:rounded-full shadow-lg shadow-pink-200/30 border border-pink-100/80 hover:bg-white hover:shadow-xl hover:shadow-pink-300/40 hover:-translate-y-0.5 transition-all duration-300">
+                        <button onClick={openWeeklySchedule} className="group flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 w-full py-2.5 sm:py-3 bg-white/60 backdrop-blur-xl text-pink-800 font-bold rounded-2xl sm:rounded-full shadow-lg shadow-pink-200/30 border border-pink-100/80 hover:bg-white hover:shadow-xl hover:shadow-pink-300/40 hover:-translate-y-0.5 transition-all duration-300">
                             <span className="text-base sm:text-xl">📅</span>
                             <span className="uppercase tracking-wider text-[9px] xs:text-[10px] sm:text-xs font-black">Agenda</span>
                         </button>
@@ -12965,7 +13027,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
 
 
                 <PriceTableModal isOpen={isPriceModalOpen} onClose={closePriceModal} />
-                <WeeklyScheduleModal isOpen={isWeeklyScheduleOpen} onClose={() => setIsWeeklyScheduleOpen(false)} />
+                <WeeklyScheduleModal isOpen={isWeeklyScheduleOpen} onClose={closeWeeklySchedule} />
                 {isAdoptionOpen && <AdoptionPublicView onClose={closeAdoption} />}
 
                 {/* Estilos de Animação Premium */}
