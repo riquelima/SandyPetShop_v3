@@ -12243,7 +12243,77 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
 
     const [showPublicAlbum, setShowPublicAlbum] = useState(false);
     const [selectedPhoto, setSelectedPhoto] = useState<{url: string, filename: string} | null>(null);
-    const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
+
+    // Helper para verificar se a rota atual corresponde à tabela de preços
+    const isPriceRoute = () => {
+        try {
+            const rawPath = window.location.pathname;
+            const path = decodeURIComponent(rawPath).toLowerCase().replace(/\/+$/, '');
+            const rawHash = window.location.hash;
+            const hash = decodeURIComponent(rawHash).toLowerCase();
+            return (
+                path === '/precos' ||
+                path === '/preços' ||
+                path === '/preco' ||
+                path === '/preço' ||
+                path === '/tabela-precos' ||
+                path === '/tabela-preços' ||
+                path === '/tabeladeprecos' ||
+                path === '/tabeladepreços' ||
+                hash === '#precos' ||
+                hash === '#preços' ||
+                hash === '#tabela-precos' ||
+                hash === '#tabela-preços'
+            );
+        } catch {
+            const path = window.location.pathname.toLowerCase().replace(/\/+$/, '');
+            return path === '/precos' || path === '/preços' || path === '/pre%c3%a7os';
+        }
+    };
+
+    const [isPriceModalOpen, setIsPriceModalOpen] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return isPriceRoute();
+        }
+        return false;
+    });
+
+    // Efeito para sincronizar a URL com a Tabela de Preços (/preços e /precos)
+    useEffect(() => {
+        const handlePop = () => {
+            if (isPriceRoute()) {
+                setIsPriceModalOpen(true);
+            } else {
+                setIsPriceModalOpen(false);
+            }
+        };
+        handlePop(); // Check on mount
+        window.addEventListener('popstate', handlePop);
+        window.addEventListener('hashchange', handlePop);
+        return () => {
+            window.removeEventListener('popstate', handlePop);
+            window.removeEventListener('hashchange', handlePop);
+        };
+    }, []);
+
+    const openPriceModal = () => {
+        if (!isPriceRoute()) {
+            window.history.pushState({}, '', '/preços');
+            window.dispatchEvent(new PopStateEvent('popstate'));
+        } else {
+            setIsPriceModalOpen(true);
+        }
+    };
+
+    const closePriceModal = () => {
+        if (isPriceRoute()) {
+            window.history.pushState({}, '', '/');
+            window.dispatchEvent(new PopStateEvent('popstate'));
+        } else {
+            setIsPriceModalOpen(false);
+        }
+    };
+
     const [isWeeklyScheduleOpen, setIsWeeklyScheduleOpen] = useState(false);
 
     const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -12873,7 +12943,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
 
                     {/* Chips de ação rápida — glassmorphism */}
                     <div className="grid grid-cols-4 gap-1.5 sm:gap-3 mt-8 w-full max-w-2xl px-1 sm:px-4">
-                        <button onClick={() => setIsPriceModalOpen(true)} className="group flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 w-full py-2.5 sm:py-3 bg-white/60 backdrop-blur-xl text-pink-800 font-bold rounded-2xl sm:rounded-full shadow-lg shadow-pink-200/30 border border-pink-100/80 hover:bg-white hover:shadow-xl hover:shadow-pink-300/40 hover:-translate-y-0.5 transition-all duration-300">
+                        <button onClick={openPriceModal} className="group flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 w-full py-2.5 sm:py-3 bg-white/60 backdrop-blur-xl text-pink-800 font-bold rounded-2xl sm:rounded-full shadow-lg shadow-pink-200/30 border border-pink-100/80 hover:bg-white hover:shadow-xl hover:shadow-pink-300/40 hover:-translate-y-0.5 transition-all duration-300">
                             <span className="text-base sm:text-xl">📋</span>
                             <span className="uppercase tracking-wider text-[9px] xs:text-[10px] sm:text-xs font-black">Preços</span>
                         </button>
@@ -12894,7 +12964,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
 
 
 
-                <PriceTableModal isOpen={isPriceModalOpen} onClose={() => setIsPriceModalOpen(false)} />
+                <PriceTableModal isOpen={isPriceModalOpen} onClose={closePriceModal} />
                 <WeeklyScheduleModal isOpen={isWeeklyScheduleOpen} onClose={() => setIsWeeklyScheduleOpen(false)} />
                 {isAdoptionOpen && <AdoptionPublicView onClose={closeAdoption} />}
 
@@ -13392,7 +13462,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                                         <h3 className="text-lg font-semibold text-gray-800">Creche Pet - Selecione uma opção</h3>
                                         <p className="text-base text-gray-600 mt-1">Escolha entre agendar uma visita ou fazer a matrícula</p>
                                         <button
-                                            onClick={() => setIsPriceModalOpen(true)}
+                                            onClick={openPriceModal}
                                             className="mt-4 px-6 py-2 bg-white/80 hover:bg-white text-pink-700 font-semibold rounded-full shadow-sm hover:shadow-md transition-all border border-pink-200 flex items-center gap-2"
                                         >
                                             <span className="text-xl">📋</span> Tabela de Preços

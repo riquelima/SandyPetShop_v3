@@ -60,5 +60,6 @@ function renderApp() {
 // Initial render
 renderApp();
 
-// Listen for hash changes to update the view without reload
+// Listen for hash and popstate changes to update the view without reload
 window.addEventListener('hashchange', renderApp);
+window.addEventListener('popstate', renderApp);
