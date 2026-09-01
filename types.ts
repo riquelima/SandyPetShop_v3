@@ -188,7 +188,7 @@ export interface DaycareRegistration {
     total_price?: number;
     payment_date: string;
     payment_status?: 'Pendente' | 'Pago';
-    status: 'Pendente' | 'Aprovado' | 'Rejeitado';
+    status: 'Pendente' | 'Aprovado' | 'Rejeitado' | 'Encerrado' | 'Inativo' | string;
     agreed_to_checklist?: boolean;
     agreed_to_contract?: boolean;
     checklist_url?: string | null;

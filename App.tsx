@@ -8853,7 +8853,7 @@ const DaycareEnrollmentCard: React.FC<{
     onEdit: (enrollment: DaycareRegistration) => void;
     onDelete: (enrollment: DaycareRegistration) => void;
     onAddExtraServices: (enrollment: DaycareRegistration) => void;
-    sectionId: 'pending' | 'approved' | 'inDaycare';
+    sectionId: 'pending' | 'approved' | 'inDaycare' | 'history';
     isDraggable?: boolean;
     onDragStart?: (e: React.DragEvent<HTMLDivElement>) => void;
     onChangePhoto: (enrollment: DaycareRegistration) => void;
@@ -8939,11 +8939,12 @@ const DaycareEnrollmentCard: React.FC<{
                                     </h3>
                                     <div className="flex items-center gap-1.5 mt-1 flex-nowrap overflow-x-auto custom-scrollbar-hide">
                                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border uppercase tracking-wide flex-shrink-0 ${
+                                            sectionId === 'history' || status === 'Encerrado' || status === 'Inativo' ? 'bg-gray-100 text-gray-600 border-gray-200' :
                                             status === 'Aprovado' ? 'bg-green-50 text-green-600 border-green-100' :
                                             status === 'Rejeitado' ? 'bg-red-50 text-red-600 border-red-100' :
                                             'bg-yellow-50 text-yellow-600 border-yellow-100'
                                         }`}>
-                                            {status}
+                                            {sectionId === 'history' && status === 'Aprovado' ? 'Encerrado' : status}
                                         </span>
                                         {(() => {
                                             const raw = String(enrollment.last_vaccine || '');
@@ -9156,7 +9157,7 @@ const DaycareEnrollmentCard: React.FC<{
 
                 {/* Ações (Action Bar) */}
                 <div className="pt-3 border-t border-gray-100 flex flex-wrap sm:grid sm:grid-cols-4 gap-1.5">
-                    {status === 'Aprovado' && onTogglePresence && (
+                    {status === 'Aprovado' && sectionId !== 'history' && onTogglePresence && (
                         <button
                             onClick={(e) => { e.stopPropagation(); onTogglePresence(enrollment); }}
                             className={`w-full py-1.5 px-2 rounded-md transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium flex-1 sm:flex-none ${
@@ -9195,7 +9196,7 @@ const DaycareEnrollmentCard: React.FC<{
                         <PlusOutlineIcon className="w-4 h-4" />
                         <span className="hidden sm:inline">Extras</span>
                     </button>
-                    {(sectionId === 'approved' || sectionId === 'inDaycare') && (
+                    {(sectionId === 'approved' || sectionId === 'inDaycare' || sectionId === 'history') && (
                         <button
                             onClick={(e) => { e.stopPropagation(); onOpenDiary && onOpenDiary(enrollment); }}
                             className="w-full bg-purple-100 text-purple-700 py-1.5 px-2 rounded-md hover:bg-purple-200 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium flex-1 sm:flex-none"
@@ -9221,7 +9222,7 @@ const DaycareEnrollmentCard: React.FC<{
                     </button>
 
                     {/* Botão Pernoite */}
-                    {status === 'Aprovado' && onAddPernoite && (
+                    {status === 'Aprovado' && sectionId !== 'history' && onAddPernoite && (
                         <button
                             onClick={(e) => { e.stopPropagation(); onAddPernoite(enrollment); }}
                             className="w-full bg-purple-50 text-purple-700 py-1.5 px-2 rounded-md hover:bg-purple-100 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium flex-1 sm:flex-none"
@@ -9235,7 +9236,7 @@ const DaycareEnrollmentCard: React.FC<{
                     )}
 
                     {/* Botão Diária */}
-                    {status === 'Aprovado' && onAddDiaria && (
+                    {status === 'Aprovado' && sectionId !== 'history' && onAddDiaria && (
                         <button
                             onClick={(e) => { e.stopPropagation(); onAddDiaria(enrollment); }}
                             className="w-full bg-amber-50 text-amber-700 py-1.5 px-2 rounded-md hover:bg-amber-100 transition-colors flex items-center justify-center gap-1.5 text-center whitespace-nowrap text-xs font-medium flex-1 sm:flex-none"
@@ -9249,7 +9250,7 @@ const DaycareEnrollmentCard: React.FC<{
                     )}
 
                     {/* Botão Emitir Nota Fiscal (Sempre permite gerar nova nota para Creche Pet) */}
-                    {status === 'Aprovado' && onFiscalNote && (
+                    {status === 'Aprovado' && sectionId !== 'history' && onFiscalNote && (
                         <button
                             onClick={(e) => { 
                                 e.stopPropagation(); 
@@ -10076,6 +10077,8 @@ const EditDaycareEnrollmentModal: React.FC<{
                                 <option value="Pendente">Pendente</option>
                                 <option value="Aprovado">Aprovado</option>
                                 <option value="Rejeitado">Rejeitado</option>
+                                <option value="Encerrado">Encerrado</option>
+                                <option value="Inativo">Inativo</option>
                             </select>
                         </div>
 
@@ -16257,7 +16260,7 @@ const DaycareView: React.FC<{ refreshKey?: number; onFiscalNote?: (enrollment: D
     const [isDeleting, setIsDeleting] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
     const [draggingOver, setDraggingOver] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'inDaycare' | 'approved' | 'pending'>('inDaycare');
+    const [activeTab, setActiveTab] = useState<'inDaycare' | 'approved' | 'pending' | 'history'>('inDaycare');
     const [isExtraServicesModalOpen, setIsExtraServicesModalOpen] = useState(false);
     const [enrollmentForExtraServices, setEnrollmentForExtraServices] = useState<DaycareRegistration | null>(null);
     const [isUploadDaycarePhotoModalOpen, setIsUploadDaycarePhotoModalOpen] = useState(false);
@@ -16478,20 +16481,90 @@ const DaycareView: React.FC<{ refreshKey?: number; onFiscalNote?: (enrollment: D
     const fetchEnrollments = useCallback(async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase.from('daycare_enrollments').select('*').order('created_at', { ascending: false });
-            if (error) {
-                const cached = localStorage.getItem('cached_daycare_enrollments_all');
-                if (cached) {
-                    const parsed = JSON.parse(cached) as DaycareRegistration[];
-                    setEnrollments(parsed);
-                    setPetsInDaycareNow(parsed.filter(e => e.extra_services?.checked_in === true));
-                }
-            } else {
-                const fetched = data as DaycareRegistration[];
-                setEnrollments(fetched);
-                setPetsInDaycareNow(fetched.filter(e => e.extra_services?.checked_in === true));
-                try { localStorage.setItem('cached_daycare_enrollments_all', JSON.stringify(data || [])); } catch { }
-            }
+            const [daycareRes, apptsRes, hotelRes] = await Promise.all([
+                supabase.from('daycare_enrollments').select('*').order('created_at', { ascending: false }),
+                supabase.from('appointments').select('*').order('created_at', { ascending: false }),
+                supabase.from('hotel_registrations').select('*').order('created_at', { ascending: false })
+            ]);
+
+            const daycareData = (daycareRes.data || []) as DaycareRegistration[];
+            const apptsData = apptsRes.data || [];
+            const hotelData = hotelRes.data || [];
+
+            const existingPetNames = new Set(daycareData.map(d => (d.pet_name || '').trim().toLowerCase()));
+
+            // Map past appointments with service containing 'creche' (e.g. Zara, Luffy, Gaia, etc.)
+            const crecheAppts = apptsData.filter(a => {
+                const s = (a.service || '').toLowerCase();
+                return s.includes('creche');
+            });
+
+            const apptDaycareMapped: DaycareRegistration[] = crecheAppts
+                .filter(a => !existingPetNames.has((a.pet_name || '').trim().toLowerCase()))
+                .map(a => ({
+                    id: 'appt-' + a.id,
+                    pet_name: a.pet_name || 'Sem nome',
+                    tutor_name: a.owner_name || 'Não informado',
+                    contact_phone: a.whatsapp || '',
+                    address: a.owner_address || '',
+                    pet_breed: a.pet_breed || 'SRD',
+                    contracted_plan: a.service || 'Creche Pet',
+                    total_price: a.price || 0,
+                    status: 'Encerrado',
+                    payment_status: 'Pago',
+                    check_in_date: a.appointment_time ? a.appointment_time.split('T')[0] : (a.created_at ? a.created_at.split('T')[0] : undefined),
+                    check_out_date: a.appointment_time ? a.appointment_time.split('T')[0] : (a.created_at ? a.created_at.split('T')[0] : undefined),
+                    created_at: a.created_at,
+                    last_vaccine: '',
+                    last_deworming: '',
+                    last_flea_remedy: '',
+                    has_allergies: null,
+                    allergies_description: '',
+                    needs_special_care: null,
+                    special_care_description: '',
+                    delivered_items: { items: [], other: '' },
+                    payment_date: a.appointment_time ? a.appointment_time.split('T')[0] : ''
+                }));
+
+            // Map hotel registrations with Apolo or rejected/past creche records that aren't already represented
+            const hotelMatches = hotelData.filter(h => {
+                const p = (h.pet_name || '').toLowerCase();
+                const s = (h.service_notes || (h as any).additional_info || '').toLowerCase();
+                return p.includes('apolo') || s.includes('creche');
+            });
+
+            const hotelDaycareMapped: DaycareRegistration[] = hotelMatches
+                .filter(h => !existingPetNames.has((h.pet_name || '').trim().toLowerCase()) && !crecheAppts.some(a => (a.pet_name || '').trim().toLowerCase() === (h.pet_name || '').trim().toLowerCase()))
+                .map(h => ({
+                    id: 'hotel-' + h.id,
+                    pet_name: h.pet_name || 'Sem nome',
+                    tutor_name: h.tutor_name || 'Não informado',
+                    contact_phone: h.tutor_phone || '',
+                    address: h.tutor_address || '',
+                    pet_breed: h.pet_breed || 'SRD',
+                    contracted_plan: 'Creche Pet',
+                    total_price: h.total_services_price || 0,
+                    status: 'Encerrado',
+                    payment_status: (h.payment_status === 'Pendente' ? 'Pendente' : 'Pago'),
+                    check_in_date: h.check_in_date || (h.created_at ? h.created_at.split('T')[0] : undefined),
+                    check_out_date: h.check_out_date || (h.created_at ? h.created_at.split('T')[0] : undefined),
+                    created_at: h.created_at,
+                    pet_photo_url: h.pet_photo_url,
+                    last_vaccine: h.last_vaccination_date || '',
+                    last_deworming: '',
+                    last_flea_remedy: '',
+                    has_allergies: null,
+                    allergies_description: h.allergies || '',
+                    needs_special_care: null,
+                    special_care_description: '',
+                    delivered_items: { items: [], other: '' },
+                    payment_date: h.check_in_date || ''
+                }));
+
+            const combined = [...daycareData, ...apptDaycareMapped, ...hotelDaycareMapped];
+            setEnrollments(combined);
+            setPetsInDaycareNow(combined.filter(e => e.extra_services?.checked_in === true));
+            try { localStorage.setItem('cached_daycare_enrollments_all', JSON.stringify(combined || [])); } catch { }
         } catch (_) {
             const cached = localStorage.getItem('cached_daycare_enrollments_all');
             if (cached) {
@@ -16530,19 +16603,28 @@ const DaycareView: React.FC<{ refreshKey?: number; onFiscalNote?: (enrollment: D
         setDaycarePaymentUpdatingId(String(enrollment.id));
         const current = (enrollment.payment_status === 'Pago') ? 'Pago' : 'Pendente';
         const next = current === 'Pago' ? 'Pendente' : 'Pago';
-        const { data, error } = await supabase
-            .from('daycare_enrollments')
-            .update({ payment_status: next })
-            .eq('id', enrollment.id)
-            .select()
-            .single();
-        if (!error) {
-            const updatedId = data && (data as any).id !== undefined ? String((data as any).id) : String(enrollment.id);
-            const updated = data as DaycareRegistration;
-            setEnrollments(prev => prev.map(r => String(r.id) === updatedId ? updated : r));
-            setPetsInDaycareNow(prev => prev.map(r => String(r.id) === updatedId ? updated : r));
+        const idStr = String(enrollment.id);
+        if (idStr.startsWith('appt-')) {
+            setEnrollments(prev => prev.map(r => String(r.id) === idStr ? { ...r, payment_status: next } : r));
+        } else if (idStr.startsWith('hotel-')) {
+            const realId = idStr.replace('hotel-', '');
+            await supabase.from('hotel_registrations').update({ payment_status: next }).eq('id', realId);
+            setEnrollments(prev => prev.map(r => String(r.id) === idStr ? { ...r, payment_status: next } : r));
         } else {
-            alert('Erro ao atualizar status de pagamento');
+            const { data, error } = await supabase
+                .from('daycare_enrollments')
+                .update({ payment_status: next })
+                .eq('id', enrollment.id)
+                .select()
+                .single();
+            if (!error) {
+                const updatedId = data && (data as any).id !== undefined ? String((data as any).id) : String(enrollment.id);
+                const updated = data as DaycareRegistration;
+                setEnrollments(prev => prev.map(r => String(r.id) === updatedId ? updated : r));
+                setPetsInDaycareNow(prev => prev.map(r => String(r.id) === updatedId ? updated : r));
+            } else {
+                alert('Erro ao atualizar status de pagamento');
+            }
         }
         setDaycarePaymentUpdatingId(null);
     };
@@ -16550,7 +16632,20 @@ const DaycareView: React.FC<{ refreshKey?: number; onFiscalNote?: (enrollment: D
     const handleConfirmDelete = async () => {
         if (!enrollmentToDelete || !enrollmentToDelete.id) return;
         setIsDeleting(true);
-        const { error } = await supabase.from('daycare_enrollments').delete().eq('id', enrollmentToDelete.id);
+        const delId = String(enrollmentToDelete.id);
+        let error: any = null;
+        if (delId.startsWith('appt-')) {
+            const realId = delId.replace('appt-', '');
+            const res = await supabase.from('appointments').delete().eq('id', realId);
+            error = res.error;
+        } else if (delId.startsWith('hotel-')) {
+            const realId = delId.replace('hotel-', '');
+            const res = await supabase.from('hotel_registrations').delete().eq('id', realId);
+            error = res.error;
+        } else {
+            const res = await supabase.from('daycare_enrollments').delete().eq('id', delId);
+            error = res.error;
+        }
         if (error) {
             alert('Falha ao excluir a matrícula.');
         } else {
@@ -16877,10 +16972,36 @@ const DaycareView: React.FC<{ refreshKey?: number; onFiscalNote?: (enrollment: D
     };
 
     const categorizedEnrollments = useMemo(() => {
-        const pending = enrollments.filter(e => e.status === 'Pendente');
+        const today = new Date().toISOString().split('T')[0];
         const inDaycareIds = new Set(petsInDaycareNow.map(p => p.id));
-        const approved = enrollments.filter(e => e.status === 'Aprovado' && !inDaycareIds.has(e.id));
-        return { pending, approved };
+        
+        const isNonActiveStatus = (status?: string) => {
+            const s = String(status || '').trim().toLowerCase();
+            return ['rejeitado', 'inativo', 'cancelado', 'encerrado', 'concluído', 'concluido', 'finalizado', 'histórico', 'historico', 'arquivado'].includes(s);
+        };
+
+        const isExpired = (e: DaycareRegistration) => {
+            if (!e.check_out_date) return false;
+            const checkOut = String(e.check_out_date).split('T')[0];
+            return checkOut < today;
+        };
+
+        const pending = enrollments.filter(e => e.status === 'Pendente' && !inDaycareIds.has(e.id));
+        
+        const approved = enrollments.filter(e => 
+            e.status === 'Aprovado' && 
+            !inDaycareIds.has(e.id) && 
+            !isExpired(e) && 
+            !isNonActiveStatus(e.status)
+        );
+
+        const history = enrollments.filter(e => 
+            !inDaycareIds.has(e.id) && 
+            e.status !== 'Pendente' && 
+            (isExpired(e) || isNonActiveStatus(e.status) || e.status !== 'Aprovado')
+        );
+
+        return { pending, approved, history };
     }, [enrollments, petsInDaycareNow]);
 
     const currentMonthIndex = useMemo(() => new Date().getMonth(), []);
@@ -16935,11 +17056,12 @@ const DaycareView: React.FC<{ refreshKey?: number; onFiscalNote?: (enrollment: D
 
     const renderTabContent = () => {
         let currentEnrollments: DaycareRegistration[] = [];
-        let sectionId: 'inDaycare' | 'approved' | 'pending' = activeTab;
+        let sectionId: 'inDaycare' | 'approved' | 'pending' | 'history' = activeTab;
 
         if (activeTab === 'inDaycare') currentEnrollments = petsInDaycareNow;
         else if (activeTab === 'approved') currentEnrollments = categorizedEnrollments.approved;
         else if (activeTab === 'pending') currentEnrollments = categorizedEnrollments.pending;
+        else if (activeTab === 'history') currentEnrollments = categorizedEnrollments.history;
 
         if (currentEnrollments.length === 0) {
             return (
@@ -16949,7 +17071,9 @@ const DaycareView: React.FC<{ refreshKey?: number; onFiscalNote?: (enrollment: D
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                         </svg>
                     </div>
-                    <p className="text-gray-500 font-medium">Nenhuma matrícula encontrada nesta categoria.</p>
+                    <p className="text-gray-500 font-medium">
+                        {activeTab === 'history' ? 'Nenhuma matrícula encontrada no histórico.' : 'Nenhuma matrícula encontrada nesta categoria.'}
+                    </p>
                 </div>
             );
         }
@@ -16959,15 +17083,15 @@ const DaycareView: React.FC<{ refreshKey?: number; onFiscalNote?: (enrollment: D
                 className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fadeIn ${draggingOver === sectionId ? 'ring-2 ring-pink-400 ring-offset-4 rounded-xl' : ''}`}
                 onDragOver={(e) => handleDragOver(e, sectionId)}
                 onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, sectionId)}
+                onDrop={(e) => handleDrop(e, sectionId as any)}
             >
                 {currentEnrollments.map(enrollment => (
                     <DaycareEnrollmentCard
                         key={enrollment.id}
                         enrollment={enrollment}
                         sectionId={sectionId}
-                        isDraggable={true}
-                        onDragStart={(e) => handleDragStart(e, enrollment, sectionId)}
+                        isDraggable={sectionId !== 'history'}
+                        onDragStart={(e) => handleDragStart(e, enrollment, sectionId as any)}
                         onClick={() => { setSelectedEnrollment(enrollment); setIsDetailsModalOpen(true); }}
                         onEdit={() => { setSelectedEnrollment(enrollment); setIsEditModalOpen(true); }}
                         onDelete={() => setEnrollmentToDelete(enrollment)}
@@ -17386,6 +17510,21 @@ const DaycareView: React.FC<{ refreshKey?: number; onFiscalNote?: (enrollment: D
                             {categorizedEnrollments.pending.length > 0 && (
                                 <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">
                                     {categorizedEnrollments.pending.length}
+                                </span>
+                            )}
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('history')}
+                            className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all duration-300 flex items-center justify-center gap-2 ${
+                                activeTab === 'history' 
+                                    ? 'bg-white text-pink-600 shadow-sm ring-1 ring-black/5' 
+                                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                            }`}
+                        >
+                            Histórico
+                            {categorizedEnrollments.history.length > 0 && (
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${activeTab === 'history' ? 'bg-pink-100 text-pink-700' : 'bg-gray-200 text-gray-700'}`}>
+                                    {categorizedEnrollments.history.length}
                                 </span>
                             )}
                         </button>
