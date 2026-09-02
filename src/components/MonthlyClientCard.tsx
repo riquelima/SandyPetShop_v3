@@ -451,30 +451,13 @@ const MonthlyClientCard: React.FC<{
         return total;
     };
 
-    const calculateTotalInvoiceValue = (client: MonthlyClient, totalAppointments: number) => {
+    const calculateTotalInvoiceValue = (client: MonthlyClient) => {
         const basePrice = Number(client.price || 0);
-        if (!client.is_active || basePrice === 0) return 0;
-
         const extrasTotal = calculateExtrasTotal(client.extra_services);
-
-        const factor = client.recurrence_type === 'weekly' 
-            ? 4 
-            : client.recurrence_type === 'bi-weekly' 
-                ? 2 
-                : 1; // monthly ou outro
-                
-        let total = basePrice + extrasTotal;
-
-        if (totalAppointments > factor) {
-            const unitPrice = basePrice / factor;
-            const extraCount = totalAppointments - factor;
-            total += unitPrice * extraCount;
-        }
-        
-        return total;
+        return basePrice + extrasTotal;
     };
 
-    const totalInvoiceValue = calculateTotalInvoiceValue(client, totalBathsThisMonthCount);
+    const totalInvoiceValue = calculateTotalInvoiceValue(client);
     const hasMonthlyExtras = Boolean(
         client.extra_services && Object.entries(client.extra_services).some(([key, s]: [string, any]) =>
             s.enabled
