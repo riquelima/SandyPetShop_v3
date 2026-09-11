@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import petshopPriceImg from './sandypet_novovalor petshop.jpeg';
-import crechePriceImg from './sandypet_crechepet.jpeg';
+const crechePriceImg = 'https://i.imgur.com/44lUlaJ.jpeg';
 
 interface PriceTableModalProps {
   isOpen: boolean;
