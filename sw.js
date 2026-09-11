@@ -1,6 +1,6 @@
 // Service Worker for Caching Application Shell
 
-const CACHE_NAME = 'sandypetshop-cache-v1';
+const CACHE_NAME = 'sandypetshop-cache-v2';
 const urlsToCache = [
   '/',
   '/index.html',
