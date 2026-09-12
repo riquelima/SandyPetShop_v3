@@ -36,19 +36,19 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({ isOpen, onClose }) =>
   if (!isVisible && !isOpen) return null;
 
   const modal = (
-    <div 
+    <div
       className={`fixed inset-0 z-[10002] flex items-center justify-center p-4 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
-      role="dialog" 
+      role="dialog"
       aria-modal="true"
     >
       {/* Backdrop */}
-      <div 
+      <div
         className={`absolute inset-0 bg-pink-950/40 backdrop-blur-md transition-opacity duration-500 ease-out ${isOpen ? 'opacity-100' : 'opacity-0'}`}
         onClick={onClose}
       />
 
       {/* Modal Content */}
-      <div 
+      <div
         className={`relative bg-white rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(244,114,182,0.3)] w-full max-w-4xl max-h-[90vh] flex flex-col transform transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] border border-pink-100/50 ${isOpen ? 'scale-100 translate-y-0 opacity-100' : 'scale-90 translate-y-8 opacity-0'}`}
       >
         {/* Header fixo com o botão de fechar */}
@@ -67,15 +67,15 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({ isOpen, onClose }) =>
 
         {/* Images Container */}
         <div className="p-6 sm:p-10 flex flex-col items-center overflow-y-auto space-y-8 relative z-10">
-          
+
           {/* Imagem Superior - Tabela Pet Shop */}
           <div className="w-full flex justify-center relative group">
             <div className="absolute inset-0 bg-pink-200/20 rounded-[1.5rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <div className="relative w-full rounded-[1.5rem] p-2 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/80 transition-transform duration-500 hover:-translate-y-1">
               {!img1Error ? (
-                <img 
-                  src={petshopPriceImg} 
-                  alt="Sandy Pet Shop - Tabela de Preços" 
+                <img
+                  src={petshopPriceImg}
+                  alt="Sandy Pet Shop - Tabela de Preços"
                   className="w-full h-auto rounded-[1rem] object-contain"
                   loading="eager"
                   onError={() => setImg1Error(true)}
@@ -91,12 +91,12 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({ isOpen, onClose }) =>
 
           {/* Imagem Inferior - Tabela Creche Pet */}
           <div className="w-full flex justify-center relative group">
-             <div className="absolute inset-0 bg-pink-200/20 rounded-[1.5rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-             <div className="relative w-full rounded-[1.5rem] p-2 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/80 transition-transform duration-500 hover:-translate-y-1">
+            <div className="absolute inset-0 bg-pink-200/20 rounded-[1.5rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <div className="relative w-full rounded-[1.5rem] p-2 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/80 transition-transform duration-500 hover:-translate-y-1">
               {!img2Error ? (
-                <img 
-                  src={crechePriceImg} 
-                  alt="Creche Pet - Tabela de Preços" 
+                <img
+                  src={crechePriceImg}
+                  alt="Creche Pet - Tabela de Preços"
                   className="w-full h-auto rounded-[1rem] object-contain"
                   loading="eager"
                   onError={() => setImg2Error(true)}

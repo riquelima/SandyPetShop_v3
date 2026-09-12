@@ -18663,7 +18663,7 @@ const AdminDashboard: React.FC<{
                     
                     if (!isMonthly || isBathOrGrooming) {
                         // URL base sempre aponta para produção (Vercel), não para localhost
-                        const appBaseUrl = 'https://agendamento-sandyspetshop.vercel.app/';
+                        const appBaseUrl = 'https://sandyspetshop.vercel.app/';
                         const feedbackParams = new URLSearchParams({
                             id: actualId,
                             table: targetTable,
