@@ -133,10 +133,13 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
     return (
         <div className="min-h-screen flex items-center justify-center p-6 bg-[#FFF5F7]">
             <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm p-8 text-center animate-fadeInUp">
-                <div className="w-20 h-20 mx-auto mb-6 bg-pink-100 rounded-full flex items-center justify-center">
-                    <svg className="w-10 h-10 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                    </svg>
+                <div className="w-28 h-28 mx-auto mb-4 flex items-center justify-center overflow-hidden">
+                    <iframe 
+                        src="https://lottie.host/embed/70d1f5f9-34fa-4399-a363-31149183508f/eAiSwdNV2o.json"
+                        className="w-full h-full pointer-events-none scale-150" 
+                        style={{ border: 'none' }}
+                        title="Login Animation"
+                    ></iframe>
                 </div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-2">Área do Cliente</h2>
                 <p className="text-sm text-gray-500 mb-6">Digite seu telefone com DDD para acessar</p>
