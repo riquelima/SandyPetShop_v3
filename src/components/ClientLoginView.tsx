@@ -45,6 +45,7 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
                 .from('monthly_clients')
                 .select('*')
                 .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`)
+                .limit(1)
                 .maybeSingle();
 
             if (monthlyData) {
@@ -57,6 +58,7 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
                 .from('daycare_enrollments')
                 .select('*')
                 .or(`contact_phone.ilike."%${rawPhone}%",contact_phone.ilike."%${formatted11}%",contact_phone.ilike."%${formatted10}%"`)
+                .limit(1)
                 .maybeSingle();
 
             if (daycareData) {
@@ -79,6 +81,7 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
                 .from('clients')
                 .select('*')
                 .or(`phone.ilike."%${rawPhone}%",phone.ilike."%${formatted11}%",phone.ilike."%${formatted10}%"`)
+                .limit(1)
                 .maybeSingle();
 
             if (clientData) {
