@@ -463,7 +463,7 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                             </div>
                                             <p className="text-xs mb-4">
                                                 <span className="bg-pink-100 text-pink-700 font-bold px-2 py-1 rounded-md uppercase tracking-wide">
-                                                    Plano: {formatPlanBR(targetData.contracted_plan)} {targetData.attendance_days ? `(${targetData.attendance_days})` : ''}
+                                                    Plano: {formatPlanBR(targetData.contracted_plan)}
                                                 </span>
                                             </p>
                                         </div>
@@ -650,7 +650,7 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                             </div>
                                             <p className="text-xs mb-4">
                                                 <span className="bg-purple-100 text-purple-700 font-bold px-2 py-1 rounded-md uppercase tracking-wide">
-                                                    Plano: {formatPlanBR(dPet.contracted_plan)} {dPet.attendance_days ? `(${dPet.attendance_days})` : ''}
+                                                    Plano: {formatPlanBR(dPet.contracted_plan)}
                                                 </span>
                                             </p>
                                         </div>
