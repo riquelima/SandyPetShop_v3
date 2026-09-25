@@ -206,6 +206,44 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
         }
     }, [loadingAppts, showAgenda, activeTab, clientData]);
 
+    const formatPlanBR = (plan: string | null | undefined) => {
+        const s = String(plan || '').toLowerCase();
+        const m = s.match(/^(\d+)x_(week|month)$/);
+        if (m) {
+            const n = m[1];
+            const period = m[2] === 'week' ? 'vezes na semana' : 'vezes no mês';
+            return `${n} ${period}`;
+        }
+        return s.replace('_', ' ');
+    };
+
+    const getDynamicDueDate = () => {
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' });
+        return `30 de ${formatter.format(now)}`;
+    };
+
+    const behaviorLabel = (n: number | string | undefined) => {
+        const num = Number(n);
+        switch (num) {
+            case 1: return 'Anjinho 😇';
+            case 2: return 'Arteirinho às vezes 😼';
+            case 3: return 'Bagunceiro 🤪';
+            case 4: return 'Terrorzinho 😈';
+            case 5: return 'O Rei do Caos 🌪️';
+            default: return typeof n === 'string' ? n : '-';
+        }
+    };
+
+    const getMoodIcon = (mood: string | undefined) => {
+        const m = String(mood || '');
+        if (m.includes('Feliz') || m.includes('Animado')) return '🥰';
+        if (m.includes('Cansado') || m.includes('Preguiça')) return '😴';
+        if (m.includes('Agitado') || m.includes('Energia')) return '⚡';
+        if (m.includes('Triste') || m.includes('Quieto')) return '😢';
+        return '🐾';
+    };
+
     return (
         <div className="min-h-screen bg-[#FFF5F7] pb-20">
             {/* Header / Avatar */}
@@ -414,9 +452,13 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                     <div>
                                         <div className="flex justify-between items-end mb-2">
                                             <p className="text-3xl font-black text-gray-800">R$ {priceNum.toFixed(2).replace('.', ',')}</p>
-                                            <p className="text-sm font-medium text-red-500">Vence dia {dueDateStr}</p>
+                                            <p className="text-sm font-medium text-red-500">Vence dia {getDynamicDueDate()}</p>
                                         </div>
-                                        <p className="text-xs text-gray-500 mb-4">Plano: {targetData.contracted_plan || 'Padrão'} {targetData.attendance_days ? `(${targetData.attendance_days})` : ''}</p>
+                                        <p className="text-xs mb-4">
+                                            <span className="bg-pink-100 text-pink-700 font-bold px-2 py-1 rounded-md uppercase tracking-wide">
+                                                Plano: {formatPlanBR(targetData.contracted_plan)} {targetData.attendance_days ? `(${targetData.attendance_days})` : ''}
+                                            </span>
+                                        </p>
                                     </div>
                                 ) : (
                                     <p className="text-gray-500 text-sm italic">Sua fatura deste mês já está paga. Tudo certo por aqui! ✨</p>
@@ -431,19 +473,42 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                             </h3>
                             
                             {daycareDiaries.length > 0 ? (
-                                <div className="space-y-4">
+                                <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar -mx-5 px-5">
                                     {daycareDiaries.map((diary, i) => (
-                                        <div key={i} className="border-b border-gray-50 pb-4 last:border-0 last:pb-0">
-                                            <div className="flex justify-between items-center mb-2">
-                                                <p className="font-bold text-pink-600">{diary.date ? new Date(diary.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '--'} </p>
-                                                <span className="bg-pink-50 text-pink-600 text-xs px-2 py-0.5 rounded-full font-medium shadow-sm">
-                                                    Humor: {diary.mood || '-'}
-                                                </span>
+                                        <div key={i} className="min-w-[280px] w-full max-w-[320px] shrink-0 snap-center bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border border-pink-100 shadow-sm p-4 relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-2 h-full bg-gradient-to-b from-purple-400 to-pink-400"></div>
+                                            <div className="flex justify-between items-center mb-4">
+                                                <p className="font-bold text-pink-700 bg-white px-3 py-1.5 rounded-full shadow-sm text-sm border border-pink-100">
+                                                    {diary.date ? new Date(diary.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '--'}
+                                                </p>
+                                                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full shadow-sm border border-pink-100">
+                                                    <span className="text-xs font-bold text-gray-600">{diary.mood || 'Normal'}</span>
+                                                    <span className="text-lg leading-none">{getMoodIcon(diary.mood)}</span>
+                                                </div>
                                             </div>
-                                            <p className="text-sm text-gray-700 mb-1"><strong>Comportamento:</strong> {diary.behavior || '-'}</p>
-                                            <p className="text-sm text-gray-700 mb-1"><strong>Alimentação:</strong> {diary.feeding || '-'}</p>
-                                            <p className="text-sm text-gray-700 mb-1"><strong>Necessidades:</strong> {Array.isArray(diary.needs_logs) ? (diary.needs_logs.map((n:any)=>`${n.type || 'Fez'} (${n.time || '--'})`).join(', ') || '-') : (typeof diary.needs_logs === 'string' ? diary.needs_logs : '-')}</p>
-                                            {diary.obs && <p className="text-sm text-gray-500 italic mt-2 text-justify">Obs: {diary.obs}</p>}
+                                            
+                                            <div className="space-y-3 bg-white p-3.5 rounded-xl shadow-sm border border-gray-100">
+                                                <div>
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">Comportamento</p>
+                                                    <p className="text-sm font-semibold text-gray-800">{behaviorLabel(diary.behavior)}</p>
+                                                </div>
+                                                <div className="h-px w-full bg-gray-100"></div>
+                                                <div>
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">Alimentação</p>
+                                                    <p className="text-sm font-semibold text-gray-800">{diary.feeding || '-'}</p>
+                                                </div>
+                                                <div className="h-px w-full bg-gray-100"></div>
+                                                <div>
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">Necessidades</p>
+                                                    <p className="text-sm font-semibold text-gray-800">{Array.isArray(diary.needs_logs) ? (diary.needs_logs.map((n:any)=>`${n.type || 'Fez'} (${n.time || '--'})`).join(', ') || '-') : (typeof diary.needs_logs === 'string' ? diary.needs_logs : '-')}</p>
+                                                </div>
+                                            </div>
+                                            {diary.obs && (
+                                                <div className="mt-3 bg-white/60 p-3.5 rounded-xl border border-pink-50">
+                                                    <p className="text-[10px] text-pink-500 font-bold uppercase tracking-widest mb-1">Observações Gerais</p>
+                                                    <p className="text-sm text-gray-700 italic font-medium leading-snug">"{diary.obs}"</p>
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
