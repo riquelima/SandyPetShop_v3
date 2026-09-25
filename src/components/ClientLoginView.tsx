@@ -30,6 +30,9 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
             return;
         }
 
+        const formatted11 = rawPhone.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2').slice(0, 15);
+        const formatted10 = rawPhone.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d)/, '$1-$2').slice(0, 14);
+
         setLoading(true);
         setError('');
 
@@ -38,7 +41,7 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
             const { data: monthlyData, error: monthlyError } = await supabase
                 .from('monthly_clients')
                 .select('*')
-                .ilike('whatsapp', `%${rawPhone}%`)
+                .or(`whatsapp.ilike.%${rawPhone}%,whatsapp.ilike.%${formatted11}%,whatsapp.ilike.%${formatted10}%`)
                 .maybeSingle();
 
             if (monthlyData) {
@@ -50,7 +53,7 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
             const { data: clientData, error: clientError } = await supabase
                 .from('clients')
                 .select('*')
-                .ilike('phone', `%${rawPhone}%`)
+                .or(`phone.ilike.%${rawPhone}%,phone.ilike.%${formatted11}%,phone.ilike.%${formatted10}%`)
                 .maybeSingle();
 
             if (clientData) {
@@ -62,7 +65,7 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
             const { data: apptData, error: apptError } = await supabase
                 .from('appointments')
                 .select('owner_name, whatsapp')
-                .ilike('whatsapp', `%${rawPhone}%`)
+                .or(`whatsapp.ilike.%${rawPhone}%,whatsapp.ilike.%${formatted11}%,whatsapp.ilike.%${formatted10}%`)
                 .order('appointment_time', { ascending: false })
                 .limit(1)
                 .maybeSingle();
@@ -76,7 +79,7 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
              const { data: apptMovelData } = await supabase
                 .from('pet_movel_appointments')
                 .select('owner_name, whatsapp')
-                .ilike('whatsapp', `%${rawPhone}%`)
+                .or(`whatsapp.ilike.%${rawPhone}%,whatsapp.ilike.%${formatted11}%,whatsapp.ilike.%${formatted10}%`)
                 .order('appointment_time', { ascending: false })
                 .limit(1)
                 .maybeSingle();
