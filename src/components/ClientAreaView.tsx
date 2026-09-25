@@ -10,6 +10,10 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
     const [loadingLoyalty, setLoadingLoyalty] = useState(false);
 
     useEffect(() => {
+        const rawPhone = phone.replace(/\D/g, '');
+        const formatted11 = rawPhone.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2').slice(0, 15);
+        const formatted10 = rawPhone.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d)/, '$1-$2').slice(0, 14);
+
         const fetchAppointments = async () => {
             setLoadingAppts(true);
             try {
@@ -17,21 +21,21 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                 const { data: apptData } = await supabase
                     .from('appointments')
                     .select('*')
-                    .ilike('whatsapp', `%${phone}%`)
+                    .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`)
                     .order('appointment_time', { ascending: false });
 
                 // Fetch from pet_movel_appointments
                 const { data: movelData } = await supabase
                     .from('pet_movel_appointments')
                     .select('*')
-                    .ilike('whatsapp', `%${phone}%`)
+                    .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`)
                     .order('appointment_time', { ascending: false });
 
                 // Fetch from agendamento_banhotosa
                 const { data: banhoData } = await supabase
                     .from('agendamento_banhotosa')
                     .select('*')
-                    .ilike('whatsapp', `%${phone}%`)
+                    .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`)
                     .order('appointment_time', { ascending: false });
 
                 const combined = [
@@ -53,13 +57,17 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
 
     useEffect(() => {
         if (!clientData.isMensalista) {
+            const rawPhone = phone.replace(/\D/g, '');
+            const formatted11 = rawPhone.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2').slice(0, 15);
+            const formatted10 = rawPhone.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d)/, '$1-$2').slice(0, 14);
+
             const fetchLoyalty = async () => {
                 setLoadingLoyalty(true);
                 try {
                     const { data } = await supabase
                         .from('loyalty_cards')
                         .select('*')
-                        .eq('client_phone', phone)
+                        .or(`client_phone.eq."${rawPhone}",client_phone.eq."${formatted11}",client_phone.eq."${formatted10}"`)
                         .maybeSingle();
                     if (data) {
                         setLoyaltyData(data);
