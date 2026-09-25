@@ -425,7 +425,7 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                             </div>
                                             <p className="text-sm text-gray-700 mb-1"><strong>Comportamento:</strong> {diary.behavior || '-'}</p>
                                             <p className="text-sm text-gray-700 mb-1"><strong>Alimentação:</strong> {diary.feeding || '-'}</p>
-                                            <p className="text-sm text-gray-700 mb-1"><strong>Necessidades:</strong> {diary.needs_logs || '-'}</p>
+                                            <p className="text-sm text-gray-700 mb-1"><strong>Necessidades:</strong> {Array.isArray(diary.needs_logs) ? (diary.needs_logs.map((n:any)=>`${n.type || 'Fez'} (${n.time || '--'})`).join(', ') || '-') : (typeof diary.needs_logs === 'string' ? diary.needs_logs : '-')}</p>
                                             {diary.obs && <p className="text-sm text-gray-500 italic mt-2 text-justify">Obs: {diary.obs}</p>}
                                         </div>
                                     ))}
