@@ -1987,7 +1987,19 @@ const AdminLogin: React.FC<{ onLoginSuccess: () => void; onBack?: () => void }> 
 
 
 
-const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
+interface SplashScreenProps {
+    onComplete: () => void;
+    title?: string;
+    subtitle?: string;
+    loadingText?: string;
+}
+
+const SplashScreen: React.FC<SplashScreenProps> = ({ 
+    onComplete, 
+    title = "Sandy's Pet Shop", 
+    subtitle = "Área Administrativa", 
+    loadingText = "Iniciando sistema..." 
+}) => {
     useEffect(() => {
         const timer = setTimeout(onComplete, 2800);
         return () => clearTimeout(timer);
@@ -2040,10 +2052,10 @@ const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
 
                 {/* Text with fade and slide up */}
                 <div className="text-center space-y-3 opacity-0 animate-splash-slide-up" style={{ animationDelay: '0.5s' }}>
-                    <h1 className="font-brand text-7xl text-pink-800 tracking-tight drop-shadow-sm">Sandy's Pet Shop</h1>
+                    <h1 className="font-brand text-7xl text-pink-800 tracking-tight drop-shadow-sm">{title}</h1>
                     <div className="flex items-center justify-center gap-4">
                         <div className="h-[2px] w-12 bg-pink-100 rounded-full"></div>
-                        <p className="text-pink-400 font-bold tracking-[0.3em] uppercase text-xs sm:text-sm">Área Administrativa</p>
+                        <p className="text-pink-400 font-bold tracking-[0.3em] uppercase text-xs sm:text-sm">{subtitle}</p>
                         <div className="h-[2px] w-12 bg-pink-100 rounded-full"></div>
                     </div>
                 </div>
@@ -2054,7 +2066,7 @@ const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
                 <div className="h-full bg-gradient-to-r from-pink-400 via-rose-500 to-pink-600 rounded-full w-1/2 animate-splash-progress"></div>
             </div>
             
-            <p className="absolute bottom-12 text-pink-500 font-bold text-sm animate-pulse">Iniciando sistema...</p>
+            <p className="absolute bottom-12 text-pink-500 font-bold text-sm animate-pulse">{loadingText}</p>
         </div>
     );
 };
@@ -20389,7 +20401,8 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
     }
 
     if (view === 'clientSplash') {
-        return <SplashScreen onComplete={() => setViewWithLog('clientArea')} />;
+        const firstName = clientData?.name ? clientData.name.split(' ')[0] : 'Cliente';
+        return <SplashScreen onComplete={() => setViewWithLog('clientArea')} subtitle={`Bem-vindo(a), ${firstName}!`} loadingText="Carregando seus dados..." />;
     }
 
     if (view === 'clientArea') {
