@@ -133,10 +133,10 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
     return (
         <div className="min-h-screen flex items-center justify-center p-6 bg-[#FFF5F7]">
             <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm p-8 text-center animate-fadeInUp">
-                <div className="w-28 h-28 mx-auto mb-4 flex items-center justify-center overflow-hidden">
+                <div className="w-32 h-32 mx-auto mb-2 flex items-center justify-center overflow-hidden">
                     <iframe 
                         src="https://lottie.host/embed/70d1f5f9-34fa-4399-a363-31149183508f/eAiSwdNV2o.json"
-                        className="w-full h-full pointer-events-none scale-150" 
+                        className="w-full h-full pointer-events-none scale-110" 
                         style={{ border: 'none' }}
                         title="Login Animation"
                     ></iframe>
