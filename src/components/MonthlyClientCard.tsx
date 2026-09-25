@@ -445,6 +445,50 @@ const MonthlyClientCard: React.FC<{
         return 'Não definido';
     };
 
+    const renderRecurrenceBadge = (client: MonthlyClient) => {
+        const text = getRecurrenceText(client);
+
+        if (!client.is_active) {
+            return (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200 leading-none whitespace-nowrap shadow-xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                    {text}
+                </span>
+            );
+        }
+
+        switch (client.recurrence_type) {
+            case 'weekly':
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-violet-50 text-violet-700 border border-violet-200/90 leading-none whitespace-nowrap shadow-xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-violet-600 shadow-[0_0_6px_rgba(124,58,237,0.6)] animate-pulse" />
+                        {text}
+                    </span>
+                );
+            case 'bi-weekly':
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200/90 leading-none whitespace-nowrap shadow-xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.6)] animate-pulse" />
+                        {text}
+                    </span>
+                );
+            case 'monthly':
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200/90 leading-none whitespace-nowrap shadow-xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shadow-[0_0_6px_rgba(14,165,233,0.6)] animate-pulse" />
+                        {text}
+                    </span>
+                );
+            default:
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-50 text-slate-600 border border-slate-200 leading-none whitespace-nowrap shadow-xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                        {text}
+                    </span>
+                );
+        }
+    };
+
     const calculateExtrasTotal = (extraServices: any) => {
         if (!extraServices || typeof extraServices !== 'object') return 0;
         let total = 0;
@@ -495,131 +539,201 @@ const MonthlyClientCard: React.FC<{
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-fuchsia-500 via-pink-500 to-purple-600 rounded-t-[2rem]" />
 
             {/* HEADER */}
-            <header className="mt-4 mb-4 flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3.5 min-w-0 flex-1">
-                    <div className="relative shrink-0 pt-0.5">
-                        <div
-                            className="w-14 h-14 rounded-full ring-2 ring-slate-100 shadow-sm overflow-hidden bg-slate-50 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
-                            onClick={(e) => { e.stopPropagation(); onChangePhoto(client); }}
-                        >
-                            {client.pet_photo_url ? (
-                                <SafeImage src={client.pet_photo_url} alt={client.pet_name} className="w-full h-full object-cover" />
-                            ) : (
-                                <span className="text-2xl">🐶</span>
-                            )}
-                        </div>
-                        {client.is_active && (
-                            <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full bg-pink-500 text-white text-[10px] font-extrabold ring-2 ring-white shadow leading-none" title={`${completedBathsCount} serviço(s) concluído(s) no mês`}>
-                                {completedBathsCount}
-                            </span>
-                        )}
-                        {(hasDaycare || hasHotel) && (
-                            <div className="absolute -top-1 -left-1 flex gap-0.5">
-                                {hasHotel && <span className="bg-blue-100 text-blue-600 p-0.5 rounded-full border border-white text-[8px]" title="Hotel">🏨</span>}
-                                {hasDaycare && <span className="bg-yellow-100 text-yellow-600 p-0.5 rounded-full border border-white text-[8px]" title="Creche">🏠</span>}
+            <header className="mt-3.5 mb-3 flex flex-col gap-2.5">
+                {/* Top Row: Avatar + Pet & Tutor | Total Fixo & Status */}
+                <div className="flex items-center justify-between gap-3 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="relative shrink-0">
+                            <div
+                                className="w-13 h-13 sm:w-14 sm:h-14 rounded-full ring-2 ring-pink-100 shadow-sm overflow-hidden bg-slate-50 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
+                                onClick={(e) => { e.stopPropagation(); onChangePhoto(client); }}
+                            >
+                                {client.pet_photo_url ? (
+                                    <SafeImage src={client.pet_photo_url} alt={client.pet_name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-2xl">🐶</span>
+                                )}
                             </div>
-                        )}
-                    </div>
-                    <div className="min-w-0 flex flex-col justify-center flex-1">
-                        <div className="flex items-center gap-2 min-w-0">
-                            <h3 className="text-[18px] font-bold tracking-tight text-slate-800 leading-tight truncate group-hover:text-pink-600 transition-colors">
-                                {toTitleCase(client.pet_name)}
-                            </h3>
-                            {!client.is_active && (
-                                <span className="text-[10px] font-semibold text-gray-500 bg-gray-200 rounded-full px-2 py-0.5 shrink-0">Pausado</span>
+                            {client.is_active && (
+                                <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full bg-pink-500 text-white text-[10px] font-extrabold ring-2 ring-white shadow leading-none" title={`${completedBathsCount} serviço(s) concluído(s) no mês`}>
+                                    {completedBathsCount}
+                                </span>
+                            )}
+                            {(hasDaycare || hasHotel) && (
+                                <div className="absolute -top-1 -left-1 flex gap-0.5">
+                                    {hasHotel && <span className="bg-blue-100 text-blue-600 p-0.5 rounded-full border border-white text-[8px]" title="Hotel">🏨</span>}
+                                    {hasDaycare && <span className="bg-yellow-100 text-yellow-600 p-0.5 rounded-full border border-white text-[8px]" title="Creche">🏠</span>}
+                                </div>
                             )}
                         </div>
-                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold leading-none whitespace-nowrap border ${client.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
-                                {client.is_active && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
-                                {getRecurrenceText(client)}
-                            </span>
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-100/70 leading-none whitespace-nowrap">
-                                <svg className="w-3 h-3 text-purple-600 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
-                                {client.service || getCondoLabel()}
+                        <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-lg sm:text-xl font-black tracking-tight text-slate-800 leading-tight truncate group-hover:text-pink-600 transition-colors">
+                                    {toTitleCase(client.pet_name)}
+                                </h3>
+                                {!client.is_active && (
+                                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5 shrink-0">
+                                        Pausado
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-xs text-slate-500 font-medium truncate mt-0.5">
+                                Tutor(a): <span className="font-semibold text-slate-700">{toTitleCase(client.owner_name)}</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col items-end shrink-0 pl-1">
+                        <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase leading-none">TOTAL FIXO</span>
+                        <div className="mt-1 flex items-baseline gap-0.5 leading-none">
+                            <span className="text-xs font-semibold text-slate-500">R$</span>
+                            <span className="text-xl font-black text-slate-900 tracking-tight">
+                                {Math.floor(totalInvoiceValue)}
+                                <span className="text-xs font-bold">,{((totalInvoiceValue % 1) * 100).toFixed(0).padStart(2, '0')}</span>
                             </span>
                         </div>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onTogglePaymentStatus(client, e); }}
+                            className={`mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border whitespace-nowrap transition-all shadow-xs ${
+                                isPaid 
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
+                                    : 'bg-amber-50 text-amber-700 border-amber-200/80 hover:bg-amber-100'
+                            }`}
+                            title={isPaid ? 'Marcar como pendente' : 'Marcar como pago'}
+                        >
+                            {isPaid ? (
+                                <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Pago</>
+                            ) : (
+                                <><ClockIcon className="w-3 h-3 text-amber-500 shrink-0" />Pendente</>
+                            )}
+                        </button>
                     </div>
                 </div>
-                <div className="flex flex-col items-end shrink-0 pl-1 pt-0.5">
-                    <span className="text-[10px] font-medium tracking-wider text-slate-400 uppercase leading-none">TOTAL FIXO</span>
-                    <div className="mt-1 flex items-baseline gap-0.5 leading-none">
-                        <span className="text-xs font-medium text-slate-500">R$</span>
-                        <span className="text-xl font-bold text-slate-900 tracking-tight">{Math.floor(totalInvoiceValue)}<span className="text-xs font-semibold">,{((totalInvoiceValue % 1) * 100).toFixed(0).padStart(2, '0')}</span></span>
-                    </div>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onTogglePaymentStatus(client, e); }}
-                        className={`mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap transition-colors ${isPaid ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-200/70 hover:bg-amber-100'}`}
-                        title={isPaid ? 'Marcar como pendente' : 'Marcar como pago'}
-                    >
-                        {isPaid ? (
-                            <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Pago</>
-                        ) : (
-                            <><svg className="w-3 h-3 text-amber-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Pendente</>
-                        )}
-                    </button>
+
+                {/* Badges Row: Full width chips bar */}
+                <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-slate-100/90">
+                    {renderRecurrenceBadge(client)}
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-pink-50 text-pink-700 border border-pink-200/80 leading-none whitespace-nowrap shadow-xs">
+                        <svg className="w-3 h-3 text-pink-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        {client.service || getCondoLabel()}
+                    </span>
+                    {client.condominium && client.condominium !== 'Nenhum Condomínio' && client.condominium.trim() !== '' && client.condominium !== client.service && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 leading-none whitespace-nowrap">
+                            🏢 {client.condominium}
+                        </span>
+                    )}
                 </div>
             </header>
 
-            {/* INFO GRID */}
-            <section className="bg-slate-50/70 rounded-2xl p-3.5 border border-slate-100/90 mb-3">
-                <div className="grid grid-cols-2 gap-x-3 gap-y-3.5">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0"><UserIcon className="w-4 h-4" /></div>
-                        <div className="min-w-0 flex-1"><p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none">TUTOR(A)</p><p className="text-xs font-bold text-slate-800 mt-0.5 leading-tight truncate">{toTitleCase(client.owner_name)}</p></div>
+            {/* INFO CARDS (2x2 Grid) */}
+            <section className="bg-slate-50/70 rounded-2xl p-2.5 sm:p-3 border border-slate-100/90 mb-3">
+                <div className="grid grid-cols-2 gap-2">
+                    {/* WhatsApp */}
+                    {client.whatsapp ? (
+                        <a
+                            href={`https://wa.me/55${client.whatsapp.replace(/\D/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-2 min-w-0 p-2 rounded-xl bg-white border border-slate-100/80 shadow-2xs hover:border-emerald-200 hover:shadow-xs transition-all group/wa"
+                            title="Abrir WhatsApp"
+                        >
+                            <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 group-hover/wa:bg-emerald-500 group-hover/wa:text-white transition-colors">
+                                <PhoneIcon className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-[9px] font-bold text-slate-400 tracking-wider uppercase leading-none">WHATSAPP</p>
+                                <p className="text-[11px] font-bold text-emerald-700 mt-0.5 tracking-tight leading-none whitespace-nowrap truncate">
+                                    {formatPhoneNumber(client.whatsapp)}
+                                </p>
+                            </div>
+                        </a>
+                    ) : (
+                        <div className="flex items-center gap-2 min-w-0 p-2 rounded-xl bg-white border border-slate-100/80 shadow-2xs">
+                            <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
+                                <PhoneIcon className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-[9px] font-bold text-slate-400 tracking-wider uppercase leading-none">WHATSAPP</p>
+                                <p className="text-[11px] font-medium text-slate-400 mt-0.5 leading-none">-</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Dia & Horário Fixo */}
+                    <div className="flex items-center gap-2 min-w-0 p-2 rounded-xl bg-white border border-slate-100/80 shadow-2xs">
+                        <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                            <ClockIcon className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[9px] font-bold text-slate-400 tracking-wider uppercase leading-none">DIA & HORÁRIO</p>
+                            <p className="text-[11px] font-bold text-slate-800 mt-0.5 leading-tight truncate">
+                                {recurrenceDayLabel}, {recurrenceTimeLabel}
+                            </p>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><PhoneIcon className="w-4 h-4" /></div>
-                        <div className="min-w-0 flex-1"><p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none">WHATSAPP</p><p className="text-[11px] font-bold text-emerald-700 mt-0.5 tracking-tight leading-none whitespace-nowrap truncate">{formatPhoneNumber(client.whatsapp)}</p></div>
+
+                    {/* Próximo Agendamento */}
+                    <div className="flex items-center gap-2 min-w-0 p-2 rounded-xl bg-white border border-slate-100/80 shadow-2xs">
+                        <div className="w-7 h-7 rounded-lg bg-pink-100 text-pink-600 flex items-center justify-center shrink-0">
+                            <CalendarIcon className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[9px] font-bold text-slate-400 tracking-wider uppercase leading-none">PRÓX. AGEND.</p>
+                            <p className="text-[11px] font-extrabold text-pink-600 mt-0.5 leading-tight truncate">
+                                {nextAppointmentText}
+                            </p>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg></div>
-                        <div className="min-w-0 flex-1"><p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none">PLANO</p><p className="text-[11px] font-bold text-slate-800 leading-tight mt-0.5 truncate">{getCondoLabel()}</p></div>
-                    </div>
-                    <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center shrink-0"><CalendarIcon className="w-4 h-4" /></div>
-                        <div className="min-w-0 flex-1"><p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none">PRÓX. AGEND.</p><p className="text-xs font-extrabold text-pink-600 truncate mt-0.5">{nextAppointmentText}</p></div>
-                    </div>
-                    <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center shrink-0"><CalendarIcon className="w-4 h-4" /></div>
-                        <div className="min-w-0 flex-1"><p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none">DIA FIXO</p><p className="text-xs font-bold text-slate-800 truncate mt-0.5">{recurrenceDayLabel}</p></div>
-                    </div>
-                    <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><ClockIcon className="w-4 h-4" /></div>
-                        <div className="min-w-0 flex-1"><p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none">HORÁRIO</p><p className="text-xs font-bold text-slate-800 truncate mt-0.5">{recurrenceTimeLabel}</p></div>
+
+                    {/* Próximo Pagamento */}
+                    <div className="flex items-center gap-2 min-w-0 p-2 rounded-xl bg-white border border-slate-100/80 shadow-2xs">
+                        <div className="w-7 h-7 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
+                            <CalendarIcon className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[9px] font-bold text-slate-400 tracking-wider uppercase leading-none">PRÓX. PAGAM.</p>
+                            <div className="flex items-center gap-1 mt-0.5">
+                                <span className="text-[11px] font-bold text-sky-700 leading-tight">
+                                    {formatDateToBR(getLastDayOfCurrentMonth())}
+                                </span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            {/* OBSERVATION + EXTRAS + PRÓX. PAGAMENTO */}
-            <div className="space-y-2 mb-3">
-                {client.observation && (
-                    <div className="bg-amber-50/80 border border-amber-200/70 rounded-xl p-3 flex items-center gap-2.5 text-xs text-amber-900">
-                        <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" /></svg></div>
-                        <p className="font-medium italic leading-snug tracking-tight text-amber-900 line-clamp-2">"{client.observation}"</p>
-                    </div>
-                )}
-                {hasMonthlyExtras && (
-                    <div className="flex flex-wrap gap-1.5">
-                        {client.extra_services && Object.entries(client.extra_services).map(([key, value]: [string, any]) => {
-                            if (!value.enabled) return null;
-                            const label = key.replace(/_/g, ' ').replace('so ', '');
-                            return (
-                                <span key={key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 capitalize">
-                                    <SparklesIcon className="w-3 h-3" />{label}
-                                </span>
-                            );
-                        })}
-                    </div>
-                )}
-                <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-2.5 flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">PRÓX. PAGAM.</span>
-                    <div className="flex items-center gap-2 bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-sm">
-                        <span className="text-xs font-bold text-emerald-700">{formatDateToBR(getLastDayOfCurrentMonth())}</span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    </div>
+            {/* OBSERVATION + EXTRAS */}
+            {(client.observation || hasMonthlyExtras) && (
+                <div className="space-y-2 mb-3">
+                    {client.observation && (
+                        <div className="bg-amber-50/80 border border-amber-200/70 rounded-xl p-2.5 flex items-center gap-2.5 text-xs text-amber-900 shadow-2xs">
+                            <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" /></svg>
+                            </div>
+                            <p className="font-medium italic leading-snug tracking-tight text-amber-900 line-clamp-2">
+                                "{client.observation}"
+                            </p>
+                        </div>
+                    )}
+                    {hasMonthlyExtras && (
+                        <div className="flex flex-wrap gap-1.5">
+                            {client.extra_services && Object.entries(client.extra_services).map(([key, value]: [string, any]) => {
+                                if (!value.enabled) return null;
+                                const label = key.replace(/_/g, ' ').replace('so ', '');
+                                return (
+                                    <span key={key} className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 capitalize">
+                                        <SparklesIcon className="w-3 h-3" />{label}
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
-            </div>
+            )}
 
             {/* APPOINTMENTS TIMELINE */}
             <section className="bg-pink-50/30 border border-pink-100/80 rounded-2xl p-3.5 mb-4">
