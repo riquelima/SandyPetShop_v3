@@ -41,7 +41,8 @@ import TestimonialsCarousel from './src/components/TestimonialsCarousel';
 import FinancialDashboardView from './src/components/FinancialDashboardView';
 import FinancialDashboardProtected from './src/components/FinancialDashboardProtected';
 import { PWAInstallBanner } from './src/components/PWAInstallBanner';
-
+import { ClientLoginView } from './src/components/ClientLoginView';
+import { ClientAreaView } from './src/components/ClientAreaView';
 
 // HELPERS DE IDENTIFICAÇÃO DE SERVIÇO (UNIFICADOS)
 export function isMobileAppointment(appt: any) {
@@ -13034,6 +13035,11 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 bg-[#fff0f5] font-sans selection:bg-pink-200">
+            <button onClick={() => setView('clientLogin')} className="absolute top-4 right-4 sm:top-8 sm:right-8 p-3 rounded-full bg-white/70 backdrop-blur-md shadow-sm border border-pink-100 hover:bg-pink-50 transition-all group z-50">
+                <svg className="w-6 h-6 text-pink-700 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+            </button>
             <div className="w-full max-w-7xl relative z-10 flex flex-col items-center">
                 {/* ═══ HERO SECTION — Petal Luxe ═══ */}
                 <header className="w-full flex flex-col items-center text-center mb-10 md:mb-16 animate-fadeInUp">
@@ -19788,17 +19794,19 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
             handleCloseObservationModal();
         }
     };
-    const [view, setView] = useState<'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration' | 'visitSelector' | 'visitAppointment' | 'splash'>('scheduler');
+    const [view, setView] = useState<'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration' | 'visitSelector' | 'visitAppointment' | 'splash' | 'clientLogin' | 'clientArea' | 'clientSplash'>('scheduler');
     const [visitServiceType, setVisitServiceType] = useState<'Creche Pet' | 'Hotel Pet' | null>(null);
 
     // Debug: Log mudanças de view
-    const setViewWithLog = (newView: 'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration' | 'visitSelector' | 'visitAppointment' | 'splash') => {
+    const setViewWithLog = (newView: 'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration' | 'visitSelector' | 'visitAppointment' | 'splash' | 'clientLogin' | 'clientArea' | 'clientSplash') => {
         console.log('Mudando view de', view, 'para', newView);
         setView(newView);
     };
 
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loadingAuth, setLoadingAuth] = useState(false);
+    const [clientPhone, setClientPhone] = useState('');
+    const [clientData, setClientData] = useState<any>(null);
 
     // Estado para controlar se a agenda está aberta - com persistência no localStorage
     const [isScheduleOpen, setIsScheduleOpen] = useState(() => {
@@ -20374,6 +20382,18 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
 
     if (view === 'visitAppointment') {
         return <VisitAppointmentForm serviceLabel={visitServiceType || 'Visita'} onBack={() => setViewWithLog('visitSelector')} onDone={() => setViewWithLog('scheduler')} />;
+    }
+
+    if (view === 'clientLogin') {
+        return <ClientLoginView onLogin={(phone, data) => { setClientPhone(phone); setClientData(data); setViewWithLog('clientSplash'); }} onBack={() => setViewWithLog('scheduler')} />;
+    }
+
+    if (view === 'clientSplash') {
+        return <SplashScreen onComplete={() => setViewWithLog('clientArea')} />;
+    }
+
+    if (view === 'clientArea') {
+        return <ClientAreaView phone={clientPhone} clientData={clientData} onLogout={() => { setClientPhone(''); setClientData(null); setViewWithLog('scheduler'); }} />;
     }
 
     if (!isScheduleOpen) {
