@@ -41,7 +41,7 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
             const { data: monthlyData, error: monthlyError } = await supabase
                 .from('monthly_clients')
                 .select('*')
-                .or(`whatsapp.ilike.%${rawPhone}%,whatsapp.ilike.%${formatted11}%,whatsapp.ilike.%${formatted10}%`)
+                .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`)
                 .maybeSingle();
 
             if (monthlyData) {
@@ -53,7 +53,7 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
             const { data: clientData, error: clientError } = await supabase
                 .from('clients')
                 .select('*')
-                .or(`phone.ilike.%${rawPhone}%,phone.ilike.%${formatted11}%,phone.ilike.%${formatted10}%`)
+                .or(`phone.ilike."%${rawPhone}%",phone.ilike."%${formatted11}%",phone.ilike."%${formatted10}%"`)
                 .maybeSingle();
 
             if (clientData) {
@@ -65,7 +65,7 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
             const { data: apptData, error: apptError } = await supabase
                 .from('appointments')
                 .select('owner_name, whatsapp')
-                .or(`whatsapp.ilike.%${rawPhone}%,whatsapp.ilike.%${formatted11}%,whatsapp.ilike.%${formatted10}%`)
+                .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`)
                 .order('appointment_time', { ascending: false })
                 .limit(1)
                 .maybeSingle();
@@ -79,7 +79,7 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
              const { data: apptMovelData } = await supabase
                 .from('pet_movel_appointments')
                 .select('owner_name, whatsapp')
-                .or(`whatsapp.ilike.%${rawPhone}%,whatsapp.ilike.%${formatted11}%,whatsapp.ilike.%${formatted10}%`)
+                .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`)
                 .order('appointment_time', { ascending: false })
                 .limit(1)
                 .maybeSingle();
