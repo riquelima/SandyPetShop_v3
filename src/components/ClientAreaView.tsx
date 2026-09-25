@@ -10,6 +10,16 @@ const cleanServiceName = (service: string) => {
         .trim();
 };
 
+const FallbackLottieAvatar = ({ className = "" }: { className?: string }) => (
+    <div className={`overflow-hidden relative flex items-center justify-center ${className}`}>
+        <iframe 
+            src="https://lottie.host/embed/ee823306-d890-4936-8032-f1bae7614d82/A1LpnduBwz.json"
+            className="w-full h-full pointer-events-none" 
+            style={{ border: 'none' }}
+        ></iframe>
+    </div>
+);
+
 export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout: () => void }> = ({ clientData, phone, onLogout }) => {
     const [activeTab, setActiveTab] = useState<'appointments' | 'fidelity' | 'invoices'>('appointments');
     const [appointments, setAppointments] = useState<any[]>([]);
@@ -104,11 +114,15 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                     </svg>
                 </button>
                 <div className="w-24 h-24 mx-auto mb-4 bg-white rounded-full p-1 shadow-md">
-                    <img 
-                        src={clientData.pet_photo_url || 'https://i.imgur.com/rN5y8uL.png'} 
-                        alt="Avatar" 
-                        className="w-full h-full rounded-full object-cover"
-                    />
+                    {clientData.pet_photo_url ? (
+                        <img 
+                            src={clientData.pet_photo_url} 
+                            alt="Avatar" 
+                            className="w-full h-full rounded-full object-cover"
+                        />
+                    ) : (
+                        <FallbackLottieAvatar className="w-full h-full rounded-full" />
+                    )}
                 </div>
                 <h1 className="text-2xl font-bold font-brand tracking-wide">Olá, {clientData.name.split(' ')[0]}!</h1>
                 <p className="text-pink-100 mt-1">{clientData.pet_name ? `Tutor(a) do ${clientData.pet_name}` : 'Bem-vindo(a) à sua área'}</p>
@@ -155,11 +169,15 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                     {upcoming.map((appt, i) => (
                                         <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-pink-50 flex items-center gap-4 hover:shadow-md transition-shadow">
                                             <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-pink-100 bg-pink-50">
-                                                <img 
-                                                    src={clientData.pet_photo_url || 'https://i.imgur.com/rN5y8uL.png'} 
-                                                    alt={appt.pet_name} 
-                                                    className="w-full h-full object-cover"
-                                                />
+                                                {clientData.pet_photo_url ? (
+                                                    <img 
+                                                        src={clientData.pet_photo_url} 
+                                                        alt={appt.pet_name} 
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <FallbackLottieAvatar className="w-full h-full bg-white" />
+                                                )}
                                             </div>
                                             <div className="flex-1">
                                                 <div className="flex justify-between items-start mb-0.5">
@@ -194,11 +212,15 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                     {past.slice(0, 10).map((appt, i) => (
                                         <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 opacity-80 hover:opacity-100 transition-opacity">
                                             <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-gray-100 bg-gray-50 grayscale">
-                                                <img 
-                                                    src={clientData.pet_photo_url || 'https://i.imgur.com/rN5y8uL.png'} 
-                                                    alt={appt.pet_name} 
-                                                    className="w-full h-full object-cover"
-                                                />
+                                                {clientData.pet_photo_url ? (
+                                                    <img 
+                                                        src={clientData.pet_photo_url} 
+                                                        alt={appt.pet_name} 
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <FallbackLottieAvatar className="w-full h-full bg-white" />
+                                                )}
                                             </div>
                                             <div className="flex-1">
                                                 <div className="flex justify-between items-start mb-0.5">
