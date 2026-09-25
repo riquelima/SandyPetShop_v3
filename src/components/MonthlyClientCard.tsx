@@ -79,6 +79,15 @@ const getLastDayOfCurrentMonth = () => {
     return new Date(year, month, targetDay);
 };
 
+const toTitleCase = (str: string | null | undefined): string => {
+    if (!str) return '';
+    return str
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+};
+
 const getNextAppointmentDateText = (client: MonthlyClient, selectedDate: Date = new Date()) => {
     const now = new Date();
     // Se selectedDate for no passado, calculamos a partir do primeiro dia do mês selecionado.
@@ -517,7 +526,7 @@ const MonthlyClientCard: React.FC<{
                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                                 <h3 className="font-outfit font-bold text-lg sm:text-xl text-gray-900 leading-tight group-hover:text-pink-600 transition-colors truncate">
-                                    {client.pet_name}
+                                    {toTitleCase(client.pet_name)}
                                 </h3>
                                 {!client.is_active && (
                                     <span className="text-[10px] font-medium text-gray-500 bg-gray-200 rounded-full px-2 py-0.5 flex-shrink-0">Pausado</span>
@@ -561,7 +570,7 @@ const MonthlyClientCard: React.FC<{
                         <UserIcon className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5 sm:mt-0" />
                         <div className="flex flex-col min-w-0">
                             <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate">Tutor</span>
-                            <span className="text-xs font-medium text-gray-700 truncate">{client.owner_name}</span>
+                            <span className="text-xs font-medium text-gray-700 truncate">{toTitleCase(client.owner_name)}</span>
                         </div>
                     </div>
                     <div className="flex items-start sm:items-center gap-2 overflow-hidden">

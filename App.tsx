@@ -7738,7 +7738,6 @@ const MonthlyClientsView: React.FC<{
     fiscalNotesMap?: Record<string, string>;
 }> = ({ onAddClient, onDataChanged, onOpenDashboard, onEmitNFe, emittingNFeId, fiscalNotesMap }) => {
     const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
-    const [monthlyClients, setMonthlyClients] = useState<MonthlyClient[]>([]);
 
     const handlePrevMonth = () => {
         setSelectedDate(prev => {
@@ -7761,7 +7760,18 @@ const MonthlyClientsView: React.FC<{
         const [y, m] = value.split('-').map(Number);
         setSelectedDate(new Date(y, m - 1, 1));
     };
-    const [loading, setLoading] = useState(true);
+    // Cache-first: start loading=false if we already have cached data so the list shows instantly
+    const [loading, setLoading] = useState<boolean>(() => {
+        try { return !localStorage.getItem('cached_monthly_clients'); } catch { return true; }
+    });
+    // Populate from cache synchronously on first render
+    const [monthlyClients, setMonthlyClients] = useState<MonthlyClient[]>(() => {
+        try {
+            const cached = localStorage.getItem('cached_monthly_clients');
+            if (cached) return JSON.parse(cached) as MonthlyClient[];
+        } catch {}
+        return [];
+    });
     const [editingClient, setEditingClient] = useState<MonthlyClient | null>(null);
     const [deletingClient, setDeletingClient] = useState<MonthlyClient | null>(null);
     const [viewingClient, setViewingClient] = useState<MonthlyClient | null>(null);
@@ -7878,12 +7888,16 @@ const MonthlyClientsView: React.FC<{
     };
 
     const fetchMonthlyClients = useCallback(async () => {
-        setLoading(true);
+        // Don't block the UI — only show spinner if we have no data at all
+        const hasCached = monthlyClients.length > 0;
+        if (!hasCached) setLoading(true);
         try {
             const { data, error } = await supabase.from('monthly_clients').select('*');
             if (error) {
-                const cached = localStorage.getItem('cached_monthly_clients');
-                if (cached) setMonthlyClients(JSON.parse(cached));
+                if (!hasCached) {
+                    const cached = localStorage.getItem('cached_monthly_clients');
+                    if (cached) setMonthlyClients(JSON.parse(cached));
+                }
             } else {
                 let sortedData = (data as MonthlyClient[]).sort((a, b) => a.owner_name.localeCompare(b.owner_name));
                 if (!data || data.length === 0) {
@@ -7897,12 +7911,14 @@ const MonthlyClientsView: React.FC<{
                 try { localStorage.setItem('cached_monthly_clients', JSON.stringify(sortedData || [])); } catch { }
             }
         } catch (_) {
-            const cached = localStorage.getItem('cached_monthly_clients');
-            if (cached) setMonthlyClients(JSON.parse(cached));
+            if (!hasCached) {
+                const cached = localStorage.getItem('cached_monthly_clients');
+                if (cached) setMonthlyClients(JSON.parse(cached));
+            }
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [monthlyClients.length]);
 
     const fetchDaycareEnrollments = useCallback(async () => {
         try {
