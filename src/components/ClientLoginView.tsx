@@ -41,37 +41,41 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
             let found = false;
 
             // Try monthly_clients
-            const { data: monthlyData } = await supabase
+            const { data: monthlyDataArr } = await supabase
                 .from('monthly_clients')
                 .select('*')
-                .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`)
-                .limit(1)
-                .maybeSingle();
+                .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`);
 
-            if (monthlyData) {
-                aggregatedData = { ...monthlyData, isMensalista: true, name: monthlyData.tutor_name || monthlyData.owner_name || 'Cliente' };
+            if (monthlyDataArr && monthlyDataArr.length > 0) {
+                const first = monthlyDataArr[0];
+                aggregatedData = { 
+                    ...first, 
+                    isMensalista: true, 
+                    monthlyPets: monthlyDataArr,
+                    name: first.tutor_name || first.owner_name || 'Cliente' 
+                };
                 found = true;
             }
 
             // Try daycare_enrollments
-            const { data: daycareData } = await supabase
+            const { data: daycareDataArr } = await supabase
                 .from('daycare_enrollments')
                 .select('*')
-                .or(`contact_phone.ilike."%${rawPhone}%",contact_phone.ilike."%${formatted11}%",contact_phone.ilike."%${formatted10}%"`)
-                .limit(1)
-                .maybeSingle();
+                .or(`contact_phone.ilike."%${rawPhone}%",contact_phone.ilike."%${formatted11}%",contact_phone.ilike."%${formatted10}%"`);
 
-            if (daycareData) {
+            if (daycareDataArr && daycareDataArr.length > 0) {
+                const first = daycareDataArr[0];
                 aggregatedData = {
                     ...aggregatedData, // keep existing mensalista fields if they exist
                     isDaycare: true,
-                    daycareData: daycareData,
-                    name: aggregatedData.name || daycareData.tutor_name || 'Cliente'
+                    daycarePets: daycareDataArr,
+                    daycareData: first,
+                    name: aggregatedData.name || first.tutor_name || 'Cliente'
                 };
                 // If the user isn't mensalista, we can just map the pet photo and id here so it works generically.
-                if (!aggregatedData.id) aggregatedData.id = daycareData.id;
-                if (!aggregatedData.pet_photo_url) aggregatedData.pet_photo_url = daycareData.pet_photo_url;
-                if (!aggregatedData.pet_name) aggregatedData.pet_name = daycareData.pet_name;
+                if (!aggregatedData.id) aggregatedData.id = first.id;
+                if (!aggregatedData.pet_photo_url) aggregatedData.pet_photo_url = first.pet_photo_url;
+                if (!aggregatedData.pet_name) aggregatedData.pet_name = first.pet_name;
                 
                 found = true;
             }

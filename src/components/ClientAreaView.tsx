@@ -160,15 +160,21 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
     }, [phone, clientData.isMensalista]);
 
     useEffect(() => {
-        if (clientData.isDaycare && clientData.id) {
+        if (clientData.isDaycare) {
+            const petIds = clientData.daycarePets?.length > 0 
+                ? clientData.daycarePets.map((p: any) => p.id) 
+                : (clientData.id ? [clientData.id] : []);
+            
+            if (petIds.length === 0) return;
+
             const fetchDiaries = async () => {
                 try {
                     const { data } = await supabase
                         .from('daycare_diary_entries')
                         .select('*')
-                        .eq('enrollment_id', clientData.id)
+                        .in('enrollment_id', petIds)
                         .order('date', { ascending: false })
-                        .limit(10);
+                        .limit(20);
                     if (data) setDaycareDiaries(data);
                 } catch (e) {
                     console.error(e);
@@ -176,7 +182,7 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
             };
             fetchDiaries();
         }
-    }, [clientData.id, clientData.isDaycare]);
+    }, [clientData.id, clientData.isDaycare, clientData.daycarePets]);
 
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -426,45 +432,47 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                     <div className="space-y-6 animate-fadeIn">
                         
                         {/* Current/Open Invoice & Plan */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-5 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-2 h-full bg-red-400"></div>
-                            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Plano e Fatura (Creche)</h3>
+                        {(clientData.daycarePets || [clientData.daycareData || clientData]).map((targetData: any, idx: number) => {
+                            if (!targetData) return null;
+                            const now = new Date();
+                            const currentYYYYMM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
                             
-                            {(() => {
-                                const now = new Date();
-                                const currentYYYYMM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                                
-                                let paymentMap: Record<string, string> = {};
-                                const targetData = clientData.daycareData || clientData;
-                                
-                                if (typeof targetData.payment_status === 'string') {
-                                    try { paymentMap = JSON.parse(targetData.payment_status); } catch(e) {}
-                                } else if (targetData.payment_status && typeof targetData.payment_status === 'object') {
-                                    paymentMap = targetData.payment_status;
-                                }
+                            let paymentMap: Record<string, string> = {};
+                            if (typeof targetData.payment_status === 'string') {
+                                try { paymentMap = JSON.parse(targetData.payment_status); } catch(e) {}
+                            } else if (targetData.payment_status && typeof targetData.payment_status === 'object') {
+                                paymentMap = targetData.payment_status;
+                            }
 
-                                const currentMonthStatus = paymentMap[currentYYYYMM] || 'Pendente';
-                                const rawDate = targetData.payment_date;
-                                const dueDateStr = rawDate ? String(rawDate).split('-').reverse().join('/') : '--';
-                                const priceNum = Number(targetData.total_price || 0);
+                            const currentMonthStatus = paymentMap[currentYYYYMM] || 'Pendente';
+                            const priceNum = Number(targetData.total_price || 0);
 
-                                return currentMonthStatus === 'Pendente' ? (
-                                    <div>
-                                        <div className="flex justify-between items-end mb-2">
-                                            <p className="text-3xl font-black text-gray-800">R$ {priceNum.toFixed(2).replace('.', ',')}</p>
-                                            <p className="text-sm font-medium text-red-500">Vence dia {getDynamicDueDate()}</p>
-                                        </div>
-                                        <p className="text-xs mb-4">
-                                            <span className="bg-pink-100 text-pink-700 font-bold px-2 py-1 rounded-md uppercase tracking-wide">
-                                                Plano: {formatPlanBR(targetData.contracted_plan)} {targetData.attendance_days ? `(${targetData.attendance_days})` : ''}
-                                            </span>
-                                        </p>
+                            return (
+                                <div key={`daycare-inv-${idx}`} className="bg-white rounded-2xl shadow-sm border border-red-100 p-5 relative overflow-hidden mb-4">
+                                    <div className="absolute top-0 right-0 w-2 h-full bg-red-400"></div>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Plano e Fatura (Creche)</h3>
+                                        <span className="text-xs font-bold text-pink-600 bg-pink-50 px-2 py-1 rounded-full">{targetData.pet_name}</span>
                                     </div>
-                                ) : (
-                                    <p className="text-gray-500 text-sm italic">Sua fatura deste mês já está paga. Tudo certo por aqui! ✨</p>
-                                );
-                            })()}
-                        </div>
+                                    
+                                    {currentMonthStatus === 'Pendente' ? (
+                                        <div>
+                                            <div className="flex justify-between items-end mb-2">
+                                                <p className="text-3xl font-black text-gray-800">R$ {priceNum.toFixed(2).replace('.', ',')}</p>
+                                                <p className="text-sm font-medium text-red-500">Vence dia {getDynamicDueDate()}</p>
+                                            </div>
+                                            <p className="text-xs mb-4">
+                                                <span className="bg-pink-100 text-pink-700 font-bold px-2 py-1 rounded-md uppercase tracking-wide">
+                                                    Plano: {formatPlanBR(targetData.contracted_plan)} {targetData.attendance_days ? `(${targetData.attendance_days})` : ''}
+                                                </span>
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <p className="text-gray-500 text-sm italic">Sua fatura deste mês já está paga. Tudo certo por aqui! ✨</p>
+                                    )}
+                                </div>
+                            );
+                        })}
 
                         {/* Recent Diaries */}
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mt-6">
@@ -474,13 +482,19 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                             
                             {daycareDiaries.length > 0 ? (
                                 <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar -mx-5 px-5">
-                                    {daycareDiaries.map((diary, i) => (
+                                    {daycareDiaries.map((diary, i) => {
+                                        const pet = clientData.daycarePets?.find((p: any) => p.id === diary.enrollment_id);
+                                        const pName = pet ? pet.pet_name : (clientData.pet_name || 'Pet');
+                                        return (
                                         <div key={i} className="min-w-[280px] w-full max-w-[320px] shrink-0 snap-center bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border border-pink-100 shadow-sm p-4 relative overflow-hidden">
                                             <div className="absolute top-0 right-0 w-2 h-full bg-gradient-to-b from-purple-400 to-pink-400"></div>
                                             <div className="flex justify-between items-center mb-4">
-                                                <p className="font-bold text-pink-700 bg-white px-3 py-1.5 rounded-full shadow-sm text-sm border border-pink-100">
-                                                    {diary.date ? new Date(diary.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '--'}
-                                                </p>
+                                                <div>
+                                                    <p className="font-bold text-pink-700 bg-white px-3 py-1.5 rounded-full shadow-sm text-sm border border-pink-100 inline-block mb-1">
+                                                        {diary.date ? new Date(diary.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '--'}
+                                                    </p>
+                                                    <p className="text-[10px] font-bold text-gray-500 uppercase ml-1">{pName}</p>
+                                                </div>
                                                 <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full shadow-sm border border-pink-100">
                                                     <span className="text-xs font-bold text-gray-600">{diary.mood || 'Normal'}</span>
                                                     <span className="text-lg leading-none">{getMoodIcon(diary.mood)}</span>
@@ -565,57 +579,66 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                 {activeTab === 'invoices' && clientData.isMensalista && (
                     <div className="space-y-4 animate-fadeIn">
                         {/* Current/Open */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-5 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-2 h-full bg-red-400"></div>
-                            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Fatura Atual (Banho e Tosa)</h3>
-                            
-                            {(() => {
-                                const now = new Date();
-                                const currentYYYYMM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                                
-                                let paymentMap: Record<string, string> = {};
-                                if (typeof clientData.payment_status === 'string') {
-                                    try { paymentMap = JSON.parse(clientData.payment_status); } catch(e) {}
-                                } else if (clientData.payment_status && typeof clientData.payment_status === 'object') {
-                                    paymentMap = clientData.payment_status;
-                                }
-
-                                const currentMonthStatus = paymentMap[currentYYYYMM] || 'Pendente';
-                                const dueDateStr = clientData.payment_due_date ? clientData.payment_due_date.split('-').reverse().join('/') : '--';
-
-                                return currentMonthStatus === 'Pendente' ? (
-                                    <div>
-                                        <div className="flex justify-between items-end mb-2">
-                                            <p className="text-3xl font-black text-gray-800">R$ {clientData.price?.toFixed(2).replace('.', ',')}</p>
-                                            <p className="text-sm font-medium text-red-500">Vence dia {dueDateStr}</p>
-                                        </div>
-                                        <p className="text-xs text-gray-500 mb-4">Plano: {clientData.recurrence_type === 'weekly' ? 'Semanal' : clientData.recurrence_type === 'bi-weekly' ? 'Quinzenal' : 'Mensal'}</p>
-                                    </div>
-                                ) : (
-                                    <p className="text-gray-500 text-sm italic">Sua fatura de banho e tosa deste mês já está paga. Tudo certo por aqui! ✨</p>
-                                );
-                            })()}
-                        </div>
-
-                        {clientData.isDaycare && (() => {
-                            const targetData = clientData.daycareData || clientData;
+                        {(clientData.monthlyPets || [clientData]).map((mPet: any, idx: number) => {
+                            if (!mPet || !mPet.price) return null;
                             const now = new Date();
                             const currentYYYYMM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
                             
                             let paymentMap: Record<string, string> = {};
-                            if (typeof targetData.payment_status === 'string') {
-                                try { paymentMap = JSON.parse(targetData.payment_status); } catch(e) {}
-                            } else if (targetData.payment_status && typeof targetData.payment_status === 'object') {
-                                paymentMap = targetData.payment_status;
+                            if (typeof mPet.payment_status === 'string') {
+                                try { paymentMap = JSON.parse(mPet.payment_status); } catch(e) {}
+                            } else if (mPet.payment_status && typeof mPet.payment_status === 'object') {
+                                paymentMap = mPet.payment_status;
                             }
 
                             const currentMonthStatus = paymentMap[currentYYYYMM] || 'Pendente';
-                            const priceNum = Number(targetData.total_price || 0);
+                            const dueDateStr = mPet.payment_due_date ? mPet.payment_due_date.split('-').reverse().join('/') : '--';
 
                             return (
-                                <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-5 relative overflow-hidden">
+                                <div key={`mensal-${idx}`} className="bg-white rounded-2xl shadow-sm border border-red-100 p-5 relative overflow-hidden mb-4">
+                                    <div className="absolute top-0 right-0 w-2 h-full bg-red-400"></div>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Fatura Atual (Banho e Tosa)</h3>
+                                        <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full">{mPet.pet_name}</span>
+                                    </div>
+                                    
+                                    {currentMonthStatus === 'Pendente' ? (
+                                        <div>
+                                            <div className="flex justify-between items-end mb-2">
+                                                <p className="text-3xl font-black text-gray-800">R$ {mPet.price?.toFixed(2).replace('.', ',')}</p>
+                                                <p className="text-sm font-medium text-red-500">Vence dia {dueDateStr}</p>
+                                            </div>
+                                            <p className="text-xs text-gray-500 mb-4">Plano: {mPet.recurrence_type === 'weekly' ? 'Semanal' : mPet.recurrence_type === 'bi-weekly' ? 'Quinzenal' : 'Mensal'}</p>
+                                        </div>
+                                    ) : (
+                                        <p className="text-gray-500 text-sm italic">Sua fatura de banho e tosa deste mês já está paga. Tudo certo por aqui! ✨</p>
+                                    )}
+                                </div>
+                            );
+                        })}
+
+                        {clientData.isDaycare && (clientData.daycarePets || [clientData.daycareData || clientData]).map((dPet: any, idx: number) => {
+                            if (!dPet) return null;
+                            const now = new Date();
+                            const currentYYYYMM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                            
+                            let paymentMap: Record<string, string> = {};
+                            if (typeof dPet.payment_status === 'string') {
+                                try { paymentMap = JSON.parse(dPet.payment_status); } catch(e) {}
+                            } else if (dPet.payment_status && typeof dPet.payment_status === 'object') {
+                                paymentMap = dPet.payment_status;
+                            }
+
+                            const currentMonthStatus = paymentMap[currentYYYYMM] || 'Pendente';
+                            const priceNum = Number(dPet.total_price || 0);
+
+                            return (
+                                <div key={`daycare-fat-${idx}`} className="bg-white rounded-2xl shadow-sm border border-purple-100 p-5 relative overflow-hidden mb-4">
                                     <div className="absolute top-0 right-0 w-2 h-full bg-purple-400"></div>
-                                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Fatura Atual (Creche)</h3>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Fatura Atual (Creche)</h3>
+                                        <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded-full">{dPet.pet_name}</span>
+                                    </div>
                                     {currentMonthStatus === 'Pendente' ? (
                                         <div>
                                             <div className="flex justify-between items-end mb-2">
@@ -624,7 +647,7 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                             </div>
                                             <p className="text-xs mb-4">
                                                 <span className="bg-purple-100 text-purple-700 font-bold px-2 py-1 rounded-md uppercase tracking-wide">
-                                                    Plano: {formatPlanBR(targetData.contracted_plan)} {targetData.attendance_days ? `(${targetData.attendance_days})` : ''}
+                                                    Plano: {formatPlanBR(dPet.contracted_plan)} {dPet.attendance_days ? `(${dPet.attendance_days})` : ''}
                                                 </span>
                                             </p>
                                         </div>
@@ -633,7 +656,7 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                     )}
                                 </div>
                             );
-                        })()}
+                        })}
 
                         {/* History */}
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mt-6">
