@@ -311,40 +311,71 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                             <div className="absolute top-0 right-0 w-2 h-full bg-red-400"></div>
                             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Fatura Atual (Em aberto)</h3>
                             
-                            {clientData.payment_status === 'Pendente' || !clientData.payment_status ? (
-                                <div>
-                                    <div className="flex justify-between items-end mb-2">
-                                        <p className="text-3xl font-black text-gray-800">R$ {clientData.price?.toFixed(2).replace('.', ',')}</p>
-                                        <p className="text-sm font-medium text-red-500">Vence dia {clientData.payment_due_date || '--'}</p>
+                            {(() => {
+                                const now = new Date();
+                                const currentYYYYMM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                                
+                                let paymentMap: Record<string, string> = {};
+                                if (typeof clientData.payment_status === 'string') {
+                                    try { paymentMap = JSON.parse(clientData.payment_status); } catch(e) {}
+                                } else if (clientData.payment_status && typeof clientData.payment_status === 'object') {
+                                    paymentMap = clientData.payment_status;
+                                }
+
+                                const currentMonthStatus = paymentMap[currentYYYYMM] || 'Pendente';
+                                const dueDateStr = clientData.payment_due_date ? clientData.payment_due_date.split('-').reverse().join('/') : '--';
+
+                                return currentMonthStatus === 'Pendente' ? (
+                                    <div>
+                                        <div className="flex justify-between items-end mb-2">
+                                            <p className="text-3xl font-black text-gray-800">R$ {clientData.price?.toFixed(2).replace('.', ',')}</p>
+                                            <p className="text-sm font-medium text-red-500">Vence dia {dueDateStr}</p>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mb-4">Plano: {clientData.recurrence_type === 'weekly' ? 'Semanal' : clientData.recurrence_type === 'bi-weekly' ? 'Quinzenal' : 'Mensal'}</p>
                                     </div>
-                                    <p className="text-xs text-gray-500 mb-4">Plano: {clientData.recurrence_type === 'weekly' ? 'Semanal' : clientData.recurrence_type === 'bi-weekly' ? 'Quinzenal' : 'Mensal'}</p>
-                                    
-                                </div>
-                            ) : (
-                                <p className="text-gray-500 text-sm italic">Nenhuma fatura em aberto no momento. Tudo certo por aqui! ✨</p>
-                            )}
+                                ) : (
+                                    <p className="text-gray-500 text-sm italic">Sua fatura deste mês já está paga. Tudo certo por aqui! ✨</p>
+                                );
+                            })()}
                         </div>
 
                         {/* History */}
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mt-6">
                             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Histórico de Pagas</h3>
                             
-                            {clientData.payment_status === 'Pago' ? (
-                                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-                                    <div>
-                                        <p className="font-bold text-gray-700">Mês Atual</p>
-                                        <p className="text-xs text-gray-500">R$ {clientData.price?.toFixed(2).replace('.', ',')}</p>
+                            {(() => {
+                                let paymentMap: Record<string, string> = {};
+                                if (typeof clientData.payment_status === 'string') {
+                                    try { paymentMap = JSON.parse(clientData.payment_status); } catch(e) {}
+                                } else if (clientData.payment_status && typeof clientData.payment_status === 'object') {
+                                    paymentMap = clientData.payment_status;
+                                }
+
+                                const paidMonths = Object.entries(paymentMap).filter(([k, v]) => v === 'Pago' || v === 'PAGO').sort((a, b) => b[0].localeCompare(a[0]));
+
+                                return paidMonths.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {paidMonths.map(([monthStr, _]) => {
+                                            const [year, month] = monthStr.split('-');
+                                            return (
+                                                <div key={monthStr} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                                                    <div>
+                                                        <p className="font-bold text-gray-700">{month}/{year}</p>
+                                                        <p className="text-xs text-gray-500">R$ {clientData.price?.toFixed(2).replace('.', ',')}</p>
+                                                    </div>
+                                                    <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-md uppercase">
+                                                        Pago
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
-                                    <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-md uppercase">
-                                        Pago
-                                    </span>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {/* Mockup historical data just to show the structure if needed, or say no history */}
-                                    <p className="text-gray-400 text-sm italic text-center py-4">Sem histórico anterior disponível no sistema.</p>
-                                </div>
-                            )}
+                                ) : (
+                                    <div className="space-y-3">
+                                        <p className="text-gray-400 text-sm italic text-center py-4">Sem histórico de faturas pagas disponível.</p>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
                 )}
