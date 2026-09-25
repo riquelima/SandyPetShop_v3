@@ -10,7 +10,7 @@ const menuItemStyles = cva(
     variants: {
       active: {
         true: "bg-pink-50 text-pink-700 font-bold",
-        false: "text-gray-600 hover:bg-gray-50/80 hover:text-gray-900 font-medium",
+        false: "text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium",
       },
       tone: {
         default: "",

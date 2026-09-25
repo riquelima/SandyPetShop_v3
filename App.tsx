@@ -19188,7 +19188,7 @@ const AdminDashboard: React.FC<{
                             </button>
                             <button
                                 onClick={() => { setIsPriceManagementOpen(true); closeMobileMenu(); }}
-                                className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-base font-medium transition-colors text-pink-700 hover:bg-pink-50"
+                                className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-base font-medium transition-colors text-pink-700 hover:bg-gray-50"
                             >
                                 <SafeImage src="https://cdn-icons-png.flaticon.com/512/8070/8070505.png" alt="Preços" className="w-6 h-6 object-contain" />
                                 Definir Preços
@@ -19270,7 +19270,7 @@ const AdminDashboard: React.FC<{
                             <div className="md:hidden space-y-1.5">
                                 <button
                                     onClick={() => setIsPriceManagementOpen(true)}
-                                className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-base font-medium transition-colors text-pink-700 hover:bg-pink-50"
+                                className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-base font-medium transition-colors text-pink-700 hover:bg-gray-50"
                             >
                                 <SafeImage src="https://cdn-icons-png.flaticon.com/512/8070/8070505.png" alt="Preços" className="w-6 h-6 object-contain" />
                                 Definir Preços
