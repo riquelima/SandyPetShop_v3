@@ -543,13 +543,13 @@ const MonthlyClientCard: React.FC<{
                 {/* Top Row: Avatar + Pet & Tutor | Total Fixo & Status */}
                 <div className="flex items-center justify-between gap-3 min-w-0">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="relative shrink-0">
+                        <div className="relative shrink-0 w-14 h-14">
                             <div
-                                className="w-13 h-13 sm:w-14 sm:h-14 rounded-full ring-2 ring-pink-100 shadow-sm overflow-hidden bg-slate-50 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
+                                className="w-14 h-14 rounded-full ring-2 ring-pink-100 shadow-sm overflow-hidden bg-slate-50 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
                                 onClick={(e) => { e.stopPropagation(); onChangePhoto(client); }}
                             >
                                 {client.pet_photo_url ? (
-                                    <SafeImage src={client.pet_photo_url} alt={client.pet_name} className="w-full h-full object-cover" />
+                                    <SafeImage src={client.pet_photo_url} alt={client.pet_name} className="w-14 h-14 rounded-full object-cover" />
                                 ) : (
                                     <span className="text-2xl">🐶</span>
                                 )}
