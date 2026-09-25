@@ -517,9 +517,11 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                                     </div>
                                                 </div>
                                                 {diary.obs && (
-                                                    <div className="bg-purple-50/50 p-2.5 rounded-xl border border-purple-100/50 mt-2">
-                                                        <p className="text-[9px] text-purple-400 font-bold uppercase tracking-wider mb-0.5">Observações</p>
-                                                        <p className="text-xs text-gray-600 italic font-medium leading-snug line-clamp-2">"{diary.obs}"</p>
+                                                    <div className="bg-purple-50/50 p-2.5 rounded-xl border border-purple-100/50 mt-2 flex flex-col">
+                                                        <p className="text-[9px] text-purple-400 font-bold uppercase tracking-wider mb-0.5 shrink-0">Observações</p>
+                                                        <div className="max-h-[60px] overflow-y-auto hide-scrollbar shrink-0">
+                                                            <p className="text-xs text-gray-600 italic font-medium leading-snug break-words">"{diary.obs}"</p>
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
