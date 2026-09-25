@@ -567,7 +567,7 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                         {/* Current/Open */}
                         <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-5 relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-2 h-full bg-red-400"></div>
-                            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Fatura Atual (Em aberto)</h3>
+                            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Fatura Atual (Banho e Tosa)</h3>
                             
                             {(() => {
                                 const now = new Date();
@@ -592,10 +592,48 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                         <p className="text-xs text-gray-500 mb-4">Plano: {clientData.recurrence_type === 'weekly' ? 'Semanal' : clientData.recurrence_type === 'bi-weekly' ? 'Quinzenal' : 'Mensal'}</p>
                                     </div>
                                 ) : (
-                                    <p className="text-gray-500 text-sm italic">Sua fatura deste mês já está paga. Tudo certo por aqui! ✨</p>
+                                    <p className="text-gray-500 text-sm italic">Sua fatura de banho e tosa deste mês já está paga. Tudo certo por aqui! ✨</p>
                                 );
                             })()}
                         </div>
+
+                        {clientData.isDaycare && (() => {
+                            const targetData = clientData.daycareData || clientData;
+                            const now = new Date();
+                            const currentYYYYMM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                            
+                            let paymentMap: Record<string, string> = {};
+                            if (typeof targetData.payment_status === 'string') {
+                                try { paymentMap = JSON.parse(targetData.payment_status); } catch(e) {}
+                            } else if (targetData.payment_status && typeof targetData.payment_status === 'object') {
+                                paymentMap = targetData.payment_status;
+                            }
+
+                            const currentMonthStatus = paymentMap[currentYYYYMM] || 'Pendente';
+                            const priceNum = Number(targetData.total_price || 0);
+
+                            return (
+                                <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-5 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-2 h-full bg-purple-400"></div>
+                                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Fatura Atual (Creche)</h3>
+                                    {currentMonthStatus === 'Pendente' ? (
+                                        <div>
+                                            <div className="flex justify-between items-end mb-2">
+                                                <p className="text-3xl font-black text-gray-800">R$ {priceNum.toFixed(2).replace('.', ',')}</p>
+                                                <p className="text-sm font-medium text-purple-500">Vence dia {getDynamicDueDate()}</p>
+                                            </div>
+                                            <p className="text-xs mb-4">
+                                                <span className="bg-purple-100 text-purple-700 font-bold px-2 py-1 rounded-md uppercase tracking-wide">
+                                                    Plano: {formatPlanBR(targetData.contracted_plan)} {targetData.attendance_days ? `(${targetData.attendance_days})` : ''}
+                                                </span>
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <p className="text-gray-500 text-sm italic">Sua fatura da creche deste mês já está paga. ✨</p>
+                                    )}
+                                </div>
+                            );
+                        })()}
 
                         {/* History */}
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mt-6">
