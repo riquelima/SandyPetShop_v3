@@ -457,8 +457,8 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                     
                                     {currentMonthStatus === 'Pendente' ? (
                                         <div>
-                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-2 gap-1 sm:gap-0">
-                                                <p className="text-3xl font-black text-gray-800">R$ {priceNum.toFixed(2).replace('.', ',')}</p>
+                                            <div className="flex flex-col mb-3">
+                                                <p className="text-4xl font-black text-gray-800 tracking-tight mb-1">R$ {priceNum.toFixed(2).replace('.', ',')}</p>
                                                 <p className="text-sm font-medium text-red-500">Vence dia {getDynamicDueDate()}</p>
                                             </div>
                                             <p className="text-xs mb-4">
@@ -607,8 +607,8 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                     
                                     {currentMonthStatus === 'Pendente' ? (
                                         <div>
-                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-2 gap-1 sm:gap-0">
-                                                <p className="text-3xl font-black text-gray-800">R$ {mPet.price?.toFixed(2).replace('.', ',')}</p>
+                                            <div className="flex flex-col mb-3">
+                                                <p className="text-4xl font-black text-gray-800 tracking-tight mb-1">R$ {mPet.price?.toFixed(2).replace('.', ',')}</p>
                                                 <p className="text-sm font-medium text-red-500">Vence dia {dueDateStr}</p>
                                             </div>
                                             <p className="text-xs text-gray-500 mb-4">Plano: {mPet.recurrence_type === 'weekly' ? 'Semanal' : mPet.recurrence_type === 'bi-weekly' ? 'Quinzenal' : 'Mensal'}</p>
@@ -644,8 +644,8 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                     </div>
                                     {currentMonthStatus === 'Pendente' ? (
                                         <div>
-                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-2 gap-1 sm:gap-0">
-                                                <p className="text-3xl font-black text-gray-800">R$ {priceNum.toFixed(2).replace('.', ',')}</p>
+                                            <div className="flex flex-col mb-3">
+                                                <p className="text-4xl font-black text-gray-800 tracking-tight mb-1">R$ {priceNum.toFixed(2).replace('.', ',')}</p>
                                                 <p className="text-sm font-medium text-purple-500">Vence dia {getDynamicDueDate()}</p>
                                             </div>
                                             <p className="text-xs mb-4">
