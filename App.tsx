@@ -40,6 +40,7 @@ import { AdoptionAdminView } from './src/components/AdoptionAdminView';
 import TestimonialsCarousel from './src/components/TestimonialsCarousel';
 import FinancialDashboardView from './src/components/FinancialDashboardView';
 import FinancialDashboardProtected from './src/components/FinancialDashboardProtected';
+import { PWAInstallBanner } from './src/components/PWAInstallBanner';
 
 
 // HELPERS DE IDENTIFICAÇÃO DE SERVIÇO (UNIFICADOS)
@@ -20339,7 +20340,12 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
         return <ScheduleClosedPage setView={setViewWithLog} />;
     }
 
-    return <Scheduler setView={setViewWithLog} prefillService={prefillService} prefillDate={prefillDate} prefillTime={prefillTime} />;
+    return (
+        <>
+            <Scheduler setView={setViewWithLog} prefillService={prefillService} prefillDate={prefillDate} prefillTime={prefillTime} />
+            <PWAInstallBanner />
+        </>
+    );
 };
 
 // Observation Modal Component
