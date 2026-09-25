@@ -193,6 +193,19 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
         .sort((a, b) => new Date(a.appointment_time).getTime() - new Date(b.appointment_time).getTime());
     const past = appointments.filter(a => a.status?.toUpperCase() === 'CONCLUÍDO' || a.status?.toUpperCase() === 'CONCLUIDO');
 
+    const hasAppointments = future.length > 0 || past.length > 0;
+    // Show agenda if loading, or if they have appointments, or if they are just a regular avulso client
+    const showAgenda = loadingAppts || hasAppointments || (!clientData.isDaycare && !clientData.isMensalista);
+    const showFidelidade = !clientData.isMensalista && showAgenda;
+
+    useEffect(() => {
+        if (!loadingAppts && activeTab === 'appointments' && !showAgenda) {
+            if (clientData.isDaycare) setActiveTab('daycare');
+            else if (clientData.isMensalista) setActiveTab('invoices');
+            else setActiveTab('fidelity');
+        }
+    }, [loadingAppts, showAgenda, activeTab, clientData]);
+
     return (
         <div className="min-h-screen bg-[#FFF5F7] pb-20">
             {/* Header / Avatar */}
@@ -239,12 +252,14 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
             {/* Content Tabs */}
             <div className="max-w-md mx-auto px-4 -mt-8 relative z-10">
                 <div className="bg-white rounded-2xl shadow-xl p-2 flex gap-1 mb-6 overflow-x-auto snap-x hide-scrollbar">
-                    <button 
-                        onClick={() => setActiveTab('appointments')}
-                        className={`flex-1 min-w-[100px] snap-center py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'appointments' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
-                    >
-                        Agenda
-                    </button>
+                    {showAgenda && (
+                        <button 
+                            onClick={() => setActiveTab('appointments')}
+                            className={`flex-1 min-w-[100px] snap-center py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'appointments' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
+                        >
+                            Agenda
+                        </button>
+                    )}
                     
                     {clientData.isDaycare && (
                         <button 
@@ -255,14 +270,16 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                         </button>
                     )}
 
-                    {clientData.isMensalista ? (
+                    {clientData.isMensalista && (
                         <button 
                             onClick={() => setActiveTab('invoices')}
                             className={`flex-1 min-w-[100px] snap-center py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'invoices' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
                         >
                             Faturas
                         </button>
-                    ) : (
+                    )}
+                    
+                    {showFidelidade && (
                         <button 
                             onClick={() => setActiveTab('fidelity')}
                             className={`flex-1 min-w-[100px] snap-center py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'fidelity' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
