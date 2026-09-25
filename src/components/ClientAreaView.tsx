@@ -193,7 +193,7 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
         .sort((a, b) => new Date(a.appointment_time).getTime() - new Date(b.appointment_time).getTime());
     const past = appointments.filter(a => a.status?.toUpperCase() === 'CONCLUÍDO' || a.status?.toUpperCase() === 'CONCLUIDO');
 
-    const hasAppointments = future.length > 0 || past.length > 0;
+    const hasAppointments = upcoming.length > 0 || past.length > 0;
     // Show agenda if loading, or if they have appointments, or if they are just a regular avulso client
     const showAgenda = loadingAppts || hasAppointments || (!clientData.isDaycare && !clientData.isMensalista);
     const showFidelidade = !clientData.isMensalista && showAgenda;
