@@ -524,7 +524,8 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                                 </div>
                                             )}
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             ) : (
                                 <p className="text-gray-400 text-sm italic text-center py-4">Nenhum diário registrado recentemente.</p>
