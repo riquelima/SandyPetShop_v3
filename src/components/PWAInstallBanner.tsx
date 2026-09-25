@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { XMarkIcon, ArrowDownTrayIcon, ShareIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ArrowDownTrayIcon, ArrowUpOnSquareIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
 
 export function PWAInstallBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -98,7 +98,7 @@ export function PWAInstallBanner() {
         {deviceType === 'ios' && (
           <div className="bg-pink-100 text-pink-800 rounded-lg p-3 text-sm mt-1">
             <p className="flex items-center gap-2 mb-1">
-              1. Toque no ícone de <strong>Compartilhar</strong> <ShareIcon className="w-4 h-4 inline-block" />
+              1. Toque no ícone de <strong>Compartilhar</strong> <ArrowUpOnSquareIcon className="w-5 h-5 inline-block" />
             </p>
             <p className="flex items-center gap-2">
               2. Escolha <strong>Adicionar à Tela de Início</strong> <PlusCircleIcon className="w-4 h-4 inline-block" />
