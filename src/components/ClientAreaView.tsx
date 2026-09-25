@@ -21,9 +21,10 @@ const FallbackLottieAvatar = ({ className = "" }: { className?: string }) => (
 );
 
 export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout: () => void }> = ({ clientData, phone, onLogout }) => {
-    const [activeTab, setActiveTab] = useState<'appointments' | 'fidelity' | 'invoices'>('appointments');
+    const [activeTab, setActiveTab] = useState<'appointments' | 'fidelity' | 'invoices' | 'daycare'>('appointments');
     const [appointments, setAppointments] = useState<any[]>([]);
     const [loadingAppts, setLoadingAppts] = useState(true);
+    const [daycareDiaries, setDaycareDiaries] = useState<any[]>([]);
 
     const [loyaltyData, setLoyaltyData] = useState<any>(null);
     const [loadingLoyalty, setLoadingLoyalty] = useState(false);
@@ -153,6 +154,25 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
         }
     }, [phone, clientData.isMensalista]);
 
+    useEffect(() => {
+        if (clientData.isDaycare && clientData.id) {
+            const fetchDiaries = async () => {
+                try {
+                    const { data } = await supabase
+                        .from('daycare_diary_entries')
+                        .select('*')
+                        .eq('enrollment_id', clientData.id)
+                        .order('date', { ascending: false })
+                        .limit(10);
+                    if (data) setDaycareDiaries(data);
+                } catch (e) {
+                    console.error(e);
+                }
+            };
+            fetchDiaries();
+        }
+    }, [clientData.id, clientData.isDaycare]);
+
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
@@ -203,7 +223,9 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                 </div>
                 <h1 className="text-2xl font-bold font-brand tracking-wide">Olá, {clientData.name.split(' ')[0]}!</h1>
                 <p className="text-pink-100 text-sm mt-1.5 px-4 font-medium opacity-90">
-                    {clientData.isMensalista 
+                    {clientData.isDaycare
+                        ? "Acompanhe a rotina do seu pet na creche e consulte suas faturas."
+                        : clientData.isMensalista 
                         ? "Gerencie seus próximos agendamentos e acompanhe suas faturas com facilidade."
                         : "Gerencie seus agendamentos e acompanhe seus pontos no Cartão Fidelidade."}
                 </p>
@@ -219,19 +241,26 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                         Agenda
                     </button>
                     
-                    {!clientData.isMensalista ? (
+                    {clientData.isDaycare ? (
                         <button 
-                            onClick={() => setActiveTab('fidelity')}
-                            className={`flex-1 py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'fidelity' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
+                            onClick={() => setActiveTab('daycare')}
+                            className={`flex-1 py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'daycare' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
                         >
-                            Fidelidade
+                            Creche
                         </button>
-                    ) : (
+                    ) : clientData.isMensalista ? (
                         <button 
                             onClick={() => setActiveTab('invoices')}
                             className={`flex-1 py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'invoices' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
                         >
                             Faturas
+                        </button>
+                    ) : (
+                        <button 
+                            onClick={() => setActiveTab('fidelity')}
+                            className={`flex-1 py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'fidelity' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
+                        >
+                            Fidelidade
                         </button>
                     )}
                 </div>
@@ -325,6 +354,73 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                 </div>
                             ) : (
                                 <p className="text-gray-500 text-center text-sm py-4">Sem histórico de serviços.</p>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Daycare View */}
+                {activeTab === 'daycare' && clientData.isDaycare && (
+                    <div className="space-y-6 animate-fadeIn">
+                        
+                        {/* Current/Open Invoice & Plan */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-5 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-2 h-full bg-red-400"></div>
+                            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Plano e Fatura (Creche)</h3>
+                            
+                            {(() => {
+                                const now = new Date();
+                                const currentYYYYMM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                                
+                                let paymentMap: Record<string, string> = {};
+                                if (typeof clientData.payment_status === 'string') {
+                                    try { paymentMap = JSON.parse(clientData.payment_status); } catch(e) {}
+                                } else if (clientData.payment_status && typeof clientData.payment_status === 'object') {
+                                    paymentMap = clientData.payment_status;
+                                }
+
+                                const currentMonthStatus = paymentMap[currentYYYYMM] || 'Pendente';
+                                const dueDateStr = clientData.payment_date ? clientData.payment_date.split('-').reverse().join('/') : '--';
+
+                                return currentMonthStatus === 'Pendente' ? (
+                                    <div>
+                                        <div className="flex justify-between items-end mb-2">
+                                            <p className="text-3xl font-black text-gray-800">R$ {clientData.total_price?.toFixed(2).replace('.', ',')}</p>
+                                            <p className="text-sm font-medium text-red-500">Vence dia {dueDateStr}</p>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mb-4">Plano: {clientData.contracted_plan} {clientData.attendance_days ? `(${clientData.attendance_days})` : ''}</p>
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-500 text-sm italic">Sua fatura deste mês já está paga. Tudo certo por aqui! ✨</p>
+                                );
+                            })()}
+                        </div>
+
+                        {/* Recent Diaries */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mt-6">
+                            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                <span className="text-lg">📖</span> Diário da Creche
+                            </h3>
+                            
+                            {daycareDiaries.length > 0 ? (
+                                <div className="space-y-4">
+                                    {daycareDiaries.map((diary, i) => (
+                                        <div key={i} className="border-b border-gray-50 pb-4 last:border-0 last:pb-0">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <p className="font-bold text-pink-600">{new Date(diary.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} </p>
+                                                <span className="bg-pink-50 text-pink-600 text-xs px-2 py-0.5 rounded-full font-medium shadow-sm">
+                                                    Humor: {diary.mood}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-gray-700 mb-1"><strong>Comportamento:</strong> {diary.behavior}</p>
+                                            <p className="text-sm text-gray-700 mb-1"><strong>Alimentação:</strong> {diary.feeding}</p>
+                                            <p className="text-sm text-gray-700 mb-1"><strong>Necessidades:</strong> {diary.needs_logs}</p>
+                                            {diary.obs && <p className="text-sm text-gray-500 italic mt-2 text-justify">Obs: {diary.obs}</p>}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-gray-400 text-sm italic text-center py-4">Nenhum diário registrado recentemente.</p>
                             )}
                         </div>
                     </div>

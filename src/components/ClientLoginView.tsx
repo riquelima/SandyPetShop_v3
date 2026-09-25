@@ -61,6 +61,18 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
                 return;
             }
 
+            // Then try daycare_enrollments
+            const { data: daycareData } = await supabase
+                .from('daycare_enrollments')
+                .select('*')
+                .or(`contact_phone.ilike."%${rawPhone}%",contact_phone.ilike."%${formatted11}%",contact_phone.ilike."%${formatted10}%"`)
+                .maybeSingle();
+
+            if (daycareData) {
+                onLogin(rawPhone, { ...daycareData, isDaycare: true, name: daycareData.tutor_name || 'Cliente' });
+                return;
+            }
+
             // Finally try appointments just to check if they have scheduled anything
             const { data: apptData, error: apptError } = await supabase
                 .from('appointments')
