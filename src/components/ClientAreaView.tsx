@@ -202,7 +202,11 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                     </label>
                 </div>
                 <h1 className="text-2xl font-bold font-brand tracking-wide">Olá, {clientData.name.split(' ')[0]}!</h1>
-                <p className="text-pink-100 mt-1">{clientData.pet_name ? `Tutor(a) do ${clientData.pet_name}` : 'Bem-vindo(a) à sua área'}</p>
+                <p className="text-pink-100 text-sm mt-1.5 px-4 font-medium opacity-90">
+                    {clientData.isMensalista 
+                        ? "Gerencie seus próximos agendamentos e acompanhe suas faturas com facilidade."
+                        : "Gerencie seus agendamentos e acompanhe seus pontos no Cartão Fidelidade."}
+                </p>
             </div>
 
             {/* Content Tabs */}
