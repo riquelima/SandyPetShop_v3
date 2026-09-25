@@ -522,12 +522,24 @@ const MonthlyClientCard: React.FC<{
     const recurrenceTimeLabel = `${String(client.recurrence_time).padStart(2, '0')}:00`;
 
     // Logic for Condominium Label
-    const getCondoLabel = () => {
-        if (!client.condominium || client.condominium === 'Nenhum Condomínio' || client.condominium.trim() === '') {
-            return 'Banho & Tosa Fixo';
+    const getEffectiveCondo = (client: MonthlyClient): string => {
+        if (client.condominium && client.condominium !== 'Nenhum Condomínio' && client.condominium.trim() !== '') {
+            return client.condominium.trim();
         }
-        return client.condominium;
+        const obs = (client.observation || '').toLowerCase();
+        if (obs.includes('paseo')) return 'Paseo';
+        if (obs.includes('max haus')) return 'Max Haus';
+        if (obs.includes('vitta')) return 'Vitta Parque';
+        const srv = (client.service || '').toLowerCase();
+        if (srv.includes('móvel') || srv.includes('movel')) {
+            return 'Pet Móvel';
+        }
+        return 'Banho & Tosa Fixo';
     };
+
+    const effectiveCondo = getEffectiveCondo(client);
+
+    const getCondoLabel = () => effectiveCondo;
 
     return (
         <>
@@ -612,16 +624,24 @@ const MonthlyClientCard: React.FC<{
 
                 {/* Badges Row: Full width chips bar */}
                 <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-slate-100/90">
+                    {/* Recurrence Badge (Semanal / Quinzenal / Mensal) */}
                     {renderRecurrenceBadge(client)}
+
+                    {/* Service Badge */}
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-pink-50 text-pink-700 border border-pink-200/80 leading-none whitespace-nowrap shadow-xs">
                         <svg className="w-3 h-3 text-pink-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                         </svg>
-                        {client.service || getCondoLabel()}
+                        {client.service || 'Banho & Tosa'}
                     </span>
-                    {client.condominium && client.condominium !== 'Nenhum Condomínio' && client.condominium.trim() !== '' && client.condominium !== client.service && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 leading-none whitespace-nowrap">
-                            🏢 {client.condominium}
+
+                    {/* Condomínio Badge - Always shown for Pet Móvel & clients with condo! */}
+                    {effectiveCondo && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80 leading-none whitespace-nowrap shadow-xs" title={`Condomínio: ${effectiveCondo}`}>
+                            <svg className="w-3.5 h-3.5 text-indigo-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            <span>{effectiveCondo}</span>
                         </span>
                     )}
                 </div>
@@ -662,6 +682,21 @@ const MonthlyClientCard: React.FC<{
                         </div>
                     )}
 
+                    {/* Condomínio / Local */}
+                    <div className="flex items-center gap-2 min-w-0 p-2 rounded-xl bg-white border border-slate-100/80 shadow-2xs">
+                        <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[9px] font-bold text-slate-400 tracking-wider uppercase leading-none">CONDOMÍNIO</p>
+                            <p className="text-[11px] font-bold text-slate-800 mt-0.5 leading-tight truncate" title={effectiveCondo}>
+                                {effectiveCondo}
+                            </p>
+                        </div>
+                    </div>
+
                     {/* Dia & Horário Fixo */}
                     <div className="flex items-center gap-2 min-w-0 p-2 rounded-xl bg-white border border-slate-100/80 shadow-2xs">
                         <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
@@ -687,24 +722,19 @@ const MonthlyClientCard: React.FC<{
                             </p>
                         </div>
                     </div>
-
-                    {/* Próximo Pagamento */}
-                    <div className="flex items-center gap-2 min-w-0 p-2 rounded-xl bg-white border border-slate-100/80 shadow-2xs">
-                        <div className="w-7 h-7 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
-                            <CalendarIcon className="w-3.5 h-3.5" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <p className="text-[9px] font-bold text-slate-400 tracking-wider uppercase leading-none">PRÓX. PAGAM.</p>
-                            <div className="flex items-center gap-1 mt-0.5">
-                                <span className="text-[11px] font-bold text-sky-700 leading-tight">
-                                    {formatDateToBR(getLastDayOfCurrentMonth())}
-                                </span>
-                                <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </section>
+
+            {/* PRÓX. PAGAMENTO */}
+            <div className="bg-slate-50/70 border border-slate-100 rounded-xl px-3 py-2 flex items-center justify-between mb-3 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">PRÓX. PAGAM.</span>
+                <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
+                    <span className="text-xs font-bold text-sky-700 leading-tight">
+                        {formatDateToBR(getLastDayOfCurrentMonth())}
+                    </span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
+                </div>
+            </div>
 
             {/* OBSERVATION + EXTRAS */}
             {(client.observation || hasMonthlyExtras) && (
