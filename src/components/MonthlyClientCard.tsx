@@ -488,326 +488,218 @@ const MonthlyClientCard: React.FC<{
     return (
         <>
             <div
-                className="group relative bg-white rounded-3xl shadow-sm hover:shadow-xl hover:shadow-pink-500/10 transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 overflow-hidden flex flex-col h-full font-jakarta"
+                className="group relative bg-white rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-pink-500/10 transition-all duration-300 transform hover:-translate-y-0.5 border border-slate-100 overflow-hidden flex flex-col font-jakarta pt-1 pb-5 px-4 sm:px-5"
                 onClick={() => onClick && onClick(client)}
             >
-            {/* --- Status Bar & Badges --- */}
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-400 to-purple-500" />
+            {/* Top Accent Bar */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-fuchsia-500 via-pink-500 to-purple-600 rounded-t-[2rem]" />
 
-            <div className="p-4 sm:p-5 flex flex-col h-full">
-
-                {/* Header Section */}
-                <div className="flex items-start justify-between mb-4 gap-2">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="relative flex-shrink-0">
-                            <div className="absolute inset-0 bg-gradient-to-br from-pink-200 to-purple-200 rounded-full blur-md opacity-40 group-hover:opacity-60 transition-opacity pointer-events-none" />
+            {/* HEADER */}
+            <header className="mt-4 mb-4 flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3.5 min-w-0 flex-1">
+                    <div className="relative shrink-0 pt-0.5">
+                        <div
+                            className="w-14 h-14 rounded-full ring-2 ring-slate-100 shadow-sm overflow-hidden bg-slate-50 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
+                            onClick={(e) => { e.stopPropagation(); onChangePhoto(client); }}
+                        >
                             {client.pet_photo_url ? (
-                                <SafeImage
-                                    src={client.pet_photo_url}
-                                    alt={client.pet_name}
-                                    className="relative z-10 w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border-2 border-white shadow-md cursor-pointer hover:scale-105 transition-transform"
-                                    onClick={(e) => { e.stopPropagation(); onChangePhoto(client); }}
-                                />
+                                <SafeImage src={client.pet_photo_url} alt={client.pet_name} className="w-full h-full object-cover" />
                             ) : (
-                                <div 
-                                    className="relative z-10 w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white flex items-center justify-center border-2 border-pink-50 shadow-sm text-2xl cursor-pointer hover:scale-105 transition-transform"
-                                    onClick={(e) => { e.stopPropagation(); onChangePhoto(client); }}
-                                >
-                                    🐶
-                                </div>
-                            )}
-                            {(hasDaycare || hasHotel) && (
-                                <div className="absolute -bottom-1 -right-1 flex gap-0.5">
-                                    {hasHotel && <span className="bg-blue-100 text-blue-600 p-0.5 rounded-full border border-white text-[8px]" title="Hotel">🏨</span>}
-                                    {hasDaycare && <span className="bg-yellow-100 text-yellow-600 p-0.5 rounded-full border border-white text-[8px]" title="Creche">🏠</span>}
-                                </div>
+                                <span className="text-2xl">🐶</span>
                             )}
                         </div>
-                         <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                                <h3 className="font-outfit font-bold text-lg sm:text-xl text-gray-900 leading-tight group-hover:text-pink-600 transition-colors truncate">
-                                    {toTitleCase(client.pet_name)}
-                                </h3>
-                                {!client.is_active && (
-                                    <span className="text-[10px] font-medium text-gray-500 bg-gray-200 rounded-full px-2 py-0.5 flex-shrink-0">Pausado</span>
-                                )}
-                                {client.is_active && (
-                                    <div 
-                                        className="flex items-center justify-center w-5 h-5 rounded-full bg-pink-100 text-pink-700 font-extrabold text-[10px] border border-pink-200 shadow-sm flex-shrink-0" 
-                                        title={`${completedBathsCount} banho(s) concluído(s) no mês`}
-                                    >
-                                        {completedBathsCount}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-1.5 mt-1 flex-nowrap overflow-x-auto custom-scrollbar-hide">
-                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pink-50 text-pink-600 border border-pink-100 uppercase tracking-wide flex-shrink-0">
-                                    {getRecurrenceText(client)}
-                                </span>
-                                <span className="text-[10px] text-gray-500 whitespace-nowrap flex-shrink-0" title={getCondoLabel()}>
-                                    {getCondoLabel()}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Price Tag */}
-                    <div className="text-right flex flex-col items-end flex-shrink-0 pl-2">
-                        <div className="font-outfit font-bold text-lg sm:text-xl text-gray-900 whitespace-nowrap">
-                            R$ {totalInvoiceValue.toFixed(2).replace('.', ',')}
-                        </div>
-                        {hasMonthlyExtras && (
-                            <div className="text-[10px] font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-md inline-block mt-0.5 whitespace-nowrap">
-                                + Extras
+                        {client.is_active && (
+                            <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full bg-pink-500 text-white text-[10px] font-extrabold ring-2 ring-white shadow leading-none" title={`${completedBathsCount} serviço(s) concluído(s) no mês`}>
+                                {completedBathsCount}
+                            </span>
+                        )}
+                        {(hasDaycare || hasHotel) && (
+                            <div className="absolute -top-1 -left-1 flex gap-0.5">
+                                {hasHotel && <span className="bg-blue-100 text-blue-600 p-0.5 rounded-full border border-white text-[8px]" title="Hotel">🏨</span>}
+                                {hasDaycare && <span className="bg-yellow-100 text-yellow-600 p-0.5 rounded-full border border-white text-[8px]" title="Creche">🏠</span>}
                             </div>
                         )}
                     </div>
-                </div>
-
-                {/* Info Grid */}
-                <div className="grid grid-cols-2 gap-y-3 gap-x-2 mb-4 bg-gray-50/50 p-2.5 sm:p-3 rounded-xl border border-gray-100">
-                    <div className="flex items-start sm:items-center gap-2 overflow-hidden">
-                        <UserIcon className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5 sm:mt-0" />
-                        <div className="flex flex-col min-w-0">
-                            <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate">Tutor</span>
-                            <span className="text-xs font-medium text-gray-700 truncate">{toTitleCase(client.owner_name)}</span>
+                    <div className="min-w-0 flex flex-col justify-center flex-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <h3 className="text-[18px] font-bold tracking-tight text-slate-800 leading-tight truncate group-hover:text-pink-600 transition-colors">
+                                {toTitleCase(client.pet_name)}
+                            </h3>
+                            {!client.is_active && (
+                                <span className="text-[10px] font-semibold text-gray-500 bg-gray-200 rounded-full px-2 py-0.5 shrink-0">Pausado</span>
+                            )}
                         </div>
-                    </div>
-                    <div className="flex items-start sm:items-center gap-2 overflow-hidden">
-                        <PhoneIcon className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5 sm:mt-0" />
-                        <div className="flex flex-col min-w-0">
-                            <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate">WhatsApp</span>
-                            <span className="text-xs font-medium text-gray-700 truncate">
-                                {formatPhoneNumber(client.whatsapp)}
+                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold leading-none whitespace-nowrap border ${client.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                                {client.is_active && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                                {getRecurrenceText(client)}
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-100/70 leading-none whitespace-nowrap">
+                                <svg className="w-3 h-3 text-purple-600 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
+                                {client.service || getCondoLabel()}
                             </span>
                         </div>
                     </div>
+                </div>
+                <div className="flex flex-col items-end shrink-0 pl-1 pt-0.5">
+                    <span className="text-[10px] font-medium tracking-wider text-slate-400 uppercase leading-none">TOTAL FIXO</span>
+                    <div className="mt-1 flex items-baseline gap-0.5 leading-none">
+                        <span className="text-xs font-medium text-slate-500">R$</span>
+                        <span className="text-xl font-bold text-slate-900 tracking-tight">{Math.floor(totalInvoiceValue)}<span className="text-xs font-semibold">,{((totalInvoiceValue % 1) * 100).toFixed(0).padStart(2, '0')}</span></span>
+                    </div>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onTogglePaymentStatus(client, e); }}
+                        className={`mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap transition-colors ${isPaid ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-200/70 hover:bg-amber-100'}`}
+                        title={isPaid ? 'Marcar como pendente' : 'Marcar como pago'}
+                    >
+                        {isPaid ? (
+                            <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Pago</>
+                        ) : (
+                            <><svg className="w-3 h-3 text-amber-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Pendente</>
+                        )}
+                    </button>
+                </div>
+            </header>
 
-                    <div className="flex items-start sm:items-center gap-2 overflow-hidden">
-                        <CalendarIcon className="w-4 h-4 text-pink-400 flex-shrink-0 mt-0.5 sm:mt-0" />
-                        <div className="flex flex-col min-w-0">
-                            <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate" title="Próx. Agendamento">Próx. Agend.</span>
-                            <span className="text-xs font-bold text-pink-600 truncate">{nextAppointmentText}</span>
-                        </div>
+            {/* INFO GRID */}
+            <section className="bg-slate-50/70 rounded-2xl p-3.5 border border-slate-100/90 mb-3">
+                <div className="grid grid-cols-2 gap-x-3 gap-y-3.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0"><UserIcon className="w-4 h-4" /></div>
+                        <div className="min-w-0 flex-1"><p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none">TUTOR(A)</p><p className="text-xs font-bold text-slate-800 mt-0.5 leading-tight truncate">{toTitleCase(client.owner_name)}</p></div>
                     </div>
-                    <div className="flex items-start sm:items-center gap-2 overflow-hidden">
-                        <CalendarIcon className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5 sm:mt-0" />
-                        <div className="flex flex-col min-w-0">
-                            <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate" title="Próx. Pagamento">Próx. Pagam.</span>
-                            <span className="text-xs font-bold text-green-600 truncate">{formatDateToBR(getLastDayOfCurrentMonth())}</span>
-                        </div>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><PhoneIcon className="w-4 h-4" /></div>
+                        <div className="min-w-0 flex-1"><p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none">WHATSAPP</p><p className="text-[11px] font-bold text-emerald-700 mt-0.5 tracking-tight leading-none whitespace-nowrap truncate">{formatPhoneNumber(client.whatsapp)}</p></div>
                     </div>
-
-                    <div className="flex items-start sm:items-center gap-2 overflow-hidden">
-                        <CalendarIcon className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5 sm:mt-0" />
-                        <div className="flex flex-col min-w-0">
-                            <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate">Dia Fixo</span>
-                            <span className="text-xs font-medium text-gray-700 truncate">{recurrenceDayLabel}</span>
-                        </div>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg></div>
+                        <div className="min-w-0 flex-1"><p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none">PLANO</p><p className="text-[11px] font-bold text-slate-800 leading-tight mt-0.5 truncate">{getCondoLabel()}</p></div>
                     </div>
-                    <div className="flex items-start sm:items-center gap-2 overflow-hidden">
-                        <ClockIcon className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5 sm:mt-0" />
-                        <div className="flex flex-col min-w-0">
-                            <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate">Horário</span>
-                            <span className="text-xs font-medium text-gray-700 truncate">{recurrenceTimeLabel}</span>
-                        </div>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center shrink-0"><CalendarIcon className="w-4 h-4" /></div>
+                        <div className="min-w-0 flex-1"><p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none">PRÓX. AGEND.</p><p className="text-xs font-extrabold text-pink-600 truncate mt-0.5">{nextAppointmentText}</p></div>
+                    </div>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center shrink-0"><CalendarIcon className="w-4 h-4" /></div>
+                        <div className="min-w-0 flex-1"><p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none">DIA FIXO</p><p className="text-xs font-bold text-slate-800 truncate mt-0.5">{recurrenceDayLabel}</p></div>
+                    </div>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><ClockIcon className="w-4 h-4" /></div>
+                        <div className="min-w-0 flex-1"><p className="text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none">HORÁRIO</p><p className="text-xs font-bold text-slate-800 truncate mt-0.5">{recurrenceTimeLabel}</p></div>
                     </div>
                 </div>
+            </section>
 
-                {/* Extras Badges (if any) */}
+            {/* OBSERVATION + EXTRAS + PRÓX. PAGAMENTO */}
+            <div className="space-y-2 mb-3">
+                {client.observation && (
+                    <div className="bg-amber-50/80 border border-amber-200/70 rounded-xl p-3 flex items-center gap-2.5 text-xs text-amber-900">
+                        <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" /></svg></div>
+                        <p className="font-medium italic leading-snug tracking-tight text-amber-900 line-clamp-2">"{client.observation}"</p>
+                    </div>
+                )}
                 {hasMonthlyExtras && (
-                    <div className="mb-4 flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1.5">
                         {client.extra_services && Object.entries(client.extra_services).map(([key, value]: [string, any]) => {
                             if (!value.enabled) return null;
-                            const label = key.replace(/_/g, ' ').replace('so ', ''); // Simple formatting
+                            const label = key.replace(/_/g, ' ').replace('so ', '');
                             return (
-                                <span key={key} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 capitalize">
-                                    <SparklesIcon className="w-3 h-3 mr-1" />
-                                    {label}
+                                <span key={key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 capitalize">
+                                    <SparklesIcon className="w-3 h-3" />{label}
                                 </span>
                             );
                         })}
                     </div>
                 )}
-                
-                {/* Observation */}
-                {client.observation && (
-                    <div className="mb-4 bg-yellow-50 p-2.5 rounded-xl border border-yellow-100/50">
-                        <p className="text-[10px] sm:text-xs text-gray-600 italic">
-                            "{client.observation}"
-                        </p>
-                    </div>
-                )}
-
-                {/* Next Appointments List - Elegant & Minimalist */}
-                <div className="mb-4 bg-pink-50/30 rounded-xl p-3 border border-pink-100 flex-1 overflow-hidden flex flex-col min-h-[140px] max-h-[180px]">
-                    <h4 className="text-[10px] font-bold text-pink-500 uppercase tracking-wider mb-2 flex items-center gap-1.5 sticky top-0 bg-pink-50/30 backdrop-blur-sm z-10 py-1">
-                        <CalendarIcon className="w-3.5 h-3.5" />
-                        Próximos Agendamentos
-                    </h4>
-                    <div className="overflow-y-auto pr-1 custom-scrollbar flex-1 space-y-1.5 scrollbar-thin scrollbar-thumb-pink-200 scrollbar-track-transparent">
-                        {!client.is_active ? (
-                            <div className="flex flex-col items-center justify-center h-full text-center p-3">
-                                <span className="text-2xl mb-1">⏸️</span>
-                                <p className="text-[11px] font-bold text-amber-600 leading-normal">
-                                    Mensalista Pausado
-                                </p>
-                                <p className="text-[10px] text-gray-500 mt-0.5 leading-snug">
-                                    Os agendamentos futuros estão ocultados e o horário está liberado na grade de reservas.
-                                </p>
-                            </div>
-                        ) : isLoadingAppointments ? (
-                            <div className="flex items-center justify-center h-full text-xs text-pink-400 font-medium py-4">Buscando agendamentos reais...</div>
-                        ) : upcomingAppointments.length > 0 ? (
-                            upcomingAppointments.map((app, idx) => {
-                                const isCompleted = app.status === 'CONCLUÍDO' || app.isPast;
-                                return (
-                                    <div key={idx} className="flex items-center justify-between text-xs bg-white/80 p-2 rounded-lg shadow-sm border border-pink-50/50 hover:bg-white transition-colors group/item">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-bold text-pink-600 font-outfit">{app.date}</span>
-                                        </div>
-                                        {isCompleted ? (
-                                            <div className="flex items-center gap-1 bg-green-50 px-1.5 py-0.5 rounded text-green-600 border border-green-100" title="Concluído">
-                                                <span className="text-[10px] font-bold uppercase">Concluído</span>
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
-                                                </svg>
-                                            </div>
-                                        ) : (
-                                            <span className="font-medium text-gray-400 text-[10px] uppercase tracking-wide group-hover/item:text-gray-600 transition-colors">Agendado</span>
-                                        )}
-                                    </div>
-                                );
-                            })
-                        ) : (
-                            <div className="flex flex-col items-center justify-center h-full text-center p-3">
-                                <span className="text-xl mb-1">📅</span>
-                                <p className="text-[11px] font-bold text-gray-500 leading-normal">
-                                    Sem agendamentos registrados para este mês.
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Footer / Actions */}
-                <div className="mt-auto pt-3 border-t border-gray-100 flex flex-col gap-3">
-                    {/* Pause/Unpause Button */}
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            if (client.is_active) {
-                                setShowPauseConfirm(true);
-                            } else {
-                                setShowReactivateConfirm(true);
-                            }
-                        }}
-                        className={`px-3 py-1.5 rounded-lg border font-medium text-xs transition-all flex items-center justify-center gap-1.5 ${
-                            client.is_active 
-                                ? "bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200 hover:border-amber-300" 
-                                : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200 hover:border-emerald-300"
-                        }`}
-                        title={client.is_active ? "Pausar cliente" : "Reativar cliente"}
-                    >
-                        {client.is_active ? (
-                            <>
-                                <PauseIcon className="w-3.5 h-3.5" />
-                                <span>Pausar</span>
-                            </>
-                        ) : (
-                            <>
-                                <PlayIcon className="w-3.5 h-3.5" />
-                                <span>Ativar</span>
-                            </>
-                        )}
-                    </button>
-                    <div className="flex items-center justify-between gap-3">
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onTogglePaymentStatus(client, e); }}
-                            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${!isPaid
-                                ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200'
-                                : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
-                                }`}
-                        >
-                            {!isPaid ? '⏳ Pendente' : '✅ Pago'}
-                        </button>
-
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onAddExtraServices(client); }}
-                            className="px-3 py-1.5 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900 border border-gray-200 text-xs font-medium transition-all"
-                        >
-                            + Extras
-                        </button>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2">
-                        {onEmitNFe && (
-                            <button
-                                onClick={(e) => { 
-                                    e.stopPropagation(); 
-                                    const nfeUrl = fiscalNotesMap?.[client.id];
-                                    if (nfeUrl) {
-                                        window.open(nfeUrl, '_blank');
-                                    } else {
-                                        onEmitNFe(client); 
-                                    }
-                                }}
-                                disabled={isEmittingNFe}
-                                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-bold text-xs transition-all duration-300 shadow-sm whitespace-nowrap ${
-                                    isEmittingNFe 
-                                    ? 'bg-pink-100 text-pink-400 cursor-not-allowed border border-pink-200' 
-                                    : fiscalNotesMap?.[client.id]
-                                    ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 hover:shadow-md active:scale-95 border border-green-400/20'
-                                    : 'bg-gradient-to-r from-pink-500 to-pink-600 text-white hover:from-pink-600 hover:to-pink-700 hover:shadow-md active:scale-95 border border-pink-400/20'
-                                }`}
-                            >
-                                {isEmittingNFe ? (
-                                    <>
-                                        <svg className="animate-spin h-3.5 w-3.5 text-pink-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        <span>Gerando...</span>
-                                    </>
-                                ) : fiscalNotesMap?.[client.id] ? (
-                                    <>
-                                        <ArrowTopRightOnSquareIcon className="w-4 h-4" />
-                                        <span>Abrir Nota</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <DocumentTextIcon className="w-4 h-4" />
-                                        <span>Nota Fiscal</span>
-                                    </>
-                                )}
-                            </button>
-                        )}
-                        
-                        <div className="flex items-center gap-1">
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onEdit(client); }}
-                                className="p-1.5 rounded-lg text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                                title="Editar"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 00 2 2h11a2 2 0 00 2-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                            </button>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onDelete(client); }}
-                                className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-                                title="Excluir"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
-                        </div>
+                <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-2.5 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">PRÓX. PAGAM.</span>
+                    <div className="flex items-center gap-2 bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-sm">
+                        <span className="text-xs font-bold text-emerald-700">{formatDateToBR(getLastDayOfCurrentMonth())}</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                     </div>
                 </div>
             </div>
-        </div>
 
+            {/* APPOINTMENTS TIMELINE */}
+            <section className="bg-pink-50/30 border border-pink-100/80 rounded-2xl p-3.5 mb-4">
+                <div className="flex items-center gap-1.5 mb-2.5">
+                    <CalendarIcon className="w-3.5 h-3.5 text-pink-500" />
+                    <h2 className="text-[11px] font-extrabold text-pink-600 tracking-wider uppercase">PRÓXIMOS AGENDAMENTOS</h2>
+                </div>
+                <div className="space-y-1.5 max-h-[160px] overflow-y-auto custom-scroll pr-1">
+                    {!client.is_active ? (
+                        <div className="flex flex-col items-center justify-center py-4 text-center">
+                            <span className="text-2xl mb-1">⏸️</span>
+                            <p className="text-[11px] font-bold text-amber-600">Mensalista Pausado</p>
+                            <p className="text-[10px] text-gray-500 mt-0.5">Agendamentos futuros ocultados.</p>
+                        </div>
+                    ) : isLoadingAppointments ? (
+                        <div className="flex items-center justify-center py-4 text-xs text-pink-400 font-medium">Buscando agendamentos...</div>
+                    ) : upcomingAppointments.length > 0 ? (
+                        upcomingAppointments.map((app, idx) => {
+                            const isCompleted = app.status === 'CONCLUÍDO' || app.isPast;
+                            return (
+                                <div key={idx} className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-pink-50 shadow-sm">
+                                    <span className="text-xs font-bold text-pink-700 tracking-tight">{app.date}</span>
+                                    {isCompleted ? (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                            CONCLUÍDO<svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                        </span>
+                                    ) : (
+                                        <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Agendado</span>
+                                    )}
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-4 text-center">
+                            <span className="text-xl mb-1">📅</span>
+                            <p className="text-[11px] font-bold text-gray-500">Sem agendamentos neste mês.</p>
+                        </div>
+                    )}
+                </div>
+            </section>
+
+            {/* SECONDARY ACTIONS */}
+            <section className="grid gap-1.5 mb-3 grid-cols-3">
+                <button onClick={(e) => { e.stopPropagation(); onAddExtraServices(client); }} className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-purple-50 hover:bg-purple-100 active:scale-95 text-purple-700 text-xs font-semibold rounded-xl border border-purple-100/70 transition-colors" type="button">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                    <span>+ Extras</span>
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); onEdit(client); }} className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 text-xs font-semibold rounded-xl border border-indigo-100/70 transition-colors" type="button">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    <span>Editar</span>
+                </button>
+                {onEmitNFe ? (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); const nfeUrl = fiscalNotesMap?.[client.id]; if (nfeUrl) { window.open(nfeUrl, '_blank'); } else { onEmitNFe(client); } }}
+                        disabled={isEmittingNFe}
+                        className={`flex items-center justify-center gap-1.5 py-2.5 px-3 text-xs font-semibold rounded-xl border transition-colors active:scale-95 ${isEmittingNFe ? 'bg-pink-50 text-pink-300 border-pink-100 cursor-not-allowed' : fiscalNotesMap?.[client.id] ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-100/70' : 'bg-pink-50 hover:bg-pink-100 text-pink-700 border-pink-100/70'}`}
+                        type="button"
+                    >
+                        {isEmittingNFe ? <svg className="animate-spin h-3.5 w-3.5 text-pink-400" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> : fiscalNotesMap?.[client.id] ? <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5 shrink-0" /> : <DocumentTextIcon className="w-3.5 h-3.5 shrink-0" />}
+                        <span>{isEmittingNFe ? 'Gerando...' : fiscalNotesMap?.[client.id] ? 'Abrir' : 'Nota'}</span>
+                    </button>
+                ) : <div />}
+            </section>
+
+            {/* FOOTER */}
+            <footer className="flex justify-between items-center px-1">
+                <button onClick={(e) => { e.stopPropagation(); onDelete(client); }} className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-500 hover:text-rose-600 transition-colors py-1 px-2 rounded-lg active:bg-rose-50" type="button">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    <span>Excluir</span>
+                </button>
+                <button
+                    onClick={(e) => { e.stopPropagation(); if (client.is_active) { setShowPauseConfirm(true); } else { setShowReactivateConfirm(true); } }}
+                    className={`inline-flex items-center gap-1.5 text-xs font-semibold transition-colors py-1 px-2 rounded-lg ${client.is_active ? 'text-amber-600 hover:text-amber-700 active:bg-amber-50' : 'text-emerald-600 hover:text-emerald-700 active:bg-emerald-50'}`}
+                    type="button"
+                >
+                    {client.is_active ? (<><PauseIcon className="w-3.5 h-3.5 shrink-0" /><span>Pausar</span></>) : (<><PlayIcon className="w-3.5 h-3.5 shrink-0" /><span>Ativar</span></>)}
+                </button>
+            </footer>
+
+            </div>
         {/* Modal de Confirmação da Pausa */}
         {showPauseConfirm && createPortal(
             <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-gray-950/60 backdrop-blur-sm animate-fadeIn" onClick={(e) => e.stopPropagation()}>
