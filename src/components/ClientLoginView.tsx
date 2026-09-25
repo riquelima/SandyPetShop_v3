@@ -131,7 +131,13 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-6 bg-[#FFF5F7]">
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#FFF5F7]">
+            <div className="mb-8 text-center animate-fadeInDown">
+                <h1 className="font-brand text-5xl sm:text-6xl text-pink-900 tracking-tight leading-none drop-shadow-sm">
+                    Sandy's <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400">Pet Shop</span>
+                </h1>
+            </div>
+
             <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm p-8 text-center animate-fadeInUp">
                 <div className="w-32 h-32 mx-auto mb-2 flex items-center justify-center overflow-hidden">
                     <iframe 
