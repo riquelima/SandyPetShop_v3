@@ -16263,9 +16263,28 @@ const DaycareBirthdaysModal: React.FC<{
 };
 
 const DaycareView: React.FC<{ refreshKey?: number; onFiscalNote?: (enrollment: DaycareRegistration) => void; emittingNFeId?: string | null; fiscalNotesMap?: Record<string, string>; onNavigate?: (view: string) => void }> = ({ refreshKey, onFiscalNote, emittingNFeId, fiscalNotesMap, onNavigate }) => {
-    const [enrollments, setEnrollments] = useState<DaycareRegistration[]>([]);
-    const [petsInDaycareNow, setPetsInDaycareNow] = useState<DaycareRegistration[]>([]);
-    const [loading, setLoading] = useState(true);
+    // Cache-first: hydrate state synchronously from localStorage before any network call
+    const [enrollments, setEnrollments] = useState<DaycareRegistration[]>(() => {
+        try {
+            const cached = localStorage.getItem('cached_daycare_enrollments_all');
+            if (cached) return JSON.parse(cached) as DaycareRegistration[];
+        } catch {}
+        return [];
+    });
+    const [petsInDaycareNow, setPetsInDaycareNow] = useState<DaycareRegistration[]>(() => {
+        try {
+            const cached = localStorage.getItem('cached_daycare_enrollments_all');
+            if (cached) {
+                const parsed = JSON.parse(cached) as DaycareRegistration[];
+                return parsed.filter(e => e.extra_services?.checked_in === true);
+            }
+        } catch {}
+        return [];
+    });
+    // Only show spinner if there is truly no cached data
+    const [loading, setLoading] = useState<boolean>(() => {
+        try { return !localStorage.getItem('cached_daycare_enrollments_all'); } catch { return true; }
+    });
     const [selectedEnrollment, setSelectedEnrollment] = useState<DaycareRegistration | null>(null);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -16493,12 +16512,21 @@ const DaycareView: React.FC<{ refreshKey?: number; onFiscalNote?: (enrollment: D
 
 
     const fetchEnrollments = useCallback(async () => {
-        setLoading(true);
+        // Only show the spinner when there is no cached data at all
+        const hasCached = enrollments.length > 0;
+        if (!hasCached) setLoading(true);
         try {
             const [daycareRes, apptsRes, hotelRes] = await Promise.all([
                 supabase.from('daycare_enrollments').select('*').order('created_at', { ascending: false }),
-                supabase.from('appointments').select('*').order('created_at', { ascending: false }),
-                supabase.from('hotel_registrations').select('*').order('created_at', { ascending: false })
+                // Filter server-side: only appointments that are creche-related (avoids downloading entire table)
+                supabase.from('appointments')
+                    .select('id,pet_name,owner_name,whatsapp,owner_address,pet_breed,service,price,appointment_time,created_at')
+                    .ilike('service', '%creche%')
+                    .order('created_at', { ascending: false }),
+                // Only select the columns we actually use from hotel_registrations
+                supabase.from('hotel_registrations')
+                    .select('id,pet_name,tutor_name,tutor_phone,tutor_address,pet_breed,service_notes,total_services_price,payment_status,check_in_date,check_out_date,created_at,pet_photo_url,last_vaccination_date,allergies')
+                    .order('created_at', { ascending: false })
             ]);
 
             const daycareData = ((daycareRes.data || []) as DaycareRegistration[]).map(d => {
@@ -16598,7 +16626,7 @@ const DaycareView: React.FC<{ refreshKey?: number; onFiscalNote?: (enrollment: D
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [enrollments.length]);
 
     useEffect(() => {
         fetchEnrollments();
