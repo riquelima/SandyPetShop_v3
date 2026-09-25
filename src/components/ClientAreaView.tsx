@@ -156,7 +156,9 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                             </div>
                                             <div className="pt-2 border-t border-gray-50 mt-1">
                                                 <p className="text-sm text-gray-700 font-medium">Pet: {appt.pet_name}</p>
-                                                <p className="text-sm text-gray-500">{appt.service} ({appt.source})</p>
+                                                <p className="text-sm text-gray-500">
+                                                    {appt.service?.includes(appt.source) ? appt.service : `${appt.service} ${appt.source ? `(${appt.source})` : ''}`.trim()}
+                                                </p>
                                             </div>
                                         </div>
                                     ))}
