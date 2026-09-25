@@ -101,7 +101,19 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
         }
     }, [phone, clientData.isMensalista]);
 
-    const upcoming = appointments.filter(a => a.status === 'AGENDADO' || a.status === 'Agendado' || !a.status);
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const startOfToday = new Date(now.setHours(0,0,0,0)).getTime();
+
+    const upcoming = appointments
+        .filter(a => {
+            const isAgendado = a.status === 'AGENDADO' || a.status === 'Agendado' || !a.status;
+            if (!isAgendado) return false;
+            const d = new Date(a.appointment_time);
+            return d.getMonth() === currentMonth && d.getFullYear() === currentYear && d.getTime() >= startOfToday;
+        })
+        .sort((a, b) => new Date(a.appointment_time).getTime() - new Date(b.appointment_time).getTime());
     const past = appointments.filter(a => a.status?.toUpperCase() === 'CONCLUÍDO' || a.status?.toUpperCase() === 'CONCLUIDO');
 
     return (
@@ -188,7 +200,12 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                                 </div>
                                                 <p className="text-sm font-medium text-pink-600 mb-0.5">{cleanServiceName(appt.service)}</p>
                                                 <p className="text-xs text-gray-500 font-medium">
-                                                    {new Date(appt.appointment_time).toLocaleDateString('pt-BR')} às {new Date(appt.appointment_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                                    {(() => {
+                                                        const d = new Date(appt.appointment_time);
+                                                        const dayName = d.toLocaleDateString('pt-BR', { weekday: 'long' });
+                                                        const capitalizedDay = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+                                                        return `${capitalizedDay}, ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+                                                    })()}
                                                 </p>
                                             </div>
                                         </div>
