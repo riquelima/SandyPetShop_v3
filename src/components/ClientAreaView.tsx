@@ -457,7 +457,7 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                     
                                     {currentMonthStatus === 'Pendente' ? (
                                         <div>
-                                            <div className="flex justify-between items-end mb-2">
+                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-2 gap-1 sm:gap-0">
                                                 <p className="text-3xl font-black text-gray-800">R$ {priceNum.toFixed(2).replace('.', ',')}</p>
                                                 <p className="text-sm font-medium text-red-500">Vence dia {getDynamicDueDate()}</p>
                                             </div>
@@ -607,7 +607,7 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                     
                                     {currentMonthStatus === 'Pendente' ? (
                                         <div>
-                                            <div className="flex justify-between items-end mb-2">
+                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-2 gap-1 sm:gap-0">
                                                 <p className="text-3xl font-black text-gray-800">R$ {mPet.price?.toFixed(2).replace('.', ',')}</p>
                                                 <p className="text-sm font-medium text-red-500">Vence dia {dueDateStr}</p>
                                             </div>
@@ -644,7 +644,7 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                     </div>
                                     {currentMonthStatus === 'Pendente' ? (
                                         <div>
-                                            <div className="flex justify-between items-end mb-2">
+                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-2 gap-1 sm:gap-0">
                                                 <p className="text-3xl font-black text-gray-800">R$ {priceNum.toFixed(2).replace('.', ',')}</p>
                                                 <p className="text-sm font-medium text-purple-500">Vence dia {getDynamicDueDate()}</p>
                                             </div>
