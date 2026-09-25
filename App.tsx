@@ -4538,7 +4538,13 @@ const AdminAddAppointmentModal: React.FC<{
             ownerName: pet.owner_name || prev.ownerName,
             petBreed: pet.pet_breed || prev.petBreed,
             ownerAddress: pet.owner_address || prev.ownerAddress,
+            whatsapp: pet.whatsapp || prev.whatsapp,
+            owner_cpf: pet.owner_cpf || prev.owner_cpf,
+            condominium: pet.condominium || prev.condominium,
         }));
+        
+        if (pet.whatsapp) setClientFound(true);
+        if (pet.condominium) setSelectedCondo(pet.condominium);
 
         if (pet.weight) {
             const weightEntry = Object.entries(PET_WEIGHT_OPTIONS).find(([key, val]) => val === pet.weight);
@@ -4585,6 +4591,30 @@ const AdminAddAppointmentModal: React.FC<{
                 setClientFound(false);
             } finally {
                 setIsFetchingClient(false);
+            }
+        }
+
+        // Autocomplete para nome do Pet
+        if (name === 'petName') {
+            if (value.length >= 2) {
+                try {
+                    const [appts, movelAppts] = await Promise.all([
+                        supabase.from('appointments').select('pet_name, owner_name, pet_breed, whatsapp, owner_cpf, owner_address, condominium, weight').ilike('pet_name', `%${value}%`).order('appointment_time', { ascending: false }).limit(20),
+                        supabase.from('pet_movel_appointments').select('pet_name, owner_name, pet_breed, whatsapp, owner_cpf, owner_address, condominium, weight').ilike('pet_name', `%${value}%`).order('appointment_time', { ascending: false }).limit(20)
+                    ]);
+                    
+                    const combined = [...(appts.data || []), ...(movelAppts.data || [])];
+                    const uniquePets = combined.reduce((acc: any[], current) => {
+                        const x = acc.find(item => item.pet_name?.toLowerCase() === current.pet_name?.toLowerCase() && item.owner_name?.toLowerCase() === current.owner_name?.toLowerCase());
+                        if (!x) return acc.concat([current]);
+                        return acc;
+                    }, []);
+                    setFoundPets(uniquePets.slice(0, 5));
+                } catch (e) {
+                    setFoundPets([]);
+                }
+            } else {
+                setFoundPets([]);
             }
         }
     };
@@ -4851,6 +4881,16 @@ const AdminAddAppointmentModal: React.FC<{
                                     <div className="relative">
                                         <span className="absolute inset-y-0 left-0 flex items-center pl-3.5"><PawIcon /></span>
                                         <input id="addAppt-petName" type="text" name="petName" value={formData.petName} onChange={handleInputChange} required placeholder="Ex: Buddy" className={`block w-full pl-11 pr-4 py-3.5 border rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all ${clientFound ? 'border-green-300 bg-green-50/50' : 'bg-gray-50/50 border-gray-200 focus:bg-white'}`} />
+                                        {foundPets.length > 0 && (
+                                            <div className="absolute z-20 w-full mt-1 bg-white border border-pink-100 rounded-xl shadow-xl overflow-hidden animate-fadeIn">
+                                                {foundPets.map((p, idx) => (
+                                                    <div key={idx} onClick={() => handleSelectPet(p)} className="flex flex-col px-4 py-3 hover:bg-pink-50 cursor-pointer border-b border-pink-50 last:border-0 transition-colors">
+                                                        <span className="font-bold text-pink-700 flex items-center gap-2">🐾 {p.pet_name} {p.pet_breed && <span className="text-xs text-gray-500 font-normal bg-gray-100 px-2 py-0.5 rounded-full">{p.pet_breed}</span>}</span>
+                                                        <span className="text-xs text-gray-600 font-medium mt-1">Tutor: {p.owner_name}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <div>
