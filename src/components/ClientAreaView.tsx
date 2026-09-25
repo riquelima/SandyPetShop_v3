@@ -389,15 +389,17 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                 }
 
                                 const currentMonthStatus = paymentMap[currentYYYYMM] || 'Pendente';
-                                const dueDateStr = targetData.payment_date ? targetData.payment_date.split('-').reverse().join('/') : '--';
+                                const rawDate = targetData.payment_date;
+                                const dueDateStr = rawDate ? String(rawDate).split('-').reverse().join('/') : '--';
+                                const priceNum = Number(targetData.total_price || 0);
 
                                 return currentMonthStatus === 'Pendente' ? (
                                     <div>
                                         <div className="flex justify-between items-end mb-2">
-                                            <p className="text-3xl font-black text-gray-800">R$ {targetData.total_price?.toFixed(2).replace('.', ',')}</p>
+                                            <p className="text-3xl font-black text-gray-800">R$ {priceNum.toFixed(2).replace('.', ',')}</p>
                                             <p className="text-sm font-medium text-red-500">Vence dia {dueDateStr}</p>
                                         </div>
-                                        <p className="text-xs text-gray-500 mb-4">Plano: {targetData.contracted_plan} {targetData.attendance_days ? `(${targetData.attendance_days})` : ''}</p>
+                                        <p className="text-xs text-gray-500 mb-4">Plano: {targetData.contracted_plan || 'Padrão'} {targetData.attendance_days ? `(${targetData.attendance_days})` : ''}</p>
                                     </div>
                                 ) : (
                                     <p className="text-gray-500 text-sm italic">Sua fatura deste mês já está paga. Tudo certo por aqui! ✨</p>
@@ -416,14 +418,14 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                     {daycareDiaries.map((diary, i) => (
                                         <div key={i} className="border-b border-gray-50 pb-4 last:border-0 last:pb-0">
                                             <div className="flex justify-between items-center mb-2">
-                                                <p className="font-bold text-pink-600">{new Date(diary.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} </p>
+                                                <p className="font-bold text-pink-600">{diary.date ? new Date(diary.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '--'} </p>
                                                 <span className="bg-pink-50 text-pink-600 text-xs px-2 py-0.5 rounded-full font-medium shadow-sm">
-                                                    Humor: {diary.mood}
+                                                    Humor: {diary.mood || '-'}
                                                 </span>
                                             </div>
-                                            <p className="text-sm text-gray-700 mb-1"><strong>Comportamento:</strong> {diary.behavior}</p>
-                                            <p className="text-sm text-gray-700 mb-1"><strong>Alimentação:</strong> {diary.feeding}</p>
-                                            <p className="text-sm text-gray-700 mb-1"><strong>Necessidades:</strong> {diary.needs_logs}</p>
+                                            <p className="text-sm text-gray-700 mb-1"><strong>Comportamento:</strong> {diary.behavior || '-'}</p>
+                                            <p className="text-sm text-gray-700 mb-1"><strong>Alimentação:</strong> {diary.feeding || '-'}</p>
+                                            <p className="text-sm text-gray-700 mb-1"><strong>Necessidades:</strong> {diary.needs_logs || '-'}</p>
                                             {diary.obs && <p className="text-sm text-gray-500 italic mt-2 text-justify">Obs: {diary.obs}</p>}
                                         </div>
                                     ))}
