@@ -7,15 +7,19 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
     const [error, setError] = useState('');
 
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let val = e.target.value.replace(/\D/g, '');
-        if (val.length > 11) val = val.substring(0, 11);
-        if (val.length > 2) {
-            val = `(${val.substring(0,2)}) ${val.substring(2)}`;
+        let raw = e.target.value.replace(/\D/g, '').substring(0, 11);
+        let formatted = raw;
+        if (raw.length > 2) {
+            formatted = `(${raw.substring(0, 2)}) `;
+            if (raw.length <= 10) {
+                formatted += raw.substring(2, 6);
+                if (raw.length > 6) formatted += '-' + raw.substring(6, 10);
+            } else {
+                formatted += raw.substring(2, 7);
+                if (raw.length > 7) formatted += '-' + raw.substring(7, 11);
+            }
         }
-        if (val.length > 9) {
-            val = `${val.substring(0,9)}-${val.substring(9)}`;
-        }
-        setPhone(val);
+        setPhone(formatted);
     };
 
     const handleLogin = async (e: React.FormEvent) => {
