@@ -10,6 +10,11 @@ const cleanServiceName = (service: string) => {
         .trim();
 };
 
+const formatName = (name: string) => {
+    if (!name) return '';
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+};
+
 const FallbackLottieAvatar = ({ className = "" }: { className?: string }) => (
     <div className={`overflow-hidden relative flex items-center justify-center ${className}`}>
         <iframe 
@@ -221,7 +226,7 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                         <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={uploadingPhoto} />
                     </label>
                 </div>
-                <h1 className="text-2xl font-bold font-brand tracking-wide">Olá, {clientData.name.split(' ')[0]}!</h1>
+                <h1 className="text-2xl font-bold font-brand tracking-wide">Olá, {formatName(clientData.name.split(' ')[0])}!</h1>
                 <p className="text-pink-100 text-sm mt-1.5 px-4 font-medium opacity-90">
                     {clientData.isDaycare
                         ? "Acompanhe a rotina do seu pet na creche e consulte suas faturas."
@@ -291,7 +296,7 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                             </div>
                                             <div className="flex-1">
                                                 <div className="flex justify-between items-start mb-0.5">
-                                                    <h4 className="font-bold text-gray-800 text-base">{appt.pet_name}</h4>
+                                                    <h4 className="font-bold text-gray-800 text-base">{formatName(appt.pet_name)}</h4>
                                                     <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                                                         Agendado
                                                     </span>
@@ -339,7 +344,7 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                             </div>
                                             <div className="flex-1">
                                                 <div className="flex justify-between items-start mb-0.5">
-                                                    <h4 className="font-bold text-gray-700 text-sm">{appt.pet_name}</h4>
+                                                    <h4 className="font-bold text-gray-700 text-sm">{formatName(appt.pet_name)}</h4>
                                                     <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                                                         Concluído
                                                     </span>
