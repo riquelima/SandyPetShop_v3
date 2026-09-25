@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 
+const cleanServiceName = (service: string) => {
+    return (service || '')
+        .replace(/\(Pet M[oó]vel\)/ig, '')
+        .replace(/\(Banho\s*&\s*Tosa\)/ig, '')
+        .replace(/Pet M[oó]vel/ig, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+};
+
 export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout: () => void }> = ({ clientData, phone, onLogout }) => {
     const [activeTab, setActiveTab] = useState<'appointments' | 'fidelity' | 'invoices'>('appointments');
     const [appointments, setAppointments] = useState<any[]>([]);
@@ -96,7 +105,7 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                 </button>
                 <div className="w-24 h-24 mx-auto mb-4 bg-white rounded-full p-1 shadow-md">
                     <img 
-                        src={clientData.pet_photo_url || 'https://cdn-icons-png.flaticon.com/512/3009/3009489.png'} 
+                        src={clientData.pet_photo_url || 'https://i.imgur.com/rN5y8uL.png'} 
                         alt="Avatar" 
                         className="w-full h-full rounded-full object-cover"
                     />
@@ -144,20 +153,24 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                             ) : upcoming.length > 0 ? (
                                 <div className="space-y-3">
                                     {upcoming.map((appt, i) => (
-                                        <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-pink-50 flex flex-col gap-2">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <p className="font-bold text-gray-800">{new Date(appt.appointment_time).toLocaleDateString('pt-BR')}</p>
-                                                    <p className="text-sm text-gray-500">{new Date(appt.appointment_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
-                                                </div>
-                                                <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                                                    Agendado
-                                                </span>
+                                        <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-pink-50 flex items-center gap-4 hover:shadow-md transition-shadow">
+                                            <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-pink-100 bg-pink-50">
+                                                <img 
+                                                    src={clientData.pet_photo_url || 'https://i.imgur.com/rN5y8uL.png'} 
+                                                    alt={appt.pet_name} 
+                                                    className="w-full h-full object-cover"
+                                                />
                                             </div>
-                                            <div className="pt-2 border-t border-gray-50 mt-1">
-                                                <p className="text-sm text-gray-700 font-medium">Pet: {appt.pet_name}</p>
-                                                <p className="text-sm text-gray-500">
-                                                    {appt.service?.includes(appt.source) ? appt.service : `${appt.service} ${appt.source ? `(${appt.source})` : ''}`.trim()}
+                                            <div className="flex-1">
+                                                <div className="flex justify-between items-start mb-0.5">
+                                                    <h4 className="font-bold text-gray-800 text-base">{appt.pet_name}</h4>
+                                                    <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                                        Agendado
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm font-medium text-pink-600 mb-0.5">{cleanServiceName(appt.service)}</p>
+                                                <p className="text-xs text-gray-500 font-medium">
+                                                    {new Date(appt.appointment_time).toLocaleDateString('pt-BR')} às {new Date(appt.appointment_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                                 </p>
                                             </div>
                                         </div>
@@ -179,17 +192,25 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                             ) : past.length > 0 ? (
                                 <div className="space-y-3">
                                     {past.slice(0, 10).map((appt, i) => (
-                                        <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-2 opacity-80">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <p className="font-semibold text-gray-700">{new Date(appt.appointment_time).toLocaleDateString('pt-BR')}</p>
-                                                </div>
-                                                <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-1 rounded-md uppercase">
-                                                    Concluído
-                                                </span>
+                                        <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 opacity-80 hover:opacity-100 transition-opacity">
+                                            <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-gray-100 bg-gray-50 grayscale">
+                                                <img 
+                                                    src={clientData.pet_photo_url || 'https://i.imgur.com/rN5y8uL.png'} 
+                                                    alt={appt.pet_name} 
+                                                    className="w-full h-full object-cover"
+                                                />
                                             </div>
-                                            <div>
-                                                <p className="text-sm text-gray-600 font-medium">{appt.pet_name} - {appt.service}</p>
+                                            <div className="flex-1">
+                                                <div className="flex justify-between items-start mb-0.5">
+                                                    <h4 className="font-bold text-gray-700 text-sm">{appt.pet_name}</h4>
+                                                    <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                                        Concluído
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs font-medium text-gray-600 mb-0.5">{cleanServiceName(appt.service)}</p>
+                                                <p className="text-xs text-gray-400 font-medium">
+                                                    {new Date(appt.appointment_time).toLocaleDateString('pt-BR')}
+                                                </p>
                                             </div>
                                         </div>
                                     ))}
