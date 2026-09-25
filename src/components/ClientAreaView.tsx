@@ -486,43 +486,43 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                         const pet = clientData.daycarePets?.find((p: any) => p.id === diary.enrollment_id);
                                         const pName = pet ? pet.pet_name : (clientData.pet_name || 'Pet');
                                         return (
-                                        <div key={i} className="min-w-[280px] w-full max-w-[320px] shrink-0 snap-center bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border border-pink-100 shadow-sm p-4 relative overflow-hidden">
-                                            <div className="absolute top-0 right-0 w-2 h-full bg-gradient-to-b from-purple-400 to-pink-400"></div>
-                                            <div className="flex justify-between items-center mb-4">
-                                                <div>
-                                                    <p className="font-bold text-pink-700 bg-white px-3 py-1.5 rounded-full shadow-sm text-sm border border-pink-100 inline-block mb-1">
-                                                        {diary.date ? new Date(diary.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '--'}
-                                                    </p>
-                                                    <p className="text-[10px] font-bold text-gray-500 uppercase ml-1">{pName}</p>
+                                        <div key={i} className="min-w-[260px] w-full max-w-[280px] shrink-0 snap-center bg-white rounded-2xl shadow-sm border border-pink-100 relative overflow-hidden flex flex-col transition-transform active:scale-95">
+                                            <div className="h-1.5 w-full bg-gradient-to-r from-purple-400 to-pink-400"></div>
+                                            <div className="p-4">
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div>
+                                                        <p className="font-extrabold text-gray-800 text-sm">
+                                                            {diary.date ? new Date(diary.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '--'}
+                                                        </p>
+                                                        <p className="text-[10px] font-bold text-pink-500 uppercase tracking-wide">{pName}</p>
+                                                    </div>
+                                                    <div className="flex flex-col items-center justify-center bg-pink-50 px-3 py-1.5 rounded-xl border border-pink-100/50">
+                                                        <span className="text-xl leading-none mb-0.5">{getMoodIcon(diary.mood)}</span>
+                                                        <span className="text-[9px] font-bold text-pink-700 uppercase tracking-wider">{diary.mood || 'Normal'}</span>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full shadow-sm border border-pink-100">
-                                                    <span className="text-xs font-bold text-gray-600">{diary.mood || 'Normal'}</span>
-                                                    <span className="text-lg leading-none">{getMoodIcon(diary.mood)}</span>
+                                                
+                                                <div className="grid grid-cols-2 gap-2 mb-3">
+                                                    <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100">
+                                                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Comportamento</p>
+                                                        <p className="text-xs font-semibold text-gray-700 truncate">{behaviorLabel(diary.behavior)}</p>
+                                                    </div>
+                                                    <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100">
+                                                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Alimentação</p>
+                                                        <p className="text-xs font-semibold text-gray-700 truncate">{diary.feeding || '-'}</p>
+                                                    </div>
+                                                    <div className="col-span-2 bg-gray-50 rounded-xl p-2.5 border border-gray-100">
+                                                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Necessidades</p>
+                                                        <p className="text-xs font-semibold text-gray-700 truncate">{Array.isArray(diary.needs_logs) ? (diary.needs_logs.map((n:any)=>`${n.type || 'Fez'} (${n.time || '--'})`).join(', ') || '-') : (typeof diary.needs_logs === 'string' ? diary.needs_logs : '-')}</p>
+                                                    </div>
                                                 </div>
+                                                {diary.obs && (
+                                                    <div className="bg-purple-50/50 p-2.5 rounded-xl border border-purple-100/50 mt-2">
+                                                        <p className="text-[9px] text-purple-400 font-bold uppercase tracking-wider mb-0.5">Observações</p>
+                                                        <p className="text-xs text-gray-600 italic font-medium leading-snug line-clamp-2">"{diary.obs}"</p>
+                                                    </div>
+                                                )}
                                             </div>
-                                            
-                                            <div className="space-y-3 bg-white p-3.5 rounded-xl shadow-sm border border-gray-100">
-                                                <div>
-                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">Comportamento</p>
-                                                    <p className="text-sm font-semibold text-gray-800">{behaviorLabel(diary.behavior)}</p>
-                                                </div>
-                                                <div className="h-px w-full bg-gray-100"></div>
-                                                <div>
-                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">Alimentação</p>
-                                                    <p className="text-sm font-semibold text-gray-800">{diary.feeding || '-'}</p>
-                                                </div>
-                                                <div className="h-px w-full bg-gray-100"></div>
-                                                <div>
-                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">Necessidades</p>
-                                                    <p className="text-sm font-semibold text-gray-800">{Array.isArray(diary.needs_logs) ? (diary.needs_logs.map((n:any)=>`${n.type || 'Fez'} (${n.time || '--'})`).join(', ') || '-') : (typeof diary.needs_logs === 'string' ? diary.needs_logs : '-')}</p>
-                                                </div>
-                                            </div>
-                                            {diary.obs && (
-                                                <div className="mt-3 bg-white/60 p-3.5 rounded-xl border border-pink-50">
-                                                    <p className="text-[10px] text-pink-500 font-bold uppercase tracking-widest mb-1">Observações Gerais</p>
-                                                    <p className="text-sm text-gray-700 italic font-medium leading-snug">"{diary.obs}"</p>
-                                                </div>
-                                            )}
                                         </div>
                                         );
                                     })}
