@@ -27,6 +27,58 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
 
     const [loyaltyData, setLoyaltyData] = useState<any>(null);
     const [loadingLoyalty, setLoadingLoyalty] = useState(false);
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const [photoUrl, setPhotoUrl] = useState(clientData.pet_photo_url || null);
+
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        const file = e.target.files[0];
+        
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${clientData.id || clientData.phone?.replace(/\D/g, '') || phone.replace(/\D/g, '')}_${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
+    
+        setUploadingPhoto(true);
+    
+        try {
+            const { error: uploadError } = await supabase.storage
+                .from('monthly_pet_photos')
+                .upload(filePath, file);
+    
+            if (uploadError) throw uploadError;
+    
+            const { data: { publicUrl } } = supabase.storage
+                .from('monthly_pet_photos')
+                .getPublicUrl(filePath);
+    
+            if (clientData.id && clientData.isMensalista) {
+                await supabase.from('monthly_clients').update({ pet_photo_url: publicUrl }).eq('id', clientData.id);
+            }
+            if (clientData.pet_name) {
+                const rawPhone = phone.replace(/\D/g, '');
+                const formatted11 = rawPhone.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2').slice(0, 15);
+                const formatted10 = rawPhone.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d)/, '$1-$2').slice(0, 14);
+                
+                await supabase.from('daycare_enrollments')
+                    .update({ pet_photo_url: publicUrl })
+                    .ilike('pet_name', clientData.pet_name)
+                    .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`);
+
+                await supabase.from('hotel_registrations')
+                    .update({ pet_photo_url: publicUrl })
+                    .ilike('pet_name', clientData.pet_name)
+                    .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`);
+            }
+            
+            setPhotoUrl(publicUrl);
+            clientData.pet_photo_url = publicUrl;
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao fazer upload da foto. Tente novamente.');
+        } finally {
+            setUploadingPhoto(false);
+        }
+    };
 
     useEffect(() => {
         const rawPhone = phone.replace(/\D/g, '');
@@ -125,16 +177,29 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                     </svg>
                 </button>
-                <div className="w-24 h-24 mx-auto mb-4 bg-white rounded-full p-1 shadow-md">
-                    {clientData.pet_photo_url ? (
-                        <img 
-                            src={clientData.pet_photo_url} 
-                            alt="Avatar" 
-                            className="w-full h-full rounded-full object-cover"
-                        />
-                    ) : (
-                        <FallbackLottieAvatar className="w-full h-full rounded-full" />
-                    )}
+                <div className="w-24 h-24 mx-auto mb-4 relative">
+                    <div className="w-full h-full bg-white rounded-full p-1 shadow-md">
+                        {photoUrl ? (
+                            <img 
+                                src={photoUrl} 
+                                alt="Avatar" 
+                                className="w-full h-full rounded-full object-cover"
+                            />
+                        ) : (
+                            <FallbackLottieAvatar className="w-full h-full rounded-full" />
+                        )}
+                    </div>
+                    <label className="absolute bottom-0 right-0 bg-pink-500 rounded-full p-2 shadow-lg cursor-pointer hover:bg-pink-400 transition-colors border-2 border-white">
+                        {uploadingPhoto ? (
+                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin block"></span>
+                        ) : (
+                            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        )}
+                        <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={uploadingPhoto} />
+                    </label>
                 </div>
                 <h1 className="text-2xl font-bold font-brand tracking-wide">Olá, {clientData.name.split(' ')[0]}!</h1>
                 <p className="text-pink-100 mt-1">{clientData.pet_name ? `Tutor(a) do ${clientData.pet_name}` : 'Bem-vindo(a) à sua área'}</p>
@@ -181,9 +246,9 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                     {upcoming.map((appt, i) => (
                                         <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-pink-50 flex items-center gap-4 hover:shadow-md transition-shadow">
                                             <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-pink-100 bg-pink-50">
-                                                {clientData.pet_photo_url ? (
+                                                {photoUrl ? (
                                                     <img 
-                                                        src={clientData.pet_photo_url} 
+                                                        src={photoUrl} 
                                                         alt={appt.pet_name} 
                                                         className="w-full h-full object-cover"
                                                     />
@@ -229,9 +294,9 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                     {past.slice(0, 10).map((appt, i) => (
                                         <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 opacity-80 hover:opacity-100 transition-opacity">
                                             <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-gray-100 bg-gray-50 grayscale">
-                                                {clientData.pet_photo_url ? (
+                                                {photoUrl ? (
                                                     <img 
-                                                        src={clientData.pet_photo_url} 
+                                                        src={photoUrl} 
                                                         alt={appt.pet_name} 
                                                         className="w-full h-full object-cover"
                                                     />
