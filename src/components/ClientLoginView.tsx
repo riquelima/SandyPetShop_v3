@@ -37,31 +37,22 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
         setError('');
 
         try {
-            // First try monthly_clients
-            const { data: monthlyData, error: monthlyError } = await supabase
+            let aggregatedData: any = {};
+            let found = false;
+
+            // Try monthly_clients
+            const { data: monthlyData } = await supabase
                 .from('monthly_clients')
                 .select('*')
                 .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`)
                 .maybeSingle();
 
             if (monthlyData) {
-                onLogin(rawPhone, { ...monthlyData, isMensalista: true, name: monthlyData.tutor_name || monthlyData.owner_name || 'Cliente' });
-                return;
+                aggregatedData = { ...monthlyData, isMensalista: true, name: monthlyData.tutor_name || monthlyData.owner_name || 'Cliente' };
+                found = true;
             }
 
-            // Then try clients
-            const { data: clientData, error: clientError } = await supabase
-                .from('clients')
-                .select('*')
-                .or(`phone.ilike."%${rawPhone}%",phone.ilike."%${formatted11}%",phone.ilike."%${formatted10}%"`)
-                .maybeSingle();
-
-            if (clientData) {
-                onLogin(rawPhone, { ...clientData, isMensalista: false, name: clientData.name || 'Cliente' });
-                return;
-            }
-
-            // Then try daycare_enrollments
+            // Try daycare_enrollments
             const { data: daycareData } = await supabase
                 .from('daycare_enrollments')
                 .select('*')
@@ -69,35 +60,64 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
                 .maybeSingle();
 
             if (daycareData) {
-                onLogin(rawPhone, { ...daycareData, isDaycare: true, name: daycareData.tutor_name || 'Cliente' });
-                return;
+                aggregatedData = {
+                    ...aggregatedData, // keep existing mensalista fields if they exist
+                    isDaycare: true,
+                    daycareData: daycareData,
+                    name: aggregatedData.name || daycareData.tutor_name || 'Cliente'
+                };
+                // If the user isn't mensalista, we can just map the pet photo and id here so it works generically.
+                if (!aggregatedData.id) aggregatedData.id = daycareData.id;
+                if (!aggregatedData.pet_photo_url) aggregatedData.pet_photo_url = daycareData.pet_photo_url;
+                if (!aggregatedData.pet_name) aggregatedData.pet_name = daycareData.pet_name;
+                
+                found = true;
             }
 
-            // Finally try appointments just to check if they have scheduled anything
-            const { data: apptData, error: apptError } = await supabase
-                .from('appointments')
-                .select('owner_name, whatsapp')
-                .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`)
-                .order('appointment_time', { ascending: false })
-                .limit(1)
+            // Try clients
+            const { data: clientData } = await supabase
+                .from('clients')
+                .select('*')
+                .or(`phone.ilike."%${rawPhone}%",phone.ilike."%${formatted11}%",phone.ilike."%${formatted10}%"`)
                 .maybeSingle();
 
-            if (apptData) {
-                onLogin(rawPhone, { name: apptData.owner_name, whatsapp: apptData.whatsapp, isMensalista: false });
-                return;
+            if (clientData) {
+                aggregatedData = { ...aggregatedData, name: aggregatedData.name || clientData.name || 'Cliente' };
+                found = true;
             }
-            
-            // Or try pet_movel_appointments
-             const { data: apptMovelData } = await supabase
-                .from('pet_movel_appointments')
-                .select('owner_name, whatsapp')
-                .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`)
-                .order('appointment_time', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-            
-            if (apptMovelData) {
-                onLogin(rawPhone, { name: apptMovelData.owner_name, whatsapp: apptMovelData.whatsapp, isMensalista: false });
+
+            // Try appointments
+            if (!found) {
+                const { data: apptData } = await supabase
+                    .from('appointments')
+                    .select('owner_name, whatsapp')
+                    .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`)
+                    .order('appointment_time', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                if (apptData) {
+                    aggregatedData = { ...aggregatedData, name: apptData.owner_name, whatsapp: apptData.whatsapp };
+                    found = true;
+                } else {
+                    const { data: apptMovelData } = await supabase
+                        .from('pet_movel_appointments')
+                        .select('owner_name, whatsapp')
+                        .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`)
+                        .order('appointment_time', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+                    
+                    if (apptMovelData) {
+                        aggregatedData = { ...aggregatedData, name: apptMovelData.owner_name, whatsapp: apptMovelData.whatsapp };
+                        found = true;
+                    }
+                }
+            }
+
+            if (found) {
+                if (aggregatedData.isMensalista === undefined) aggregatedData.isMensalista = false;
+                onLogin(rawPhone, aggregatedData);
                 return;
             }
 

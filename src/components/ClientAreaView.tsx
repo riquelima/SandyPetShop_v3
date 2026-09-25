@@ -238,32 +238,34 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
 
             {/* Content Tabs */}
             <div className="max-w-md mx-auto px-4 -mt-8 relative z-10">
-                <div className="bg-white rounded-2xl shadow-xl p-2 flex gap-2 mb-6">
+                <div className="bg-white rounded-2xl shadow-xl p-2 flex gap-1 mb-6 overflow-x-auto snap-x hide-scrollbar">
                     <button 
                         onClick={() => setActiveTab('appointments')}
-                        className={`flex-1 py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'appointments' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
+                        className={`flex-1 min-w-[100px] snap-center py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'appointments' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
                     >
                         Agenda
                     </button>
                     
-                    {clientData.isDaycare ? (
+                    {clientData.isDaycare && (
                         <button 
                             onClick={() => setActiveTab('daycare')}
-                            className={`flex-1 py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'daycare' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
+                            className={`flex-1 min-w-[100px] snap-center py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'daycare' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
                         >
                             Creche
                         </button>
-                    ) : clientData.isMensalista ? (
+                    )}
+
+                    {clientData.isMensalista ? (
                         <button 
                             onClick={() => setActiveTab('invoices')}
-                            className={`flex-1 py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'invoices' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
+                            className={`flex-1 min-w-[100px] snap-center py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'invoices' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
                         >
                             Faturas
                         </button>
                     ) : (
                         <button 
                             onClick={() => setActiveTab('fidelity')}
-                            className={`flex-1 py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'fidelity' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
+                            className={`flex-1 min-w-[100px] snap-center py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'fidelity' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
                         >
                             Fidelidade
                         </button>
@@ -378,22 +380,24 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                                 const currentYYYYMM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
                                 
                                 let paymentMap: Record<string, string> = {};
-                                if (typeof clientData.payment_status === 'string') {
-                                    try { paymentMap = JSON.parse(clientData.payment_status); } catch(e) {}
-                                } else if (clientData.payment_status && typeof clientData.payment_status === 'object') {
-                                    paymentMap = clientData.payment_status;
+                                const targetData = clientData.daycareData || clientData;
+                                
+                                if (typeof targetData.payment_status === 'string') {
+                                    try { paymentMap = JSON.parse(targetData.payment_status); } catch(e) {}
+                                } else if (targetData.payment_status && typeof targetData.payment_status === 'object') {
+                                    paymentMap = targetData.payment_status;
                                 }
 
                                 const currentMonthStatus = paymentMap[currentYYYYMM] || 'Pendente';
-                                const dueDateStr = clientData.payment_date ? clientData.payment_date.split('-').reverse().join('/') : '--';
+                                const dueDateStr = targetData.payment_date ? targetData.payment_date.split('-').reverse().join('/') : '--';
 
                                 return currentMonthStatus === 'Pendente' ? (
                                     <div>
                                         <div className="flex justify-between items-end mb-2">
-                                            <p className="text-3xl font-black text-gray-800">R$ {clientData.total_price?.toFixed(2).replace('.', ',')}</p>
+                                            <p className="text-3xl font-black text-gray-800">R$ {targetData.total_price?.toFixed(2).replace('.', ',')}</p>
                                             <p className="text-sm font-medium text-red-500">Vence dia {dueDateStr}</p>
                                         </div>
-                                        <p className="text-xs text-gray-500 mb-4">Plano: {clientData.contracted_plan} {clientData.attendance_days ? `(${clientData.attendance_days})` : ''}</p>
+                                        <p className="text-xs text-gray-500 mb-4">Plano: {targetData.contracted_plan} {targetData.attendance_days ? `(${targetData.attendance_days})` : ''}</p>
                                     </div>
                                 ) : (
                                     <p className="text-gray-500 text-sm italic">Sua fatura deste mês já está paga. Tudo certo por aqui! ✨</p>
