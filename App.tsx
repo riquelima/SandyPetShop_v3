@@ -1570,8 +1570,8 @@ const SignaturePad: React.FC<{ value?: string; onChange: (dataUrl: string) => vo
     );
 };
 const PawIcon = () => <SafeImage src="https://static.thenounproject.com/png/pet-icon-6939415-512.png" alt="Pet Icon" className="h-7 w-7 opacity-60" />;
-const UserIcon = () => <SafeImage src="https://cdn-icons-png.flaticon.com/512/10754/10754012.png" alt="User Icon" className="h-7 w-7 opacity-60" />;
-const WhatsAppIcon = () => <SafeImage src="https://cdn-icons-png.flaticon.com/512/15713/15713434.png" alt="WhatsApp Icon" className="h-5 w-5 opacity-60" />;
+const UserIcon = () => <SafeImage src="https://cdn-icons-png.flaticon.com/512/15494/15494722.png" alt="User Icon" className="h-4 w-4 opacity-60" />;
+const WhatsAppIcon = () => <SafeImage src="https://cdn-icons-png.flaticon.com/512/14051/14051811.png" alt="WhatsApp Icon" className="h-4 w-4 opacity-60" />;
 const SuccessIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="min-h-[64px] w-24 text-green-500 mx-auto mb-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>;
 const ChartBarIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>;
 const FunnelIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M3 4.5A1.5 1.5 0 014.5 3h15a1.5 1.5 0 011.2 2.4l-6.3 8.4v4.2a1.5 1.5 0 01-.9 1.37l-3 1.5A1.5 1.5 0 018 19.5v-5.7L1.3 5.4A1.5 1.5 0 013 4.5z" /></svg>;
@@ -4270,7 +4270,8 @@ const AdminAddAppointmentModal: React.FC<{
         owner_cpf: '',
         petBreed: '',
         ownerAddress: '',
-        observation: ''
+        observation: '',
+        petPhoto: null as string | null
     });
     const [selectedService, setSelectedService] = useState<ServiceType | null>(null);
     const [serviceStepView, setServiceStepView] = useState<'main' | 'bath_groom' | 'pet_movel' | 'pet_movel_condo' | 'hotel_pet' | 'daycare_options' | 'hotel_options'>('main');
@@ -4350,7 +4351,7 @@ const AdminAddAppointmentModal: React.FC<{
     // Reset form when modal opens/closes
     useEffect(() => {
         if (isOpen) {
-            setFormData({ petName: '', ownerName: '', whatsapp: '', owner_cpf: '', petBreed: '', ownerAddress: '', observation: '' });
+            setFormData({ petName: '', ownerName: '', whatsapp: '', owner_cpf: '', petBreed: '', ownerAddress: '', observation: '', petPhoto: null });
             setSelectedService(null);
             setServiceStepView('main');
             setSelectedCondo(null);
@@ -11508,9 +11509,7 @@ const DaycareRegistrationForm: React.FC<{
                                 <label className="block text-sm font-bold text-pink-900 uppercase tracking-widest mb-3">CPF/CNPJ (Fiscal)</label>
                                 <div className="relative">
                                     <span className="absolute inset-y-0 left-0 flex items-center pl-4">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5 text-pink-400">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Zm6-10.125a1.875 1.875 0 1 1-3.75 0 1.875 1.875 0 0 1 3.75 0Zm1.294 6.336a6.721 6.721 0 0 1-3.17.789 6.721 6.721 0 0 1-3.168-.789 3.376 3.376 0 0 1 6.338 0Z" />
-                                        </svg>
+                                        <SafeImage src="https://cdn-icons-png.flaticon.com/512/9881/9881335.png" alt="CPF/CNPJ Icon" className="h-4 w-4 opacity-60" />
                                     </span>
                                     <input
                                         type="text"
@@ -12136,6 +12135,8 @@ export const TimeSlotPicker: React.FC<{
 const AlbumGrid = ({ onPhotoClick }: { onPhotoClick: (photo: {url: string, filename: string}) => void }) => {
     const [photos, setPhotos] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const startedAt = useRef(Date.now());
 
     useEffect(() => {
         fetchPhotos();
@@ -12148,29 +12149,46 @@ const AlbumGrid = ({ onPhotoClick }: { onPhotoClick: (photo: {url: string, filen
                 .from('pet_album_photos')
                 .select('*')
                 .order('created_at', { ascending: false });
-            
+
             if (error) throw error;
             if (data) setPhotos(data);
         } catch (error) {
             console.error('Error fetching album photos:', error);
         } finally {
-            setLoading(false);
+            // Garante que o splash fique visível por pelo menos 3 segundos
+            const minDuration = 3000;
+            const elapsed = Date.now() - startedAt;
+            const remaining = Math.max(0, minDuration - elapsed);
+            setTimeout(() => setLoading(false), remaining);
         }
+    };
+
+    const goPrev = () => {
+        setCurrentIndex((prev) => (prev - 1 + photos.length) % photos.length);
+    };
+
+    const goNext = () => {
+        setCurrentIndex((prev) => (prev + 1) % photos.length);
     };
 
     if (loading) return (
         <div className="flex-1 flex flex-col items-center justify-center gap-6 animate-fadeIn">
-            <div className="relative">
-                <div className="w-24 h-24 border-8 border-pink-100 border-t-pink-600 rounded-full animate-spin"></div>
-                <div className="absolute inset-0 flex items-center justify-center text-3xl">🐶</div>
+            <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-br from-pink-400 via-rose-300 to-orange-200 rounded-full blur-2xl opacity-60 animate-pulse-slow scale-150"></div>
+                <SafeImage
+                    src="https://i.imgur.com/M3Gt3OA.png"
+                    alt="Sandy's Pet Shop Logo"
+                    className="relative h-24 w-24 sm:h-28 sm:w-28 object-contain drop-shadow-xl animate-pulse"
+                    loading="eager"
+                />
             </div>
-            <p className="text-pink-900 font-black text-2xl tracking-tight animate-pulse">Carregando memórias...</p>
+            <p className="text-pink-700 font-bold text-lg sm:text-xl tracking-tight animate-pulse">Carregando memórias...</p>
         </div>
     );
 
     if (photos.length === 0) return (
         <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40 space-y-6 animate-fadeIn">
-            <div className="text-9xl">📸</div>
+            <div className="text-9xl">��</div>
             <div className="space-y-2">
                 <p className="text-3xl font-black text-pink-950">Nenhuma foto ainda.</p>
                 <p className="font-bold text-pink-700 text-lg">Em breve, muitos momentos lindos aqui!</p>
@@ -12178,31 +12196,76 @@ const AlbumGrid = ({ onPhotoClick }: { onPhotoClick: (photo: {url: string, filen
         </div>
     );
 
+    const current = photos[currentIndex];
+    const visibleDots = Math.min(photos.length, 6);
+
     return (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6 pb-20">
-            {photos.map((photo, index) => (
-                <div 
-                    key={photo.id} 
-                    onClick={() => onPhotoClick({ url: photo.url, filename: photo.filename })}
-                    className="animate-bloom cursor-pointer group"
-                    style={{ animationDelay: `${index * 0.05}s` }}
+        <div className="w-full flex-1 flex flex-col animate-fadeIn">
+            <section
+                className="relative flex-1 flex flex-col justify-center items-center px-2 sm:px-4 py-2 overflow-hidden"
+                data-purpose="photo-carousel"
+            >
+                <div
+                    className="relative w-full h-full max-h-[640px] rounded-[28px] sm:rounded-[32px] overflow-hidden bg-white p-2 border border-white flex flex-col"
+                    style={{ boxShadow: '0 12px 36px -8px rgba(217, 37, 110, 0.18), 0 4px 16px -4px rgba(0, 0, 0, 0.06)' }}
                 >
-                    <div className="relative aspect-square rounded-[2rem] overflow-hidden shadow-md hover:shadow-2xl transition-all duration-700 hover:-translate-y-2 border-4 border-white bg-pink-50">
-                        <img 
-                            src={photo.url} 
-                            alt={photo.filename}
-                            className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-1000 ease-out"
-                            loading="lazy"
+                    <div
+                        className="relative w-full h-full rounded-[22px] sm:rounded-[24px] overflow-hidden bg-rose-50 cursor-pointer"
+                        onClick={() => onPhotoClick({ url: current.url, filename: current.filename })}
+                    >
+                        <img
+                            key={current.id}
+                            alt={current.filename}
+                            className="w-full h-full object-cover object-center animate-fadeIn"
+                            src={current.url}
+                            loading="eager"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-pink-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-4">
-                            <p className="text-white font-bold text-xs truncate mb-1">{photo.filename}</p>
-                            <p className="text-pink-200 text-[10px] uppercase font-black tracking-tighter">
-                                {new Date(photo.created_at).toLocaleDateString('pt-BR')}
-                            </p>
+                        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none"></div>
+                        <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-1.5 z-10">
+                            {photos.slice(0, visibleDots).map((_, i) => (
+                                <span
+                                    key={i}
+                                    onClick={(e) => { e.stopPropagation(); setCurrentIndex(i); }}
+                                    className={
+                                        i === currentIndex % visibleDots
+                                            ? 'w-5 h-1.5 rounded-full bg-pink-600 shadow-sm transition-all duration-300 cursor-pointer'
+                                            : 'w-1.5 h-1.5 rounded-full bg-white/70 backdrop-blur-sm cursor-pointer hover:bg-white'
+                                    }
+                                ></span>
+                            ))}
                         </div>
                     </div>
                 </div>
-            ))}
+
+                <button
+                    aria-label="Foto anterior"
+                    onClick={goPrev}
+                    className="absolute left-1 sm:-left-1 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/95 backdrop-blur-md border border-rose-100 flex items-center justify-center text-pink-600 active:scale-90 hover:bg-rose-50/80 transition-all z-20"
+                    style={{ boxShadow: '0 8px 24px -4px rgba(217, 37, 110, 0.25)' }}
+                    type="button"
+                >
+                    <svg className="w-5 h-5 -ml-0.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path d="M15 18l-6-6 6-6"></path>
+                    </svg>
+                </button>
+                <button
+                    aria-label="Próxima foto"
+                    onClick={goNext}
+                    className="absolute right-1 sm:-right-1 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/95 backdrop-blur-md border border-rose-100 flex items-center justify-center text-pink-600 active:scale-90 hover:bg-rose-50/80 transition-all z-20"
+                    style={{ boxShadow: '0 8px 24px -4px rgba(217, 37, 110, 0.25)' }}
+                    type="button"
+                >
+                    <svg className="w-5 h-5 -mr-0.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path d="M9 18l6-6-6-6"></path>
+                    </svg>
+                </button>
+
+                <div className="mt-3 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-semibold tracking-widest text-pink-700/90 bg-white/70 px-3 py-1 rounded-full border border-rose-100 backdrop-blur-sm">
+                        {currentIndex + 1} <span className="text-rose-300 font-normal px-1">/</span> {photos.length}
+                    </span>
+                </div>
+            </section>
         </div>
     );
 };
@@ -13004,11 +13067,18 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 bg-[#fff0f5] font-sans selection:bg-pink-200">
-            <button onClick={() => setView('clientLogin')} className="absolute top-4 right-4 sm:top-8 sm:right-8 p-3 rounded-full bg-white/70 backdrop-blur-md shadow-sm border border-pink-100 hover:bg-pink-50 transition-all group z-50">
-                <svg className="w-6 h-6 text-pink-700 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                </svg>
-            </button>
+            {!showPublicAlbum && !isWeeklyScheduleOpen && !isAdoptionOpen && serviceStepView === 'main' && (
+                <button
+                    onClick={() => setView('clientLogin')}
+                    aria-label="Área do cliente"
+                    title="Área do cliente"
+                    className="absolute top-3 right-3 sm:top-5 sm:right-5 p-2 rounded-full hover:bg-pink-50/40 transition-all group z-50"
+                >
+                    <svg className="w-5 h-5 text-pink-400 group-hover:text-pink-600 group-hover:scale-110 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                    </svg>
+                </button>
+            )}
             <div className="w-full max-w-7xl relative z-10 flex flex-col items-center">
                 {/* ═══ HERO SECTION — Petal Luxe ═══ */}
                 <header className="w-full flex flex-col items-center text-center mb-10 md:mb-16 animate-fadeInUp">
@@ -13097,28 +13167,33 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                 {/* VISÃO DO ÁLBUM PREMIUM */}
                 {showPublicAlbum && (
                     <div className="fixed inset-0 z-[150] bg-[#fff0f5] overflow-y-auto animate-fadeIn flex flex-col">
-                        <button 
-                            onClick={() => setShowPublicAlbum(false)}
-                            className="absolute top-5 left-5 z-[160] p-2.5 bg-white/90 backdrop-blur-md text-pink-700 rounded-full shadow-md border border-pink-100/80 hover:bg-pink-600 hover:text-white hover:border-pink-600 transition-all duration-300 hover:scale-110 active:scale-95 flex items-center justify-center group"
-                            title="Voltar"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5 group-hover:-translate-x-1 transition-transform">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-                            </svg>
-                        </button>
-                        <div className="w-full max-w-7xl mx-auto px-4 py-8 md:py-12 flex flex-col flex-1 pl-14 sm:pl-4">
-                            <header className="flex flex-col md:flex-row items-center justify-between mb-12 gap-8 animate-slideDown">
-                                <div className="flex items-center gap-6">
-                                    <div className="text-center md:text-left">
-                                        <h2 className="text-5xl font-bold text-pink-600 leading-none" style={{ fontFamily: 'Lobster Two, cursive' }}>Álbum</h2>
-                                        <p className="text-pink-600 font-extrabold text-[10px] uppercase tracking-[0.3em] mt-2">Momentos Inesquecíveis</p>
-                                    </div>
-                                </div>
-                                <div className="flex -space-x-4">
-                                    {[1,2,3,4].map(i => <div key={i} className="w-12 h-12 rounded-full border-4 border-white bg-pink-100 flex items-center justify-center text-xl shadow-md">📸</div>)}
-                                </div>
-                            </header>
+                        {/* Top Navigation */}
+                        <nav className="w-full px-6 pt-4 pb-2 flex items-center justify-between relative shrink-0 z-20">
+                            <button
+                                aria-label="Voltar"
+                                onClick={() => setShowPublicAlbum(false)}
+                                className="w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-stone-700 active:scale-95 transition border border-rose-100/60 hover:text-pink-600"
+                                type="button"
+                            >
+                                <svg className="w-5 h-5 -ml-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round"></path>
+                                </svg>
+                            </button>
+                            <div className="text-center flex flex-col items-center absolute left-1/2 -translate-x-1/2">
+                                <h1
+                                    className="text-3xl font-bold text-pink-600 tracking-tight leading-tight"
+                                    style={{ fontFamily: '"Lobster Two", cursive' }}
+                                >
+                                    Álbum
+                                </h1>
+                                <p className="text-[10px] uppercase font-bold tracking-[0.24em] text-pink-500/80 mt-0.5 whitespace-nowrap">
+                                    Momentos Inesquecíveis
+                                </p>
+                            </div>
+                        </nav>
 
+                        {/* Main: Carrossel em destaque */}
+                        <div className="w-full max-w-2xl mx-auto px-4 flex flex-col flex-1 pb-6">
                             <AlbumGrid onPhotoClick={(p: any) => setSelectedPhoto(p)} />
                         </div>
                     </div>
@@ -13280,6 +13355,70 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                                     </div>
                         {/* SECTION 1: DADOS */}
                         <div className="space-y-7 border-b border-gray-100 pb-8">
+                            {/* Avatar de upload da foto do pet */}
+                            <div className="flex flex-col items-center justify-center mb-2">
+                                <label
+                                    htmlFor="pet-photo-upload"
+                                    className="relative group cursor-pointer"
+                                    title="Adicionar foto do pet"
+                                >
+                                    <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-pink-100 to-rose-200 flex items-center justify-center transition-all group-hover:scale-105 group-hover:shadow-xl">
+                                        {formData.petPhoto ? (
+                                            <img
+                                                src={formData.petPhoto}
+                                                alt="Foto do pet"
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            // @ts-ignore - web component lottie-player via CDN
+                                            <lottie-player
+                                                src="https://lottie.host/ee823306-d890-4936-8032-f1bae7614d82/A1LpnduBwz.json"
+                                                background="transparent"
+                                                speed="1"
+                                                style={{ width: '100%', height: '100%' }}
+                                                loop
+                                                autoplay
+                                            ></lottie-player>
+                                        )}
+                                    </div>
+                                    {/* Icone de camera/badge */}
+                                    <div className="absolute bottom-0 right-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-pink-600 border-4 border-white shadow-md flex items-center justify-center group-hover:bg-pink-700 transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 sm:w-5 sm:h-5 text-white">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                                        </svg>
+                                    </div>
+                                    <input
+                                        id="pet-photo-upload"
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+                                            const reader = new FileReader();
+                                            reader.onload = (ev) => {
+                                                const dataUrl = ev.target?.result as string;
+                                                setFormData(prev => ({ ...prev, petPhoto: dataUrl }));
+                                            };
+                                            reader.readAsDataURL(file);
+                                        }}
+                                    />
+                                </label>
+                                <p className="mt-3 text-xs sm:text-sm text-pink-700 font-bold uppercase tracking-wider">
+                                    {formData.petPhoto ? 'Foto carregada com sucesso' : 'Adicione a foto do seu pet'}
+                                </p>
+                                {formData.petPhoto && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, petPhoto: null }))}
+                                        className="mt-1 text-[11px] font-bold text-pink-500 hover:text-pink-700 underline underline-offset-2"
+                                    >
+                                        Remover foto
+                                    </button>
+                                )}
+                            </div>
+
                             <h2 className="text-3xl font-extrabold text-pink-950 whitespace-nowrap leading-none tracking-tight">Informações</h2>
                             <div>
                                 <label htmlFor="whatsapp" className="block text-sm font-bold text-pink-900 uppercase tracking-widest mb-2">WhatsApp</label>
@@ -13596,7 +13735,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                                         </div>
                                     </div>
                                     <div>
-                                        <h3 className="text-sm font-bold text-pink-900 uppercase tracking-widest mb-4 mt-8">3. Serviços Adicionais (Opcional)</h3>
+                                        <h3 className="text-sm font-bold text-pink-900 uppercase tracking-widest mb-4 mt-8 whitespace-nowrap">3. Serviços Adicionais (Opcional)</h3>
                                         <div className="max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2">
                                                 {ADDON_SERVICES.filter(a => a.id !== 'tosa_higienica').map(addon => {
@@ -13683,7 +13822,20 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                         {/* SECTION 4: RESUMO E CONFIRMAÇÃO */}
                         {selectedTime && (
                             <div className="space-y-6 pt-6 animate-fadeIn">
-                                <h2 className="text-3xl font-extrabold text-pink-950 leading-tight tracking-tight mb-4 break-words">Resumo do Agendamento</h2>
+                                <h2 className="text-3xl font-extrabold text-pink-950 leading-tight tracking-tight mb-4 break-words whitespace-nowrap">Resumo do Agendamento</h2>
+                                {/* Foto do pet no resumo - so exibe se houver foto adicionada */}
+                                {formData.petPhoto && (
+                                    <div className="flex flex-col items-center justify-center -mt-2 mb-2">
+                                        <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-pink-100 to-rose-200 flex items-center justify-center">
+                                            <img
+                                                src={formData.petPhoto}
+                                                alt={`Foto de ${formData.petName}`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                        <p className="mt-2 text-sm font-extrabold text-pink-950">{formData.petName}</p>
+                                    </div>
+                                )}
                                 <div className="p-6 bg-white rounded-lg space-y-2 text-gray-700 border border-gray-200">
                                     <p><strong>Pet:</strong> {formData.petName} ({formData.petBreed})</p>
                                     <p><strong>Responsável:</strong> {formData.ownerName}</p>
@@ -14949,7 +15101,7 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
 
                 <div className="grid grid-cols-2 gap-y-3 gap-x-2 mb-4 bg-gray-50/50 p-2.5 sm:p-3 rounded-xl border border-gray-100">
                     <div className="flex items-start sm:items-center gap-2 overflow-hidden">
-                        <SafeImage src="https://cdn-icons-png.flaticon.com/512/10754/10754012.png" alt="User Icon" className="h-7 w-7 opacity-60" loading="lazy" />
+                        <SafeImage src="https://cdn-icons-png.flaticon.com/512/15494/15494722.png" alt="User Icon" className="h-7 w-7 opacity-60" loading="lazy" />
                         <div className="flex flex-col min-w-0">
                             <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate">Tutor</span>
                             <span className="text-xs font-medium text-gray-700 truncate">{registration.tutor_name}</span>
@@ -20605,7 +20757,7 @@ const VisitAppointmentForm: React.FC<{ serviceLabel: string; onBack: () => void;
                                     <label htmlFor="ownerName" className="block text-base font-semibold text-gray-700">Seu Nome</label>
                                     <div className="relative mt-1">
                                         <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-                                            <SafeImage alt="User Icon" className="h-7 w-7 opacity-60" src="https://cdn-icons-png.flaticon.com/512/10754/10754012.png" />
+                                            <SafeImage alt="User Icon" className="h-4 w-4 opacity-60" src="https://cdn-icons-png.flaticon.com/512/15494/15494722.png" />
                                         </span>
                                         <input id="ownerName" required value={ownerName} onChange={e => setOwnerName(e.target.value)} className="block w-full pl-10 pr-5 py-4 bg-gray-50 border rounded-lg shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-gray-900 transition-colors border-gray-300" type="text" placeholder="Nome completo" />
                                     </div>
@@ -20615,7 +20767,7 @@ const VisitAppointmentForm: React.FC<{ serviceLabel: string; onBack: () => void;
                                     <label htmlFor="whatsapp" className="block text-base font-semibold text-gray-700">WhatsApp</label>
                                     <div className="relative mt-1">
                                         <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-                                            <SafeImage alt="WhatsApp Icon" className="h-5 w-5 opacity-60" src="https://cdn-icons-png.flaticon.com/512/15713/15713434.png" />
+                                            <SafeImage alt="WhatsApp Icon" className="h-4 w-4 opacity-60" src="https://cdn-icons-png.flaticon.com/512/14051/14051811.png" />
                                         </span>
                                         <input id="whatsapp" required value={whatsapp} onChange={e => setWhatsapp(formatWhatsapp(e.target.value))} placeholder="(XX) XXXXX-XXXX" maxLength={15} className="block w-full pl-10 pr-10 py-4 bg-gray-50 border rounded-lg shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-gray-900 transition-colors border-gray-300" type="tel" />
                                     </div>
