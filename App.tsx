@@ -1,4 +1,54 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+
+// Declaracao global do lottie-web (bodymovin) carregado via CDN
+declare global {
+  interface Window {
+    lottie: any;
+  }
+}
+
+// Componente Lottie robusto usando lottie-web (bodymovin) via window.lottie
+interface LottieAnimationProps {
+  src: string;
+  loop?: boolean;
+  autoplay?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
+}
+const LottieAnimation: React.FC<LottieAnimationProps> = ({ src, loop = true, autoplay = true, className, style }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const animRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    if (typeof window === 'undefined' || !window.lottie) return;
+
+    let cancelled = false;
+    fetch(src)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled || !containerRef.current) return;
+        animRef.current = window.lottie.loadAnimation({
+          container: containerRef.current,
+          renderer: 'svg',
+          loop,
+          autoplay,
+          animationData: data,
+        });
+      })
+      .catch(err => console.error('Lottie load error:', err));
+
+    return () => {
+      cancelled = true;
+      if (animRef.current) {
+        animRef.current.destroy();
+        animRef.current = null;
+      }
+    };
+  }, [src, loop, autoplay]);
+
+  return <div ref={containerRef} className={className} style={style} />;
+};
 import { createPortal } from 'react-dom';
 import { toBlob } from 'html-to-image';
 import { CheckCircleIcon as CheckCircleOutlineIcon, XCircleIcon as XCircleOutlineIcon, EyeIcon as EyeOutlineIcon, PencilSquareIcon as PencilOutlineIcon, PlusIcon as PlusOutlineIcon, TrashIcon as TrashOutlineIcon, LockClosedIcon as LockClosedOutlineIcon, XMarkIcon, PhoneIcon, SparklesIcon, ChartPieIcon, ChevronUpIcon, ChevronDownIcon as HeroChevronDownIcon, ArrowTrendingUpIcon, PhotoIcon, Cog6ToothIcon, ArrowUpTrayIcon, UserPlusIcon, Squares2X2Icon, ChevronLeftIcon, ChevronRightIcon, GiftIcon, DocumentTextIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
@@ -1569,14 +1619,14 @@ const SignaturePad: React.FC<{ value?: string; onChange: (dataUrl: string) => vo
         </div>
     );
 };
-const PawIcon = () => <SafeImage src="https://static.thenounproject.com/png/pet-icon-6939415-512.png" alt="Pet Icon" className="h-7 w-7 opacity-60" />;
+const PawIcon = () => <SafeImage src="https://static.thenounproject.com/png/pet-icon-6939415-512.png" alt="Pet Icon" className="h-4 w-4 opacity-60" />;
 const UserIcon = () => <SafeImage src="https://cdn-icons-png.flaticon.com/512/15494/15494722.png" alt="User Icon" className="h-4 w-4 opacity-60" />;
 const WhatsAppIcon = () => <SafeImage src="https://cdn-icons-png.flaticon.com/512/14051/14051811.png" alt="WhatsApp Icon" className="h-4 w-4 opacity-60" />;
 const SuccessIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="min-h-[64px] w-24 text-green-500 mx-auto mb-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>;
 const ChartBarIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>;
 const FunnelIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M3 4.5A1.5 1.5 0 014.5 3h15a1.5 1.5 0 011.2 2.4l-6.3 8.4v4.2a1.5 1.5 0 01-.9 1.37l-3 1.5A1.5 1.5 0 018 19.5v-5.7L1.3 5.4A1.5 1.5 0 013 4.5z" /></svg>;
-const BreedIcon = () => <SafeImage src="https://static.thenounproject.com/png/pet-icon-7326432-512.png" alt="Breed Icon" className="h-7 w-7 opacity-60" />;
-const AddressIcon = () => <SafeImage src="https://static.thenounproject.com/png/location-icon-7979305-512.png" alt="Address Icon" className="h-7 w-7 opacity-60" />;
+const BreedIcon = () => <SafeImage src="https://static.thenounproject.com/png/pet-icon-7326432-512.png" alt="Breed Icon" className="h-4 w-4 opacity-60" />;
+const AddressIcon = () => <SafeImage src="https://static.thenounproject.com/png/location-icon-7979305-512.png" alt="Address Icon" className="h-4 w-4 opacity-60" />;
 const LogoutIcon = () => <SafeImage src="https://cdn-icons-png.flaticon.com/512/15604/15604119.png" alt="Sair" className="h-6 w-6 object-contain inline-block" />;
 const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" /></svg>;
 const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 10.586V6z" clipRule="evenodd" /></svg>;
@@ -2053,7 +2103,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
 
                 {/* Text with fade and slide up */}
                 <div className="text-center space-y-3 opacity-0 animate-splash-slide-up" style={{ animationDelay: '0.5s' }}>
-                    <h1 className="font-brand text-7xl text-pink-800 tracking-tight drop-shadow-sm">{title}</h1>
+                    <h1 className="font-brand text-5xl sm:text-6xl md:text-7xl text-pink-800 tracking-tight drop-shadow-sm whitespace-nowrap">{title}</h1>
                     <div className="flex items-center justify-center gap-4">
                         <div className="h-[2px] w-12 bg-pink-100 rounded-full"></div>
                         <p className="text-pink-400 font-bold tracking-[0.3em] uppercase text-xs sm:text-sm">{subtitle}</p>
@@ -13370,15 +13420,10 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
-                                            // @ts-ignore - web component lottie-player via CDN
-                                            <lottie-player
+                                            <LottieAnimation
                                                 src="https://lottie.host/ee823306-d890-4936-8032-f1bae7614d82/A1LpnduBwz.json"
-                                                background="transparent"
-                                                speed="1"
                                                 style={{ width: '100%', height: '100%' }}
-                                                loop
-                                                autoplay
-                                            ></lottie-player>
+                                            />
                                         )}
                                     </div>
                                     {/* Icone de camera/badge */}
@@ -13445,9 +13490,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                                 <label htmlFor="owner_cpf" className="block text-sm font-bold text-pink-900 uppercase tracking-widest mb-2">CPF/CNPJ (Fiscal)</label>
                                 <div className="relative mt-1">
                                     <span className="absolute inset-y-0 left-0 flex items-center pl-4">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5 text-pink-400">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Zm6-10.125a1.875 1.875 0 1 1-3.75 0 1.875 1.875 0 0 1 3.75 0Zm1.294 6.336a6.721 6.721 0 0 1-3.17.789 6.721 6.721 0 0 1-3.168-.789 3.376 3.376 0 0 1 6.338 0Z" />
-                                        </svg>
+                                        <SafeImage src="https://cdn-icons-png.flaticon.com/512/9881/9881335.png" alt="CPF/CNPJ Icon" className="h-4 w-4 opacity-60" />
                                     </span>
                                     <input
                                         type="text"
@@ -13884,7 +13927,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                                     <button type="submit" disabled={isSubmitting || !isStep1Valid || !isStep2Valid || !isStep3Valid} className="group relative overflow-hidden w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-extrabold py-2.5 px-8 rounded-2xl transition-all duration-300 shadow-[0_8px_30px_rgb(244,114,182,0.3)] hover:shadow-[0_8px_30px_rgb(244,114,182,0.5)] transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none text-lg tracking-wide uppercase">
                                         <div className="absolute inset-0 bg-white/20 w-0 group-hover:w-full transition-all duration-500 ease-out"></div>
                                         <span className="relative z-10 flex items-center justify-center gap-2">
-                                            {isSubmitting ? 'Agendando...' : <><span>✓</span> Confirmar Agendamento</>}
+                                            {isSubmitting ? 'Agendando...' : (<><span>✓</span> Confirmar Agendamento</>)}
                                         </span>
                                     </button>
                                 </div>
@@ -20507,7 +20550,18 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
 
     if (view === 'visitSelector') {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-pink-50 via-white to-rose-50">
+            <div className="min-h-screen flex flex-col items-center justify-center p-6 pt-20 bg-gradient-to-br from-pink-50 via-white to-rose-50 relative">
+                {/* Botao Voltar no header (padrao dos formularios) */}
+                <button
+                    type="button"
+                    onClick={() => setViewWithLog('scheduler')}
+                    className="absolute top-6 left-2 sm:top-8 sm:left-4 z-[110] flex items-center justify-center w-10 h-10 bg-pink-50 text-pink-700 font-bold rounded-full shadow-sm hover:bg-pink-100 hover:shadow-md transition-all duration-300"
+                    title="Voltar para a pagina inicial"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                    </svg>
+                </button>
                 <div className="text-center mb-8">
                     <SafeImage src="https://i.imgur.com/M3Gt3OA.png" alt="Sandy's Pet Shop" className="h-20 w-20 mx-auto mb-2" loading="eager" />
                     <h1 className="font-brand text-4xl text-pink-800">Sandy's Pet Shop</h1>
@@ -20520,10 +20574,6 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
                             <img src="https://cdn-icons-png.flaticon.com/512/11201/11201086.png" alt="Creche Pet" className="w-12 h-12 rounded-full object-contain mb-2" />
                             <span className="text-lg">Creche Pet</span>
                         </button>
-                    </div>
-
-                    <div className="mt-6 text-center">
-                        <button type="button" onClick={() => setViewWithLog('scheduler')} className="text-sm text-pink-600 hover:underline">← Voltar</button>
                     </div>
                 </main>
             </div>
@@ -20777,7 +20827,7 @@ const VisitAppointmentForm: React.FC<{ serviceLabel: string; onBack: () => void;
                                     <label htmlFor="petName" className="block text-base font-semibold text-gray-700">Nome do Pet</label>
                                     <div className="relative mt-1">
                                         <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-                                            <SafeImage alt="Pet Icon" className="h-7 w-7 opacity-60" src="https://static.thenounproject.com/png/pet-icon-6939415-512.png" />
+                                            <SafeImage alt="Pet Icon" className="h-4 w-4 opacity-60" src="https://static.thenounproject.com/png/pet-icon-6939415-512.png" />
                                         </span>
                                         <input id="petName" required value={petName} onChange={e => setPetName(e.target.value)} className="block w-full pl-10 pr-5 py-4 bg-gray-50 border rounded-lg shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-gray-900 transition-colors border-gray-300" type="text" placeholder="Nome do seu pet" />
                                     </div>

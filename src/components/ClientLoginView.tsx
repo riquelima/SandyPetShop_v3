@@ -138,7 +138,20 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
     };
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#FFF5F7]">
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 pt-20 bg-[#FFF5F7] relative">
+            {/* Botao Voltar no header (padrao dos formularios) */}
+            <button
+                type="button"
+                onClick={onBack}
+                aria-label="Voltar para a pagina inicial"
+                title="Voltar para a pagina inicial"
+                className="absolute top-6 left-2 sm:top-8 sm:left-4 z-[110] flex items-center justify-center w-10 h-10 bg-pink-50 text-pink-700 font-bold rounded-full shadow-sm hover:bg-pink-100 hover:shadow-md transition-all duration-300"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                </svg>
+            </button>
+
             <div className="mb-8 text-center animate-fadeInDown">
                 <h1 className="font-brand text-5xl sm:text-6xl text-pink-900 tracking-tight leading-none drop-shadow-sm">
                     Sandy's <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400">Pet Shop</span>
@@ -147,9 +160,9 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
 
             <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm p-8 text-center animate-fadeInUp">
                 <div className="w-32 h-32 mx-auto mb-2 flex items-center justify-center overflow-hidden">
-                    <iframe 
+                    <iframe
                         src="https://lottie.host/embed/70d1f5f9-34fa-4399-a363-31149183508f/eAiSwdNV2o.json"
-                        className="w-full h-full pointer-events-none scale-110" 
+                        className="w-full h-full pointer-events-none scale-110"
                         style={{ border: 'none' }}
                         title="Login Animation"
                     ></iframe>
@@ -158,13 +171,20 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
                 <p className="text-sm text-gray-500 mb-6">Digite seu telefone com DDD para acessar</p>
 
                 <form onSubmit={handleLogin} className="space-y-4">
-                    <div>
+                    <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                            <img
+                                src="https://cdn-icons-png.flaticon.com/512/14051/14051811.png"
+                                alt="WhatsApp Icon"
+                                className="h-4 w-4 opacity-60"
+                            />
+                        </span>
                         <input
                             type="tel"
                             value={phone}
                             onChange={handlePhoneChange}
                             placeholder="(11) 99999-9999"
-                            className="w-full text-center text-xl p-4 border border-gray-200 rounded-2xl focus:border-pink-500 focus:ring-2 focus:ring-pink-200 outline-none transition-all"
+                            className="w-full text-center text-xl py-4 px-12 border border-gray-200 rounded-2xl focus:border-pink-500 focus:ring-2 focus:ring-pink-200 outline-none transition-all"
                             disabled={loading}
                         />
                     </div>
@@ -177,10 +197,6 @@ export const ClientLoginView: React.FC<{ onLogin: (phone: string, clientData: an
                         {loading ? 'Buscando...' : 'Entrar'}
                     </button>
                 </form>
-
-                <button onClick={onBack} className="mt-8 text-sm text-gray-400 hover:text-pink-600 font-medium transition-colors">
-                    ← Voltar para a página inicial
-                </button>
             </div>
         </div>
     );

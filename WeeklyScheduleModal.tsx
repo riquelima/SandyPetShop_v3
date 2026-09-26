@@ -1,6 +1,25 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { supabase } from './supabaseClient';
 
+// Declaracao global do lottie-web (bodymovin) carregado via CDN
+declare global {
+  interface Window {
+    lottie: any;
+  }
+}
+
+// Wrapper de imagem local (fallback para emoji em caso de erro)
+const SafeImage: React.FC<React.ImgHTMLAttributes<HTMLImageElement>> = ({ src, alt, ...rest }) => {
+  const [hasError, setHasError] = useState(false);
+  if (!src || hasError) return null;
+  return <img src={src} alt={alt} onError={() => setHasError(true)} {...rest} />;
+};
+
+// Cache em memoria dos agendamentos por chave de semana (evita refetch ao reabrir)
+const weeklyCache = new Map<string, any[]>();
+const CACHE_TTL_MS = 60 * 1000; // 1 minuto
+const cacheTimestamps = new Map<string, number>();
+
 interface WeeklyScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -127,10 +146,25 @@ const PetWeeklyAvatar: React.FC<{ src?: string | null; name: string; isBanho: bo
 
   const fetchWeeklyData = async () => {
     setIsLoading(true);
+    const t0 = Date.now();
+    // Chave de cache baseada na semana atual (YYYY-MM-DD do domingo)
+    const cacheKey = `${weekDays[0].isoDateStr}_${weekDays[6].isoDateStr}`;
+
+    // Verifica cache em memoria (TTL de 1 min) para evitar refetch ao reabrir
+    const cachedAt = cacheTimestamps.get(cacheKey);
+    const cached = weeklyCache.get(cacheKey);
+    if (cached && cachedAt && (Date.now() - cachedAt) < CACHE_TTL_MS) {
+      setAppointments(cached);
+      // Mantem um pequeno delay para evitar flicker do spinner
+      const elapsed = Date.now() - t0;
+      setTimeout(() => setIsLoading(false), Math.max(0, 400 - elapsed));
+      return;
+    }
+
     try {
       const sunday = weekDays[0].date;
       const saturday = weekDays[6].date;
-      
+
       const startStr = `${sunday.toISOString().split('T')[0]}T00:00:00`;
       const endStr = `${saturday.toISOString().split('T')[0]}T23:59:59`;
 
@@ -285,10 +319,17 @@ const PetWeeklyAvatar: React.FC<{ src?: string | null; name: string; isBanho: bo
         });
 
       setAppointments(combined);
+      // Salva no cache em memoria para a mesma semana (evita refetch ao reabrir)
+      weeklyCache.set(cacheKey, combined);
+      cacheTimestamps.set(cacheKey, Date.now());
     } catch (err) {
       console.error('Erro ao buscar agenda semanal:', err);
     } finally {
-      setIsLoading(false);
+      // Garante um minimo de 800ms de loading para evitar "flash" do spinner
+      // (UX mais agradavel e evita flicker em loads rapidos)
+      const elapsed = Date.now() - t0;
+      const remaining = Math.max(0, 800 - elapsed);
+      setTimeout(() => setIsLoading(false), remaining);
     }
   };
 
@@ -451,9 +492,14 @@ const PetWeeklyAvatar: React.FC<{ src?: string | null; name: string; isBanho: bo
 
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <div className="relative">
-                <div className="w-14 h-14 border-4 border-pink-100 border-t-pink-500 rounded-full animate-spin"></div>
-                <div className="absolute inset-0 flex items-center justify-center text-2xl">��</div>
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-br from-pink-400 via-rose-300 to-orange-200 rounded-full blur-2xl opacity-60 animate-pulse-slow scale-150"></div>
+                <SafeImage
+                  src="https://i.imgur.com/M3Gt3OA.png"
+                  alt="Sandy's Pet Shop Logo"
+                  className="relative h-20 w-20 sm:h-24 sm:w-24 object-contain drop-shadow-xl animate-pulse"
+                  loading="eager"
+                />
               </div>
               <p className="text-pink-700 font-bold text-sm">Carregando agendamentos...</p>
             </div>
@@ -464,7 +510,7 @@ const PetWeeklyAvatar: React.FC<{ src?: string | null; name: string; isBanho: bo
                 const isToday = getSaoPauloDateString() === day.isoDateStr;
                 const filteredByDayType = dayAppointments.filter(a => {
                   if (selectedFilter === 'banho_tosa') return a.type === 'Banho & Tosa';
-                  if (selectedFilter === 'pet_movel') return a.type === 'Pet Movel';
+                  if (selectedFilter === 'pet_movel') return a.type === 'Pet Móvel';
                   return true;
                 });
 
