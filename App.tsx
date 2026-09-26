@@ -13516,7 +13516,10 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                                         <SafeImage src="https://cdn-icons-png.flaticon.com/512/9881/9881335.png" alt="CPF/CNPJ Icon" className="h-4 w-4 opacity-60" />
                                     </span>
                                     <input
-                                        type="text"
+                                        type="tel"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        autoComplete="off"
                                         name="owner_cpf"
                                         id="owner_cpf"
                                         value={formData.owner_cpf}
