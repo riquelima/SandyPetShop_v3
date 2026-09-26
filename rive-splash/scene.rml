@@ -1,0 +1,398 @@
+<Rive version="1" kind="fragment">
+    <Artboard defaultStateMachineId="0:7" styleId="0:5" width="400" height="400" name="SandySplash" id="0:2">
+        <LayoutComponentStyle name="Artboard Style" id="0:5"/>
+
+        <Fill name="Background">
+            <SolidColor colorValue="00FFFFFF" name="Transparent"/>
+        </Fill>
+
+        <!-- 1. SPARKLES & STARS (Top of draw order) -->
+        <!-- Star Top-Right (Golden Luxury Star) -->
+        <Shape x="305" y="90" name="StarTR" id="0:20">
+            <Star width="38" height="38" points="4" innerRadius="0.30" cornerRadius="2" originX="0.5" originY="0.5" name="Path"/>
+            <Fill name="F">
+                <LinearGradient startX="-19" startY="-19" endX="19" endY="19">
+                    <GradientStop colorValue="FFFFE699" position="0"/>
+                    <GradientStop colorValue="FFF59E0B" position="1"/>
+                </LinearGradient>
+            </Fill>
+        </Shape>
+
+        <!-- Star Top-Left (Soft Amber Sparkle) -->
+        <Shape x="90" y="125" name="StarTL" id="0:21">
+            <Star width="28" height="28" points="4" innerRadius="0.32" cornerRadius="2" originX="0.5" originY="0.5" name="Path"/>
+            <Fill name="F">
+                <LinearGradient startX="-14" startY="-14" endX="14" endY="14">
+                    <GradientStop colorValue="FFFFF0B3" position="0"/>
+                    <GradientStop colorValue="FFFBBF24" position="1"/>
+                </LinearGradient>
+            </Fill>
+        </Shape>
+
+        <!-- Star Bottom-Left (Sandy Pink Twinkle) -->
+        <Shape x="105" y="295" name="StarBL" id="0:22">
+            <Star width="24" height="24" points="4" innerRadius="0.32" cornerRadius="2" originX="0.5" originY="0.5" name="Path"/>
+            <Fill name="F">
+                <LinearGradient startX="-12" startY="-12" endX="12" endY="12">
+                    <GradientStop colorValue="FFFBCFE8" position="0"/>
+                    <GradientStop colorValue="FFF472B6" position="1"/>
+                </LinearGradient>
+            </Fill>
+        </Shape>
+
+        <!-- Star Bottom-Right (Vibrant Magenta Sparkle) -->
+        <Shape x="295" y="290" name="StarBR" id="0:23">
+            <Star width="30" height="30" points="4" innerRadius="0.35" cornerRadius="2" originX="0.5" originY="0.5" name="Path"/>
+            <Fill name="F">
+                <LinearGradient startX="-15" startY="-15" endX="15" endY="15">
+                    <GradientStop colorValue="FFF43F5E" position="0"/>
+                    <GradientStop colorValue="FFA43073" position="1"/>
+                </LinearGradient>
+            </Fill>
+        </Shape>
+
+        <!-- Extra Micro Sparkle Top -->
+        <Shape x="200" y="55" name="StarTop" id="0:24">
+            <Star width="18" height="18" points="4" innerRadius="0.28" cornerRadius="1" originX="0.5" originY="0.5" name="Path"/>
+            <Fill name="F">
+                <SolidColor colorValue="FFFFE58F" name="C"/>
+            </Fill>
+        </Shape>
+
+        <!-- 2. ORBIT NODE (Spins around center) -->
+        <Node x="200" y="200" name="OrbitNode" id="0:45">
+            <!-- Golden Bead on main orbit -->
+            <Shape x="114" y="0" name="OrbitDot" id="0:46">
+                <Ellipse width="16" height="16" originX="0.5" originY="0.5" name="Path"/>
+                <Fill name="F">
+                    <LinearGradient startX="-8" startY="-8" endX="8" endY="8">
+                        <GradientStop colorValue="FFFFFBEB" position="0"/>
+                        <GradientStop colorValue="FFF59E0B" position="1"/>
+                    </LinearGradient>
+                </Fill>
+                <Stroke thickness="2" name="S">
+                    <SolidColor colorValue="FFFFFFFF" name="WhiteBorder"/>
+                </Stroke>
+            </Shape>
+
+            <!-- Secondary Diamond Bead opposite -->
+            <Shape x="-114" y="0" name="OrbitDiamond" id="0:47">
+                <Star width="14" height="14" points="4" innerRadius="0.4" cornerRadius="1" originX="0.5" originY="0.5" name="Path"/>
+                <Fill name="F">
+                    <SolidColor colorValue="FFFF69B4" name="C"/>
+                </Fill>
+                <Stroke thickness="1.5" name="S">
+                    <SolidColor colorValue="FFFFFFFF" name="W"/>
+                </Stroke>
+            </Shape>
+        </Node>
+
+        <!-- 3. CENTRAL PET PAW GROUP -->
+        <Node x="200" y="200" name="PawGroup" id="0:30">
+            <!-- Toe 1 (Left Outer) -->
+            <Shape x="-46" y="-34" rotation="-0.40" name="Toe1" id="0:32">
+                <Ellipse width="26" height="38" originX="0.5" originY="0.5" name="Path"/>
+                <Fill name="F">
+                    <LinearGradient startX="0" startY="-19" endX="0" endY="19">
+                        <GradientStop colorValue="FFF43F5E" position="0"/>
+                        <GradientStop colorValue="FFA43073" position="1"/>
+                    </LinearGradient>
+                </Fill>
+            </Shape>
+
+            <!-- Toe 2 (Center-Left) -->
+            <Shape x="-16" y="-52" rotation="-0.12" name="Toe2" id="0:33">
+                <Ellipse width="28" height="42" originX="0.5" originY="0.5" name="Path"/>
+                <Fill name="F">
+                    <LinearGradient startX="0" startY="-21" endX="0" endY="21">
+                        <GradientStop colorValue="FFF43F5E" position="0"/>
+                        <GradientStop colorValue="FFA43073" position="1"/>
+                    </LinearGradient>
+                </Fill>
+            </Shape>
+
+            <!-- Toe 3 (Center-Right) -->
+            <Shape x="16" y="-52" rotation="0.12" name="Toe3" id="0:34">
+                <Ellipse width="28" height="42" originX="0.5" originY="0.5" name="Path"/>
+                <Fill name="F">
+                    <LinearGradient startX="0" startY="-21" endX="0" endY="21">
+                        <GradientStop colorValue="FFF43F5E" position="0"/>
+                        <GradientStop colorValue="FFA43073" position="1"/>
+                    </LinearGradient>
+                </Fill>
+            </Shape>
+
+            <!-- Toe 4 (Right Outer) -->
+            <Shape x="46" y="-34" rotation="0.40" name="Toe4" id="0:35">
+                <Ellipse width="26" height="38" originX="0.5" originY="0.5" name="Path"/>
+                <Fill name="F">
+                    <LinearGradient startX="0" startY="-19" endX="0" endY="19">
+                        <GradientStop colorValue="FFF43F5E" position="0"/>
+                        <GradientStop colorValue="FFA43073" position="1"/>
+                    </LinearGradient>
+                </Fill>
+            </Shape>
+
+            <!-- Main Palm Pad -->
+            <Shape x="0" y="20" name="MainPad" id="0:31">
+                <Ellipse width="104" height="86" originX="0.5" originY="0.5" name="Path"/>
+                <Fill name="F">
+                    <LinearGradient startX="0" startY="-43" endX="0" endY="43">
+                        <GradientStop colorValue="FFF43F5E" position="0"/>
+                        <GradientStop colorValue="FFA43073" position="1"/>
+                    </LinearGradient>
+                </Fill>
+            </Shape>
+
+            <!-- Highlight gloss on main pad -->
+            <Shape x="-16" y="8" name="PadGloss">
+                <Ellipse width="34" height="18" originX="0.5" originY="0.5" name="Path"/>
+                <Fill name="F">
+                    <SolidColor colorValue="4FFFFFFF" name="C"/>
+                </Fill>
+            </Shape>
+        </Node>
+
+        <!-- 4. ORBIT RING -->
+        <Shape x="200" y="200" name="OrbitRing" id="0:40">
+            <Ellipse width="228" height="228" originX="0.5" originY="0.5" name="Path"/>
+            <Stroke thickness="2" name="S">
+                <LinearGradient startX="-114" startY="-114" endX="114" endY="114">
+                    <GradientStop colorValue="70F472B6" position="0"/>
+                    <GradientStop colorValue="15FFFFFF" position="0.5"/>
+                    <GradientStop colorValue="70A43073" position="1"/>
+                </LinearGradient>
+            </Stroke>
+        </Shape>
+
+        <!-- Secondary Inner Orbit Ring -->
+        <Shape x="200" y="200" name="OrbitRingInner" id="0:41">
+            <Ellipse width="180" height="180" originX="0.5" originY="0.5" name="Path"/>
+            <Stroke thickness="1.5" name="S">
+                <LinearGradient startX="90" startY="-90" endX="-90" endY="90">
+                    <GradientStop colorValue="35FBBF24" position="0"/>
+                    <GradientStop colorValue="05FFFFFF" position="0.5"/>
+                    <GradientStop colorValue="40F472B6" position="1"/>
+                </LinearGradient>
+            </Stroke>
+        </Shape>
+
+        <!-- 5. AMBIENT GLOW RINGS (Background) -->
+        <Shape x="200" y="200" name="GlowInner" id="0:50">
+            <Ellipse width="200" height="200" originX="0.5" originY="0.5" name="Path"/>
+            <Fill name="F">
+                <LinearGradient startX="-100" startY="-100" endX="100" endY="100">
+                    <GradientStop colorValue="45FCE7F3" position="0"/>
+                    <GradientStop colorValue="15F8D7EA" position="1"/>
+                </LinearGradient>
+            </Fill>
+        </Shape>
+
+        <Shape x="200" y="200" name="GlowOuter" id="0:51">
+            <Ellipse width="280" height="280" originX="0.5" originY="0.5" name="Path"/>
+            <Fill name="F">
+                <LinearGradient startX="0" startY="-140" endX="0" endY="140">
+                    <GradientStop colorValue="30FCE4F0" position="0"/>
+                    <GradientStop colorValue="00FFFFFF" position="1"/>
+                </LinearGradient>
+            </Fill>
+        </Shape>
+
+        <!-- 6. STATE MACHINE -->
+        <StateMachine name="State Machine 1" id="0:7">
+            <StateMachineLayer name="Layer 1" id="0:8">
+                <AnyState x="200" y="-120"/>
+                <ExitState x="400" y="-120"/>
+                <EntryState>
+                    <StateTransition stateToId="0:12"/>
+                </EntryState>
+                <AnimationState x="200" animationId="0:60" id="0:12"/>
+            </StateMachineLayer>
+            <StateMachineLayer name="Layer Orbit" id="0:9">
+                <AnyState x="200" y="-120"/>
+                <ExitState x="400" y="-120"/>
+                <EntryState>
+                    <StateTransition stateToId="0:13"/>
+                </EntryState>
+                <AnimationState x="200" animationId="0:61" id="0:13"/>
+            </StateMachineLayer>
+            <StateMachineLayer name="Layer Twinkle" id="0:10">
+                <AnyState x="200" y="-120"/>
+                <ExitState x="400" y="-120"/>
+                <EntryState>
+                    <StateTransition stateToId="0:14"/>
+                </EntryState>
+                <AnimationState x="200" animationId="0:62" id="0:14"/>
+            </StateMachineLayer>
+            <StateMachineLayer name="Layer PawWave" id="0:11">
+                <AnyState x="200" y="-120"/>
+                <ExitState x="400" y="-120"/>
+                <EntryState>
+                    <StateTransition stateToId="0:15"/>
+                </EntryState>
+                <AnimationState x="200" animationId="0:63" id="0:15"/>
+            </StateMachineLayer>
+        </StateMachine>
+
+        <!-- 7. ANIMATIONS -->
+        <!-- Float & Pulse Central Paw and Glow -->
+        <LinearAnimation loopValue="loop" duration="120" name="FloatPaw" id="0:60">
+            <!-- Float PawGroup Y: 200 -> 188 -> 200 (propertyKey 14 = y) -->
+            <KeyedObject objectId="0:30">
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="200" interpolationType="linear"/>
+                    <KeyFrameDouble value="188" interpolationType="linear" frame="60"/>
+                    <KeyFrameDouble value="200" interpolationType="linear" frame="120"/>
+                </KeyedProperty>
+                <!-- Scale PawGroup: 1.0 -> 1.05 -> 1.0 (propertyKey 16 = scaleX, 17 = scaleY) -->
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="1" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.05" interpolationType="linear" frame="60"/>
+                    <KeyFrameDouble value="1" interpolationType="linear" frame="120"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.05" interpolationType="linear" frame="60"/>
+                    <KeyFrameDouble value="1" interpolationType="linear" frame="120"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <!-- GlowOuter Pulse scale: 0.94 -> 1.08 -> 0.94 -->
+            <KeyedObject objectId="0:51">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="0.94" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.08" interpolationType="linear" frame="60"/>
+                    <KeyFrameDouble value="0.94" interpolationType="linear" frame="120"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="0.94" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.08" interpolationType="linear" frame="60"/>
+                    <KeyFrameDouble value="0.94" interpolationType="linear" frame="120"/>
+                </KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+
+        <!-- Orbit Rotation: 0 -> 2pi (propertyKey 15 = rotation) -->
+        <LinearAnimation loopValue="loop" duration="180" name="OrbitSpin" id="0:61">
+            <KeyedObject objectId="0:45">
+                <KeyedProperty propertyKey="15">
+                    <KeyFrameDouble value="0" interpolationType="linear"/>
+                    <KeyFrameDouble value="6.2831855" interpolationType="linear" frame="180"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <!-- OrbitRing slow counter spin: 0 -> -6.2831855 -->
+            <KeyedObject objectId="0:40">
+                <KeyedProperty propertyKey="15">
+                    <KeyFrameDouble value="0" interpolationType="linear"/>
+                    <KeyFrameDouble value="-6.2831855" interpolationType="linear" frame="180"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <!-- OrbitRingInner gentle spin -->
+            <KeyedObject objectId="0:41">
+                <KeyedProperty propertyKey="15">
+                    <KeyFrameDouble value="0" interpolationType="linear"/>
+                    <KeyFrameDouble value="6.2831855" interpolationType="linear" frame="120"/>
+                </KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+
+        <!-- Twinkle Stars: Rotate and Scale (duration 90 frames) -->
+        <LinearAnimation loopValue="loop" duration="90" name="TwinkleStars" id="0:62">
+            <!-- StarTR spins 360 deg -->
+            <KeyedObject objectId="0:20">
+                <KeyedProperty propertyKey="15">
+                    <KeyFrameDouble value="0" interpolationType="linear"/>
+                    <KeyFrameDouble value="6.2831855" interpolationType="linear" frame="90"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="0.8" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.2" interpolationType="linear" frame="45"/>
+                    <KeyFrameDouble value="0.8" interpolationType="linear" frame="90"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="0.8" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.2" interpolationType="linear" frame="45"/>
+                    <KeyFrameDouble value="0.8" interpolationType="linear" frame="90"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <!-- StarTL scale pulse -->
+            <KeyedObject objectId="0:21">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="1.1" interpolationType="linear"/>
+                    <KeyFrameDouble value="0.7" interpolationType="linear" frame="45"/>
+                    <KeyFrameDouble value="1.1" interpolationType="linear" frame="90"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1.1" interpolationType="linear"/>
+                    <KeyFrameDouble value="0.7" interpolationType="linear" frame="45"/>
+                    <KeyFrameDouble value="1.1" interpolationType="linear" frame="90"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <!-- StarBR spins counter-clockwise -->
+            <KeyedObject objectId="0:23">
+                <KeyedProperty propertyKey="15">
+                    <KeyFrameDouble value="0" interpolationType="linear"/>
+                    <KeyFrameDouble value="-6.2831855" interpolationType="linear" frame="90"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="0.75" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.15" interpolationType="linear" frame="45"/>
+                    <KeyFrameDouble value="0.75" interpolationType="linear" frame="90"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="0.75" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.15" interpolationType="linear" frame="45"/>
+                    <KeyFrameDouble value="0.75" interpolationType="linear" frame="90"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <!-- StarTop gentle pulse -->
+            <KeyedObject objectId="0:24">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="0.8" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.25" interpolationType="linear" frame="45"/>
+                    <KeyFrameDouble value="0.8" interpolationType="linear" frame="90"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="0.8" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.25" interpolationType="linear" frame="45"/>
+                    <KeyFrameDouble value="0.8" interpolationType="linear" frame="90"/>
+                </KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+
+        <!-- Wave / Organic subtle bounce on toe beans -->
+        <LinearAnimation loopValue="loop" duration="80" name="PawWave" id="0:63">
+            <!-- Toe 1 micro scale/lift at frame 20 -->
+            <KeyedObject objectId="0:32">
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.12" interpolationType="linear" frame="20"/>
+                    <KeyFrameDouble value="1" interpolationType="linear" frame="40"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <!-- Toe 2 micro scale/lift at frame 35 -->
+            <KeyedObject objectId="0:33">
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.12" interpolationType="linear" frame="35"/>
+                    <KeyFrameDouble value="1" interpolationType="linear" frame="55"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <!-- Toe 3 micro scale/lift at frame 50 -->
+            <KeyedObject objectId="0:34">
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.12" interpolationType="linear" frame="50"/>
+                    <KeyFrameDouble value="1" interpolationType="linear" frame="70"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <!-- Toe 4 micro scale/lift at frame 65 -->
+            <KeyedObject objectId="0:35">
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.12" interpolationType="linear" frame="65"/>
+                    <KeyFrameDouble value="1" interpolationType="linear" frame="80"/>
+                </KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+    </Artboard>
+</Rive>
