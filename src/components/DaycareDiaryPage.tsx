@@ -146,18 +146,54 @@ const DaycareDiaryPage: React.FC<Props> = ({ enrollment, date, onDateChange, onB
 
     const saveDiary = async () => {
         setSaving(true);
+
+        // Converte formatos não suportados (avif, heic, etc.) para JPEG usando Canvas
+        const normalizeImageFile = (file: File): Promise<{ blob: Blob; ext: string; mime: string }> =>
+            new Promise((resolve) => {
+                const unsupportedMimes = ['image/avif', 'image/heic', 'image/heif'];
+                const isUnsupported = unsupportedMimes.includes(file.type)
+                    || /\.(avif|heic|heif)$/i.test(file.name);
+                const isVideo = file.type.startsWith('video/');
+
+                if (isUnsupported && !isVideo) {
+                    // Converte via canvas para JPEG
+                    const url = URL.createObjectURL(file);
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.naturalWidth;
+                        canvas.height = img.naturalHeight;
+                        const ctx = canvas.getContext('2d')!;
+                        ctx.drawImage(img, 0, 0);
+                        canvas.toBlob(blob => {
+                            URL.revokeObjectURL(url);
+                            resolve({ blob: blob!, ext: 'jpg', mime: 'image/jpeg' });
+                        }, 'image/jpeg', 0.92);
+                    };
+                    img.onerror = () => {
+                        URL.revokeObjectURL(url);
+                        // Se falhar, envia como está e deixa o erro aparecer
+                        resolve({ blob: file, ext: file.name.split('.').pop()?.toLowerCase() || 'jpg', mime: file.type });
+                    };
+                    img.src = url;
+                } else {
+                    const ext = file.name.split('.').pop()?.toLowerCase() || (isVideo ? 'mp4' : 'jpg');
+                    resolve({ blob: file, ext, mime: file.type || (isVideo ? 'video/mp4' : 'image/jpeg') });
+                }
+            });
+
         try {
             // Upload files
             let uploadedUrls: string[] = [];
             const uploadErrors: string[] = [];
             for (const file of media) {
-                const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+                const { blob, ext, mime } = await normalizeImageFile(file);
                 const fileName = `daycare/${enrollment.id}/${date}_${Date.now()}.${ext}`;
                 const { error: uploadError } = await supabase.storage
                     .from('daycare_pet_photos')
-                    .upload(fileName, file, {
+                    .upload(fileName, blob, {
                         upsert: true,
-                        contentType: file.type || (ext === 'mp4' ? 'video/mp4' : 'image/jpeg'),
+                        contentType: mime,
                     });
                 if (uploadError) {
                     console.error('[DaycareDiary] Upload error:', uploadError);
