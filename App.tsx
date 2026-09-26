@@ -4345,6 +4345,7 @@ const AdminAddAppointmentModal: React.FC<{
 
     const [selectedTime, setSelectedTime] = useState<number | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showSuccessSplash, setShowSuccessSplash] = useState(false);
     const [allowedDays, setAllowedDays] = useState<number[] | undefined>(undefined);
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [clientFound, setClientFound] = useState(false);
@@ -4796,7 +4797,8 @@ const AdminAddAppointmentModal: React.FC<{
             weight: isVisitService ? 'N/A' : (selectedWeight ? PET_WEIGHT_OPTIONS[selectedWeight] : 'N/A'),
             addons: isVisitService ? [] : ADDON_SERVICES.filter(addon => selectedAddons[addon.id]).map(addon => addon.label),
             price: totalPrice,
-            status: 'AGENDADO'
+            status: 'AGENDADO',
+            pet_photo_url: formData.petPhoto || null
         };
 
         const supabasePayload = {
@@ -12519,6 +12521,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
     const [selectedTime, setSelectedTime] = useState<number | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showSuccessSplash, setShowSuccessSplash] = useState(false);
     const [isAnimating, setIsAnimating] = useState(false);
     const [allowedDays, setAllowedDays] = useState<number[] | undefined>(undefined);
     const [disabledBathGroomDates, setDisabledBathGroomDates] = useState<string[]>([]);
@@ -13000,6 +13003,31 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
         }
         const targetTable = isPetMovelSubmit ? 'pet_movel_appointments' : (isBathGroomService || isVisitService) ? 'agendamento_banhotosa' : 'appointments';
 
+        // Upload da foto do pet para o bucket publico (se houver)
+        let petPhotoUrl: string | null = null;
+        if (formData.petPhoto && formData.petPhoto.startsWith('data:')) {
+            try {
+                const base64 = formData.petPhoto.split(',')[1] || '';
+                const mimeMatch = formData.petPhoto.match(/^data:(.*?);base64,/);
+                const mime = mimeMatch?.[1] || 'image/jpeg';
+                const ext = mime.split('/')[1] || 'jpg';
+                const bytes = atob(base64);
+                const buffer = new Uint8Array(bytes.length);
+                for (let i = 0; i < bytes.length; i++) buffer[i] = bytes.charCodeAt(i);
+                const blob = new Blob([buffer], { type: mime });
+                const fileName = `public/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+                const { error: upErr } = await supabase.storage.from('appointment_pet_photos').upload(fileName, blob, { upsert: true, contentType: mime });
+                if (upErr) throw upErr;
+                const { data: pub } = supabase.storage.from('appointment_pet_photos').getPublicUrl(fileName);
+                petPhotoUrl = pub.publicUrl;
+            } catch (uploadErr) {
+                console.error('Falha no upload da foto do pet:', uploadErr);
+                petPhotoUrl = null;
+            }
+        } else if (formData.petPhoto) {
+            petPhotoUrl = formData.petPhoto;
+        }
+
         const basePayload = {
             appointment_time: appointmentTime.toISOString(),
             pet_name: formData.petName,
@@ -13011,6 +13039,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
             addons: isVisitService ? [] : ADDON_SERVICES.filter(addon => selectedAddons[addon.id]).map(addon => addon.label),
             price: totalPrice,
             status: 'AGENDADO',
+            pet_photo_url: petPhotoUrl,
             extra_services: {
                 pernoite: { enabled: false, quantity: 0 },
                 banho_tosa: { enabled: false, value: 0 },
@@ -13082,14 +13111,8 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
             };
 
             setAppointments(prev => [...prev, newAppointment]);
-            setIsModalOpen(true);
-            setTimeout(() => {
-                setIsModalOpen(false);
-                setFormData({ petName: '', ownerName: '', whatsapp: '', owner_cpf: '', petBreed: '', ownerAddress: '', observation: '' });
-                setSelectedService(null); setSelectedWeight(null); setSelectedAddons({}); setSelectedTime(null); setTotalPrice(0); setIsSubmitting(false);
-                setSelectedCondo(null);
-                setServiceStepView('main');
-            }, 3000);
+            // Mostra splash de sucesso com confete + foto do pet
+            setShowSuccessSplash(true);
         } catch (error: any) {
             console.error("Error submitting appointment:", error);
             let userMessage = 'Não foi possível concluir o agendamento. Tente novamente.';
@@ -13955,6 +13978,26 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Splash animado de confirmacao com confete + foto do pet */}
+            {showSuccessSplash && (
+                <AppointmentSuccessSplash
+                    petName={formData.petName || 'Seu pet'}
+                    petPhoto={formData.petPhoto}
+                    onDone={() => {
+                        setShowSuccessSplash(false);
+                        setFormData({ petName: '', ownerName: '', whatsapp: '', owner_cpf: '', petBreed: '', ownerAddress: '', observation: '', petPhoto: null });
+                        setSelectedService(null);
+                        setSelectedWeight(null);
+                        setSelectedAddons({});
+                        setSelectedTime(null);
+                        setTotalPrice(0);
+                        setIsSubmitting(false);
+                        setSelectedCondo(null);
+                        setServiceStepView('main');
+                    }}
+                />
             )}
             </div>
         </div>
@@ -19052,7 +19095,7 @@ const AdminDashboard: React.FC<{
                             condominium: rec.condominium ?? rec.condo ?? undefined,
                             extra_services: rec.extra_services ?? undefined,
                             observation: rec.observation ?? rec.notes ?? undefined,
-                            pet_photo_url: rec.monthly_clients?.pet_photo_url ?? undefined,
+                            pet_photo_url: rec.pet_photo_url ?? rec.monthly_clients?.pet_photo_url ?? undefined,
                             recurrence_type: rec.monthly_clients?.recurrence_type ?? undefined,
                             responsible: rec.responsible ?? undefined,
                             owner_cpf: rec.owner_cpf ?? undefined,
@@ -19779,6 +19822,7 @@ import MonthlyResetManager from './src/components/MonthlyResetManager';
 import PriceManagementModal from './src/components/PriceManagementModal';
 import FiscalConfirmationModal from './src/components/FiscalConfirmationModal';
 import PublicDiaryView from './src/components/PublicDiaryView';
+import { AppointmentSuccessSplash } from './src/components/AppointmentSuccessSplash';
 
 const TypingWords: React.FC = () => {
     const words = useMemo(() => ["melhor amigo", "fiel companheiro", "amigo de quatro patas", "parceiro de aventuras", "peludinho"], []);
@@ -20172,7 +20216,7 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
                     condominium: rec.condominium ?? rec.condo ?? undefined,
                     extra_services: rec.extra_services ?? undefined,
                     observation: rec.observation ?? rec.notes ?? undefined,
-                    pet_photo_url: rec.monthly_clients?.pet_photo_url ?? undefined,
+                    pet_photo_url: rec.pet_photo_url ?? rec.monthly_clients?.pet_photo_url ?? undefined,
                     recurrence_type: rec.monthly_clients?.recurrence_type ?? undefined,
                     responsible: rec.responsible ?? undefined,
                     owner_cpf: rec.owner_cpf ?? undefined,
@@ -20294,7 +20338,7 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
                     condominium: rec.condominium ?? rec.condo ?? undefined,
                     extra_services: rec.extra_services ?? undefined,
                     observation: rec.observation ?? rec.notes ?? undefined,
-                    pet_photo_url: rec.monthly_clients?.pet_photo_url ?? mInfo?.pet_photo_url ?? undefined,
+                    pet_photo_url: rec.pet_photo_url ?? rec.monthly_clients?.pet_photo_url ?? mInfo?.pet_photo_url ?? undefined,
                     recurrence_type: rec.monthly_clients?.recurrence_type ?? mInfo?.recurrence_type ?? undefined,
                     responsible: rec.responsible ?? undefined,
                     owner_cpf: rec.owner_cpf ?? undefined,
