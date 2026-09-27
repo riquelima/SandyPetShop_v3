@@ -227,15 +227,15 @@ const ConfettiRain: React.FC = () => {
     );
 };
 
-// ── Ultra-Luxury Splash Screen (4 Segundos com Foto Centralizada) ──
+// ── Ultra-Luxury Splash Screen (5 Segundos com Foto Centralizada) ──
 const SplashScreen: React.FC<{ petName: string; petPhoto?: string; onDone: () => void }> = ({ petName, petPhoto, onDone }) => {
     const [phase, setPhase] = useState<'enter' | 'hold' | 'exit'>('enter');
 
     useEffect(() => {
-        // Exatamente 4 segundos totais de carregamento cinematográfico
+        // Exatamente 5 segundos totais de carregamento cinematográfico
         const t1 = setTimeout(() => setPhase('hold'), 100);
-        const t2 = setTimeout(() => setPhase('exit'), 3500); // fade out a partir de 3.5s
-        const t3 = setTimeout(onDone, 4000); // conclui aos 4.0s
+        const t2 = setTimeout(() => setPhase('exit'), 4400); // fade out a partir de 4.4s
+        const t3 = setTimeout(onDone, 5000); // conclui aos 5.0s
         return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
     }, [onDone]);
 
@@ -475,7 +475,7 @@ const SplashScreen: React.FC<{ petName: string; petPhoto?: string; onDone: () =>
                         </span>
                     </p>
 
-                    {/* Barra de Progresso elegante preenchendo ao longo dos 4s */}
+                    {/* Barra de Progresso elegante preenchendo ao longo dos 5s */}
                     <div style={{
                         width: 190,
                         height: 6,
@@ -489,7 +489,7 @@ const SplashScreen: React.FC<{ petName: string; petPhoto?: string; onDone: () =>
                             width: '100%',
                             background: 'linear-gradient(90deg, #f43f5e, #a43073, #f59e0b)',
                             borderRadius: 9999,
-                            animation: 'progressFill 3.8s cubic-bezier(0.1, 0.5, 0.2, 1) forwards',
+                            animation: 'progressFill 4.7s cubic-bezier(0.1, 0.5, 0.2, 1) forwards',
                         }} />
                     </div>
                 </div>
