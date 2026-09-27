@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "buildCommand": "cd sandypetshop && npm run build",
+  "installCommand": "cd sandypetshop && npm install",
+  "outputDirectory": "sandypetshop/dist",
+  "rewrites": [
+    { "source": "/diario/:path*", "destination": "/index.html" },
+    { "source": "/admin/:path*", "destination": "/index.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
