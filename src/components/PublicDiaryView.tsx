@@ -27,6 +27,7 @@ interface Props {
     enrollment: Enrollment;
     date: string;
     onDateChange: (d: string) => void;
+    skipSplash?: boolean;
 }
 
 const getBehaviorLabel = (n: number) => {
@@ -875,11 +876,11 @@ const CalendarModal: React.FC<CalendarModalProps> = ({
 };
 
 // ── Main ──
-const PublicDiaryView: React.FC<Props> = ({ enrollment, date, onDateChange }) => {
+const PublicDiaryView: React.FC<Props> = ({ enrollment, date, onDateChange, skipSplash = false }) => {
     const [entry, setEntry] = useState<DiaryEntry | null>(null);
     const [loading, setLoading] = useState(true);
-    const [showSplash, setShowSplash] = useState(true);
-    const [contentVisible, setContentVisible] = useState(false);
+    const [showSplash, setShowSplash] = useState(!skipSplash);
+    const [contentVisible, setContentVisible] = useState(skipSplash);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const [datesWithDiary, setDatesWithDiary] = useState<string[]>([]);
     const [currentPetPhoto, setCurrentPetPhoto] = useState<string | undefined>(enrollment.pet_photo_url);
@@ -1413,4 +1414,5 @@ const PublicDiaryView: React.FC<Props> = ({ enrollment, date, onDateChange }) =>
     );
 };
 
+export { SplashScreen };
 export default PublicDiaryView;

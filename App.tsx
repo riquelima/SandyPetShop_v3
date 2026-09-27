@@ -19932,7 +19932,7 @@ const ScheduleClosedPage: React.FC<{ setView: (view: string) => void }> = ({ set
 import MonthlyResetManager from './src/components/MonthlyResetManager';
 import PriceManagementModal from './src/components/PriceManagementModal';
 import FiscalConfirmationModal from './src/components/FiscalConfirmationModal';
-import PublicDiaryView from './src/components/PublicDiaryView';
+import PublicDiaryView, { SplashScreen as DiarySplashScreen } from './src/components/PublicDiaryView';
 import { AppointmentSuccessSplash } from './src/components/AppointmentSuccessSplash';
 
 const TypingWords: React.FC = () => {
@@ -20009,28 +20009,53 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
         return <LoyaltyCardPage petName={loyaltyData.pet} ownerName={loyaltyData.owner} />;
     }
 
-    const [publicDiaryEnrollment, setPublicDiaryEnrollment] = useState<DaycareRegistration | null>(null);
-    const [publicDiaryLoading, setPublicDiaryLoading] = useState(false);
+    // ── Diary Route: wrapper que mostra splash imediatamente e busca dados em paralelo ──
     const [publicDiaryDate, setPublicDiaryDate] = useState<string>(() => {
         try { const p = new URLSearchParams(window.location.search); return p.get('date') || new Date().toISOString().slice(0, 10); } catch { return new Date().toISOString().slice(0, 10); }
     });
 
-    useEffect(() => {
-        if (publicDiaryMatch) {
-            const id = publicDiaryMatch[1];
-            let cancelled = false;
-            const load = async () => {
-                setPublicDiaryLoading(true);
-                try {
-                    const { data, error } = await supabase.from('daycare_enrollments').select('*').eq('id', id).single();
-                    if (!cancelled && data) setPublicDiaryEnrollment(data as DaycareRegistration);
-                } catch { }
-                setPublicDiaryLoading(false);
-            };
-            load();
-            return () => { cancelled = true; };
-        }
-    }, [publicDiaryMatch?.[1]]);
+    // DiaryRouteWrapper: splash aparece IMEDIATAMENTE, dados carregam em paralelo
+    const DiaryRouteWrapper: React.FC<{ id: string }> = React.useMemo(() => {
+        return function DiaryRouteWrapperInner({ id }: { id: string }) {
+            const [enrollment, setEnrollment] = React.useState<any>(null);
+            const [splashDone, setSplashDone] = React.useState(false);
+            const [petPhoto, setPetPhoto] = React.useState<string | undefined>(undefined);
+            const [petName, setPetName] = React.useState<string>('');
+            const [notFound, setNotFound] = React.useState(false);
+
+            React.useEffect(() => {
+                let cancelled = false;
+                supabase.from('daycare_enrollments').select('*').eq('id', id).single()
+                    .then(({ data }) => {
+                        if (cancelled) return;
+                        if (data) {
+                            setEnrollment(data);
+                            setPetName(data.pet_name || '');
+                            setPetPhoto(data.pet_photo_url || undefined);
+                        } else {
+                            setNotFound(true);
+                        }
+                    });
+                return () => { cancelled = true; };
+            }, [id]);
+
+            if (!splashDone) {
+                return (
+                    <DiarySplashScreen
+                        petName={petName}
+                        petPhoto={petPhoto}
+                        onDone={() => setSplashDone(true)}
+                    />
+                );
+            }
+
+            if (notFound || (!enrollment)) {
+                return <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(135deg,#fce4f0,#fdf3ee)',flexDirection:'column',gap:12}}><div style={{fontSize:60}}>📭</div><p style={{color:'#87717a',fontFamily:'Quicksand,sans-serif',fontWeight:700}}>Diário não encontrado.</p></div>;
+            }
+
+            return <PublicDiaryView enrollment={enrollment} date={publicDiaryDate} onDateChange={setPublicDiaryDate} skipSplash />;
+        };
+    }, [publicDiaryDate]);
     const [isObservationModalOpen, setObservationModalOpen] = useState(false);
     const [selectedAppointmentForObservation, setSelectedAppointmentForObservation] = useState<AdminAppointment | null>(null);
     const [observationText, setObservationText] = useState('');
@@ -20604,9 +20629,7 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
     }, [isAuthenticated]);
 
     if (publicDiaryMatch) {
-        if (publicDiaryLoading && !publicDiaryEnrollment) return <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(135deg,#fce4f0,#fdf3ee)'}}><div style={{width:48,height:48,borderRadius:'50%',border:'4px solid #a43073',borderTopColor:'transparent',animation:'spin 0.9s linear infinite'}} /></div>;
-        if (!publicDiaryEnrollment) return <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(135deg,#fce4f0,#fdf3ee)',flexDirection:'column',gap:12}}><div style={{fontSize:60}}>📭</div><p style={{color:'#87717a',fontFamily:'Quicksand,sans-serif',fontWeight:700}}>Diário não encontrado.</p></div>;
-        return <PublicDiaryView enrollment={publicDiaryEnrollment} date={publicDiaryDate} onDateChange={setPublicDiaryDate} />;
+        return <DiaryRouteWrapper id={publicDiaryMatch[1]} />;
     }
     if (loadingAuth) {
         return <div className="min-h-screen flex items-center justify-center bg-gray-100"><LoadingSpinner /></div>;
