@@ -235,7 +235,7 @@ export const AppointmentSuccessSplash: React.FC<AppointmentSuccessSplashProps> =
                         Agendamento confirmado!
                     </p>
                     <p className="text-pink-600/80 text-sm font-medium">
-                        Estamos ansiosos para receber seu pet ��
+                        Estamos ansiosos para receber seu pet 🥰
                     </p>
                 </div>
 
