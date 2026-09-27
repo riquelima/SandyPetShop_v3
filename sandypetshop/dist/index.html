@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="https://i.imgur.com/M3Gt3OA.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="manifest" href="/assets/manifest-hA05Lp_e.json" />
+    <meta name="theme-color" content="#DB2777" />
+    <link rel="apple-touch-icon" href="https://i.imgur.com/M3Gt3OA.png" />
+    <title>Sandy's Pet Shop - Agendamento</title>
+    <meta name="description" content="Agende de forma rápida e prática o banho e tosa do seu pet na Sandy's Pet Shop!" />
+
+    <!-- Open Graph / Facebook / Instagram -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://sandyspetshop.vercel.app/" />
+    <meta property="og:title" content="Sandy's Pet Shop - Agendamento" />
+    <meta property="og:description" content="Agende de forma rápida e prática o banho e tosa do seu pet na Sandy's Pet Shop!" />
+    <meta property="og:image" content="https://sandyspetshop.vercel.app/bemvindo.jpeg" />
+    <meta property="og:image:secure_url" content="https://sandyspetshop.vercel.app/bemvindo.jpeg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Sandy's Pet Shop" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://sandyspetshop.vercel.app/" />
+    <meta name="twitter:title" content="Sandy's Pet Shop - Agendamento" />
+    <meta name="twitter:description" content="Agende de forma rápida e prática o banho e tosa do seu pet na Sandy's Pet Shop!" />
+    <meta name="twitter:image" content="https://sandyspetshop.vercel.app/bemvindo.jpeg" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              "on-surface-variant": "#544249", "primary-fixed": "#ffd8e7", "on-secondary-fixed-variant": "#62259b", "surface-container-low": "#fcf2eb", "tertiary-fixed": "#68fcbf", "outline": "#87717a", "surface-variant": "#eae1da", "on-primary": "#ffffff", "on-tertiary-fixed": "#002114", "inverse-primary": "#ffafd3", "on-secondary-fixed": "#2c0051", "tertiary-container": "#00b580", "primary-fixed-dim": "#ffafd3", "inverse-surface": "#342f2b", "secondary-fixed-dim": "#ddb8ff", "surface-bright": "#fff8f5", "error": "#ba1a1a", "on-primary-fixed": "#3d0026", "on-surface": "#1f1b17", "inverse-on-surface": "#f9efe8", "background": "#fff8f5", "secondary-container": "#c185fd", "on-background": "#1f1b17", "on-secondary-container": "#510c8a", "surface-dim": "#e2d8d2", "secondary-fixed": "#f0dbff", "surface-container-high": "#f0e6e0", "on-secondary": "#ffffff", "surface-container-highest": "#eae1da", "tertiary-fixed-dim": "#45dfa4", "surface-container": "#f6ece6", "on-error-container": "#93000a", "secondary": "#7b41b4", "on-tertiary-container": "#003f2a", "surface-tint": "#a43073", "primary-container": "#f472b6", "surface": "#fff8f5", "on-primary-container": "#6d0047", "on-tertiary": "#ffffff", "on-error": "#ffffff", "on-primary-fixed-variant": "#85145a", "error-container": "#ffdad6", "outline-variant": "#dac0c9", "on-tertiary-fixed-variant": "#005137", "tertiary": "#006c4b", "surface-container-lowest": "#ffffff", "primary": "#a43073"
+            },
+            spacing: {
+              "gutter-mobile": "0.75rem", "space-lg": "1.25rem", "margin-mobile": "1rem", "space-xl": "1.75rem", "space-xs": "0.25rem", "space-sm": "0.5rem", "space-2xl": "2.5rem", "gutter": "1rem", "space-md": "0.75rem", "margin": "1.25rem"
+            },
+            fontFamily: {
+              "headline-lg": ["Quicksand"], "body-lg": ["Nunito Sans"], "display-lg": ["Quicksand"], "headline-md": ["Quicksand"], "headline-lg-mobile": ["Quicksand"], "label-lg": ["Quicksand"], "label-md": ["Quicksand"], "body-sm": ["Nunito Sans"], "label-sm": ["Quicksand"], "headline-sm": ["Quicksand"], "body-md": ["Nunito Sans"]
+            },
+            fontSize: {
+              "headline-lg": ["28px", { "lineHeight": "34px", "letterSpacing": "-0.01em", "fontWeight": "700" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "500" }], "display-lg": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "headline-md": ["20px", { "lineHeight": "26px", "fontWeight": "600" }], "headline-lg-mobile": ["24px", { "lineHeight": "30px", "letterSpacing": "-0.01em", "fontWeight": "700" }], "label-lg": ["15px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "700" }], "label-md": ["13px", { "lineHeight": "18px", "fontWeight": "600" }], "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.02em", "fontWeight": "700" }], "headline-sm": ["17px", { "lineHeight": "22px", "fontWeight": "600" }], "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+            }
+          }
+        }
+      }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700&family=Quicksand:wght@500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@700&family=Poppins:wght@400;500;600;700&family=Rochester&family=Lobster+Two:wght@700&family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rubik:wght@400;500;600;700&display=swap');
+      
+      /* Barra de rolagem (scrollbar) elegante e premium do sistema */
+      
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      
+      ::-webkit-scrollbar-thumb {
+        background: rgba(219, 39, 119, 0.22); /* Rosa suave translúcido combinando com a cor de destaque #DB2777 */
+        border-radius: 9999px;
+        border: 1px solid transparent;
+        background-clip: padding-box;
+        transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(219, 39, 119, 0.48); /* Rosa mais nítido ao passar o mouse */
+        border-radius: 9999px;
+      }
+      
+      /* Customizações temáticas para seções específicas */
+      
+      .scrollbar-purple::-webkit-scrollbar-thumb {
+        background: rgba(139, 92, 246, 0.25); /* Roxo translúcido */
+      }
+      
+      .scrollbar-purple::-webkit-scrollbar-thumb:hover {
+        background: rgba(139, 92, 246, 0.5);
+      }
+      
+      .scrollbar-amber::-webkit-scrollbar-thumb {
+        background: rgba(245, 158, 11, 0.25); /* Âmbar translúcido */
+      }
+      
+      .scrollbar-amber::-webkit-scrollbar-thumb:hover {
+        background: rgba(245, 158, 11, 0.5);
+      }
+      
+      /* Estilização para o Firefox */
+      
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(219, 39, 119, 0.22) transparent;
+      }
+      
+      body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        font-family: 'Poppins', sans-serif;
+        background-color: #FFF5F7; /* Baby Pink Background */
+        touch-action: pan-x pan-y; /* Disable double-tap zoom but allow scrolling */
+      }
+      
+      .font-brand {
+        font-family: 'Rochester', cursive;
+      }
+      
+      .font-inter {
+        font-family: 'Inter', sans-serif;
+      }
+      
+      .font-outfit {
+        font-family: 'Outfit', sans-serif;
+      }
+      
+      .font-jakarta {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+      }
+      
+      .font-rubik {
+        font-family: 'Rubik', sans-serif;
+      }
+      
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      
+      @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translate3d(0, 30px, 0);
+        }
+        to {
+            opacity: 1;
+            transform: translate3d(0, 0, 0);
+        }
+      }
+      
+      @keyframes slideInFromRight {
+        from {
+          opacity: 0;
+          transform: translateX(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      
+      @keyframes slideOutToLeft {
+        from {
+          opacity: 1;
+          transform: translateX(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateX(-30px);
+        }
+      }
+      
+      @keyframes slideOutToRight {
+        from {
+          opacity: 1;
+          transform: translateX(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateX(100%);
+        }
+      }
+      
+      @keyframes slideInFromRight {
+        from {
+          opacity: 0;
+          transform: translateX(100%);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      
+      @keyframes scaleIn {
+        from { transform: scale(0.8); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+      }
+      
+      .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
+      
+      .animate-fadeInUp { animation: fadeInUp 0.6s ease-out forwards; }
+      
+      .animate-scaleIn { animation: scaleIn 0.5s ease-out forwards; }
+      
+      .animate-slideInFromRight { animation: slideInFromRight 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+      
+      .animate-slideOutToLeft { animation: slideOutToLeft 0.5s ease-out forwards; }
+      
+      .animate-slideOutToRight { animation: slideOutToRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+      
+      @keyframes slideIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      
+      @keyframes spinSlow {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      
+      @keyframes blob {
+        0% { transform: translate(0px, 0px) scale(1); }
+        33% { transform: translate(30px, -50px) scale(1.1); }
+        66% { transform: translate(-20px, 20px) scale(0.9); }
+        100% { transform: translate(0px, 0px) scale(1); }
+      }
+      
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+      }
+      
+      .animate-slideIn { animation: slideIn 0.5s ease-out forwards; }
+      
+      .animate-spin-slow { animation: spinSlow 3s linear infinite; }
+      
+      .animate-blob { animation: blob 7s infinite; }
+      
+      .animate-float { animation: float 3s ease-in-out infinite; }
+      
+      .animation-delay-2000 { animation-delay: 2s; }
+      
+      .animation-delay-4000 { animation-delay: 4s; }
+      
+      @keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      
+      .animate-slideUp { animation: slideUp 0.6s ease-out forwards; }
+      
+      @keyframes bloom {
+        from { opacity: 0; transform: scale(0.9) translateY(10px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+      }
+      
+      .animate-bloom { animation: bloom 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+      
+      /* ==========================================
+         ADMIN DARK MODE VARIABLES & OVERRIDES
+         ========================================== */
+      
+      :root {
+        --admin-bg-primary: #f8fafc;
+        --admin-bg-secondary: #f1f5f9;
+        --admin-bg-card: #ffffff;
+        --admin-bg-hover: #f1f5f9;
+        --admin-border-color: #e2e8f0;
+        --admin-text-primary: #0f172a;
+        --admin-text-secondary: #475569;
+        --admin-text-disabled: #94a3b8;
+        --admin-color-brand: #ec4899;
+      }
+      
+      /* Quando a classe .dark estiver presente no painel admin */
+      
+      .dark,
+      [data-theme="dark"],
+      .admin-dashboard-container.dark {
+        --admin-bg-primary: #121212;      /* Fundo geral da página (Preto/cinza Notion escuro) */
+        --admin-bg-secondary: #1c1c1c;    /* Fundo de blocos/listas/tabelas */
+        --admin-bg-card: #222222;         /* Fundo de cartões/cards destacados */
+        --admin-bg-hover: #2c2c2c;        /* Hover de itens e abas ativas */
+        --admin-border-color: #262626;     /* Divisores e bordas */
+        --admin-text-primary: #ffffff;     /* Texto branco puro */
+        --admin-text-secondary: #a0a0a0;   /* Texto cinza Notion */
+        --admin-text-disabled: #5a5a5a;    /* Texto desativado */
+        --admin-color-brand: #ffffff;      /* Marca neutra branca */
+      }
+      
+      /* Suporte a transições globais suaves no painel administrativo */
+      
+      .admin-dashboard-container,
+      .admin-dashboard-container * {
+        transition: background-color 0.25s ease,
+                    color 0.25s ease,
+                    border-color 0.25s ease,
+                    box-shadow 0.25s ease;
+      }
+      
+      /* Sobrescritas para forçar o tema escuro Notion em elementos estruturais */
+      
+      .dark.admin-bg-primary-override,
+      .dark .admin-bg-primary-override,
+      .admin-dashboard-container.dark.admin-bg-primary-override,
+      .admin-dashboard-container.dark .admin-bg-primary-override,
+      [data-theme="dark"].admin-bg-primary-override,
+      [data-theme="dark"] .admin-bg-primary-override {
+        background-color: var(--admin-bg-primary) !important;
+        background-image: none !important;
+      }
+      
+      .dark.admin-bg-secondary-override,
+      .dark .admin-bg-secondary-override,
+      .admin-dashboard-container.dark.admin-bg-secondary-override,
+      .admin-dashboard-container.dark .admin-bg-secondary-override,
+      [data-theme="dark"].admin-bg-secondary-override,
+      [data-theme="dark"] .admin-bg-secondary-override {
+        background-color: var(--admin-bg-secondary) !important;
+        background-image: none !important;
+      }
+      
+      .dark.admin-bg-card-override,
+      .dark .admin-bg-card-override,
+      .admin-dashboard-container.dark.admin-bg-card-override,
+      .admin-dashboard-container.dark .admin-bg-card-override,
+      [data-theme="dark"].admin-bg-card-override,
+      [data-theme="dark"] .admin-bg-card-override {
+        background-color: var(--admin-bg-card) !important;
+        background-image: none !important;
+      }
+      
+      .dark.admin-border-override,
+      .dark .admin-border-override,
+      .admin-dashboard-container.dark.admin-border-override,
+      .admin-dashboard-container.dark .admin-border-override,
+      [data-theme="dark"].admin-border-override,
+      [data-theme="dark"] .admin-border-override {
+        border-color: var(--admin-border-color) !important;
+      }
+      
+      .dark.admin-text-primary-override,
+      .dark .admin-text-primary-override,
+      .admin-dashboard-container.dark.admin-text-primary-override,
+      .admin-dashboard-container.dark .admin-text-primary-override,
+      [data-theme="dark"].admin-text-primary-override,
+      [data-theme="dark"] .admin-text-primary-override {
+        color: var(--admin-text-primary) !important;
+      }
+      
+      .dark.admin-text-secondary-override,
+      .dark .admin-text-secondary-override,
+      .admin-dashboard-container.dark.admin-text-secondary-override,
+      .admin-dashboard-container.dark .admin-text-secondary-override,
+      [data-theme="dark"].admin-text-secondary-override,
+      [data-theme="dark"] .admin-text-secondary-override {
+        color: var(--admin-text-secondary) !important;
+      }
+      
+      /* Sobrescrita de classes Tailwind de Fundo */
+      
+      .dark .bg-white,
+      .admin-dashboard-container.dark .bg-white,
+      [data-theme="dark"] .bg-white,
+      .dark section.bg-white,
+      .admin-dashboard-container.dark section.bg-white,
+      .dark .bg-slate-50,
+      .dark .bg-gray-50,
+      .dark .bg-gray-100,
+      .dark .bg-slate-100 {
+        background-color: var(--admin-bg-card) !important;
+        background-image: none !important;
+      }
+      
+      /* Sobrescrita do fundo da página (bg-slate-900 que vem da raiz do App.tsx e body) */
+      
+      .dark body,
+      body.dark,
+      [data-theme="dark"] body,
+      .dark.bg-slate-900,
+      .dark .bg-slate-900,
+      .dark.bg-slate-950,
+      .dark .bg-slate-950,
+      .dark.bg-gray-900,
+      .dark .bg-gray-900,
+      .dark.bg-zinc-950,
+      .dark .bg-zinc-950,
+      .dark.bg-neutral-950,
+      .dark .bg-neutral-950,
+      .admin-dashboard-container.dark.bg-slate-900,
+      .admin-dashboard-container.dark .bg-slate-900,
+      [data-theme="dark"].bg-slate-900,
+      [data-theme="dark"] .bg-slate-900 {
+        background-color: var(--admin-bg-primary) !important;
+        background-image: none !important;
+      }
+      
+      /* ANULAR TODOS OS FUNDOS COM OPACIDADE (GLASSMORPHISM) COLORIDOS DE SUB-CARDS E CONTÊINERES */
+      
+      .dark [class*="bg-white/"],
+      .dark [class*="bg-pink-50/"],
+      .dark [class*="bg-pink-100/"],
+      .dark [class*="bg-purple-50/"],
+      .dark [class*="bg-purple-100/"],
+      .dark [class*="bg-indigo-50/"],
+      .dark [class*="bg-indigo-100/"],
+      .dark [class*="bg-blue-50/"],
+      .dark [class*="bg-blue-100/"],
+      .dark [class*="bg-cyan-50/"],
+      .dark [class*="bg-cyan-100/"],
+      .dark [class*="bg-yellow-50/"],
+      .dark [class*="bg-yellow-100/"],
+      .dark [class*="bg-amber-50/"],
+      .dark [class*="bg-amber-100/"],
+      .dark [class*="bg-green-50/"],
+      .dark [class*="bg-green-100/"],
+      .dark [class*="bg-emerald-50/"],
+      .dark [class*="bg-emerald-100/"],
+      .dark [class*="bg-rose-50/"],
+      .dark [class*="bg-rose-100/"],
+      .dark [class*="bg-red-50/"],
+      .dark [class*="bg-red-100/"],
+      .dark [class*="bg-gray-50/"],
+      .dark [class*="bg-gray-100/"],
+      .dark [class*="bg-slate-50/"],
+      .dark [class*="bg-slate-100/"] {
+        background-color: var(--admin-bg-secondary) !important;
+        border-color: var(--admin-border-color) !important;
+        color: var(--admin-text-primary) !important;
+        background-image: none !important;
+      }
+      
+      /* Modais e Popovers suspensos que usam alta opacidade devem usar o fundo do cartão */
+      
+      .dark [class*="bg-white/96"],
+      .dark [class*="bg-white/95"],
+      .dark [class*="bg-white/90"] {
+        background-color: var(--admin-bg-card) !important;
+      }
+      
+      /* ANULAR TODOS OS FUNDOS COLORIDOS NO MODO ESCURO (NOTION STYLE) */
+      
+      .dark [class*="bg-pink-"],
+      .dark [class*="bg-purple-"],
+      .dark [class*="bg-indigo-"],
+      .dark [class*="bg-blue-"],
+      .dark [class*="bg-yellow-"],
+      .dark [class*="bg-amber-"],
+      .dark [class*="bg-orange-"],
+      .dark [class*="bg-red-"],
+      .dark [class*="bg-rose-"],
+      .dark [class*="bg-green-"],
+      .dark [class*="bg-emerald-"],
+      .dark [class*="bg-teal-"],
+      .dark [class*="bg-cyan-"] {
+        background-color: var(--admin-bg-secondary) !important;
+        color: var(--admin-text-primary) !important;
+        border-color: var(--admin-border-color) !important;
+        background-image: none !important;
+      }
+      
+      /* Hover em elementos de cores */
+      
+      .dark .hover\:bg-gray-50:hover,
+      .dark .hover\:bg-pink-50:hover,
+      .dark .hover\:bg-pink-100\/30:hover,
+      .dark .hover\:bg-pink-100:hover,
+      .dark .hover\:bg-pink-900\/30:hover,
+      .dark .hover\:bg-green-900\/30:hover,
+      .dark .hover\:bg-red-900\/30:hover,
+      .dark .hover\:bg-white:hover,
+      .dark .hover\:bg-white\/80:hover,
+      .dark .hover\:bg-white\/30:hover,
+      .dark .hover\:bg-white\/50:hover,
+      .dark .hover\:bg-gray-200\/50:hover {
+        background-color: var(--admin-bg-hover) !important;
+        color: var(--admin-text-primary) !important;
+      }
+      
+      /* ANULAR TODOS OS GRADIENTES DE FUNDO E DETALHES NO MODO ESCURO */
+      
+      .dark .bg-gradient-to-br,
+      .dark .bg-gradient-to-r,
+      .dark .bg-gradient-to-tr,
+      .dark .bg-gradient-to-t,
+      .dark .bg-gradient-to-b {
+        background-image: none !important;
+        background-color: var(--admin-bg-card) !important;
+      }
+      
+      /* Barra decorativa do topo do card e cabeçalhos em degradê */
+      
+      .dark [class*="bg-gradient-to-r from-pink-"],
+      .dark [class*="bg-gradient-to-br from-pink-"],
+      .dark [class*="bg-gradient-to-r from-purple-"],
+      .dark [class*="bg-gradient-to-br from-purple-"] {
+        background-image: none !important;
+        background-color: var(--admin-border-color) !important;
+      }
+      
+      /* Anular gradientes de fundo coloridos específicos da tela de IA e financeiro */
+      
+      .dark [class*="from-pink-"],
+      .dark [class*="to-pink-"],
+      .dark [class*="from-purple-"],
+      .dark [class*="to-purple-"],
+      .dark [class*="from-cyan-"],
+      .dark [class*="to-cyan-"],
+      .dark [class*="from-amber-"],
+      .dark [class*="to-amber-"] {
+        background-image: none !important;
+        background-color: var(--admin-bg-card) !important;
+        color: var(--admin-text-primary) !important;
+      }
+      
+      /* Barras de gráficos de receita e insights de IA (ex: from-pink-300 to-pink-500) no modo escuro */
+      
+      .dark [class*="from-pink-300"][class*="to-pink-500"] {
+        background-image: none !important;
+        background-color: var(--admin-text-secondary) !important;
+      }
+      
+      /* Anular sombras coloridas neons brilhantes no modo escuro */
+      
+      .dark [class*="shadow-pink-"],
+      .dark [class*="shadow-purple-"],
+      .dark [class*="shadow-indigo-"],
+      .dark [class*="shadow-cyan-"],
+      .dark [class*="shadow-amber-"] {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3) !important;
+      }
+      
+      /* Anular todas as cores de marca de textos nos insights de IA e financeiro */
+      
+      .dark [class*="text-pink-"],
+      .dark [class*="text-purple-"],
+      .dark [class*="text-indigo-"],
+      .dark [class*="text-cyan-"],
+      .dark [class*="text-amber-"] {
+        color: var(--admin-text-primary) !important;
+      }
+      
+      /* Anular classes arbitrárias de cores do Tailwind no modo escuro */
+      
+      .dark [class*="bg-\["],
+      .dark [class*="text-\["],
+      .dark [class*="border-\["] {
+        background-color: var(--admin-bg-secondary) !important;
+        background-image: none !important;
+        color: var(--admin-text-primary) !important;
+        border-color: var(--admin-border-color) !important;
+      }
+      
+      /* ANULAR TODAS AS CORES DE TEXTO NO MODO ESCURO */
+      
+      .dark .text-gray-900, .dark .text-slate-900, .dark .text-gray-850, .dark .text-gray-800,
+      .dark .text-pink-600, .dark .text-pink-700, .dark .text-pink-800, .dark .text-pink-900,
+      .dark .text-purple-600, .dark .text-purple-700, .dark .text-purple-800, .dark .text-purple-900,
+      .dark .text-indigo-600, .dark .text-indigo-700, .dark .text-indigo-800, .dark .text-indigo-900,
+      .dark .text-blue-600, .dark .text-blue-700, .dark .text-blue-800, .dark .text-blue-900,
+      .dark .text-yellow-600, .dark .text-yellow-700, .dark .text-yellow-800, .dark .text-yellow-900,
+      .dark .text-green-600, .dark .text-green-700, .dark .text-green-800, .dark .text-green-900,
+      .dark .text-emerald-600, .dark .text-emerald-700, .dark .text-emerald-750, .dark .text-emerald-800, .dark .text-emerald-900,
+      .dark .text-amber-600, .dark .text-amber-700, .dark .text-amber-800, .dark .text-amber-900,
+      .dark .text-rose-600, .dark .text-rose-700, .dark .text-rose-800, .dark .text-rose-900,
+      .dark .text-orange-600, .dark .text-orange-700, .dark .text-orange-800, .dark .text-orange-900,
+      .dark .text-red-500, .dark .text-red-650, .dark .text-red-700, .dark .text-red-900,
+      .dark .text-cyan-600, .dark .text-cyan-700, .dark .text-cyan-800, .dark .text-cyan-900 {
+        color: var(--admin-text-primary) !important;
+      }
+      
+      .dark .text-gray-700, .dark .text-gray-600, .dark .text-slate-600, .dark .text-slate-500, .dark .text-gray-500 {
+        color: var(--admin-text-secondary) !important;
+      }
+      
+      .dark .text-gray-400, .dark .text-slate-400 {
+        color: var(--admin-text-disabled) !important;
+      }
+      
+      /* ANULAR TODAS AS BORDAS COLORIDAS NO MODO ESCURO */
+      
+      .dark .border-gray-100, .dark .border-gray-200, .dark .border-gray-300,
+      .dark .border-slate-100, .dark .border-slate-200, .dark .border-slate-300,
+      .dark .border-pink-50, .dark .border-pink-100, .dark .border-pink-200, .dark .border-pink-300,
+      .dark .border-purple-50, .dark .border-purple-100, .dark .border-purple-200, .dark .border-purple-300,
+      .dark .border-indigo-50, .dark .border-indigo-100, .dark .border-indigo-200, .dark .border-indigo-300,
+      .dark .border-green-50, .dark .border-green-100, .dark .border-green-200, .dark .border-green-300,
+      .dark .border-yellow-50, .dark .border-yellow-100, .dark .border-yellow-200, .dark .border-yellow-300,
+      .dark .border-blue-50, .dark .border-blue-100, .dark .border-blue-200, .dark .border-blue-300,
+      .dark .border-rose-50, .dark .border-rose-100, .dark .border-rose-200,
+      .dark .border-amber-50, .dark .border-amber-100, .dark .border-amber-200,
+      .dark .border-orange-50, .dark .border-orange-100, .dark .border-orange-200 {
+        border-color: var(--admin-border-color) !important;
+      }
+      
+      .dark .border-b-2 {
+        border-bottom-color: var(--admin-border-color) !important;
+      }
+      
+      /* Formulários, Inputs e Selects */
+      
+      .dark input,
+      .dark select,
+      .dark textarea {
+        background-color: var(--admin-bg-secondary) !important;
+        color: var(--admin-text-primary) !important;
+        border-color: var(--admin-border-color) !important;
+      }
+      
+      .dark input::placeholder,
+      .dark textarea::placeholder {
+        color: var(--admin-text-disabled) !important;
+      }
+      
+      .dark input:focus,
+      .dark select:focus,
+      .dark textarea:focus {
+        border-color: var(--admin-text-secondary) !important;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1) !important;
+      }
+      
+      .dark input:disabled,
+      .dark select:disabled,
+      .dark textarea:disabled {
+        background-color: var(--admin-bg-primary) !important;
+        color: var(--admin-text-disabled) !important;
+        opacity: 0.5;
+      }
+      
+      .dark input[type="date"]::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+      }
+      
+      /* Scrollbar para Modo Escuro */
+      
+      .dark ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1) !important;
+      }
+      
+      .dark ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.2) !important;
+      }
+      
+      /* Sombras no Modo Escuro */
+      
+      .dark .shadow-lg,
+      .dark .shadow-xl,
+      .dark .shadow-2xl,
+      .dark .shadow-md,
+      .dark .shadow-sm,
+      .dark .shadow {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3) !important;
+      }
+      
+      /* Abas Selecionadas no Dark Mode */
+      
+      .dark .bg-white.text-pink-600,
+      .dark .bg-white.text-pink-700 {
+        background-color: var(--admin-bg-hover) !important;
+        color: var(--admin-text-primary) !important;
+        box-shadow: none !important;
+        border: 1px solid var(--admin-border-color) !important;
+      }
+      
+      .dark .border-gray-100\/50,
+      .dark .border-gray-50\/50 {
+        border-color: var(--admin-border-color) !important;
+      }
+      
+      /* Glassmorphism e Opacidades de Branco no Modo Escuro Notion */
+      
+      .dark .bg-white\/96 { background-color: rgba(37, 37, 37, 0.96) !important; }
+      
+      .dark .bg-white\/95 { background-color: rgba(37, 37, 37, 0.95) !important; }
+      
+      .dark .bg-white\/90 { background-color: rgba(37, 37, 37, 0.9) !important; }
+      
+      .dark .bg-white\/80 { background-color: rgba(37, 37, 37, 0.85) !important; }
+      
+      .dark .bg-white\/70 { background-color: rgba(37, 37, 37, 0.8) !important; }
+      
+      .dark .bg-white\/60 { background-color: rgba(32, 32, 32, 0.8) !important; }
+      
+      .dark .bg-white\/50 { background-color: rgba(32, 32, 32, 0.7) !important; }
+      
+      .dark .bg-white\/45 { background-color: rgba(32, 32, 32, 0.65) !important; }
+      
+      .dark .bg-white\/40 { background-color: rgba(32, 32, 32, 0.6) !important; }
+      
+      .dark .bg-white\/30,
+      .dark .bg-white\/25,
+      .dark .bg-white\/20,
+      .dark .bg-white\/15,
+      .dark .bg-white\/10,
+      .dark .bg-white\/5 {
+        background-color: rgba(255, 255, 255, 0.03) !important;
+      }
+      
+      /* Hover nas classes com opacidades */
+      
+      .dark .hover\:bg-white:hover { background-color: rgba(255, 255, 255, 0.06) !important; }
+      
+      .dark .hover\:bg-white\/80:hover { background-color: rgba(255, 255, 255, 0.06) !important; }
+      
+      .dark .hover\:bg-white\/30:hover { background-color: rgba(255, 255, 255, 0.04) !important; }
+      
+      .dark .hover\:bg-white\/50:hover { background-color: rgba(255, 255, 255, 0.06) !important; }
+      
+      /* Ajuste específico do Calendário e DatePicker no Modo Escuro Notion */
+      
+      .dark .text-pink-950,
+      .dark .text-pink-800\/60,
+      .dark .text-pink-700,
+      .dark .text-pink-600 {
+        color: var(--admin-text-primary) !important;
+      }
+      
+      .dark .text-pink-900\/30 {
+        color: var(--admin-text-disabled) !important;
+        opacity: 0.35 !important;
+      }
+      
+      .dark .hover\:bg-pink-100\/80:hover,
+      .dark .hover\:bg-pink-100:hover,
+      .dark .hover\:bg-pink-50:hover {
+        background-color: var(--admin-bg-hover) !important;
+        color: var(--admin-text-primary) !important;
+      }
+      
+      /* Dia selecionado do calendário no modo escuro Notion (círculo branco com texto preto) */
+      
+      .dark .bg-gradient-to-r.from-pink-500.to-rose-400.text-white,
+      .dark .bg-gradient-to-r.from-pink-500.to-rose-400 {
+        background-image: none !important;
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        box-shadow: none !important;
+      }
+      
+      /* Sombra do calendário e grafismo no modo escuro Notion */
+      
+      .dark [class*="shadow-[0_8px_30px_rgb(244,114,182"] {
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5) !important;
+      }
+    </style>
+
+
+  <script type="module" crossorigin src="/assets/index-CtTn_c5J.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CiqDqURq.css">
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

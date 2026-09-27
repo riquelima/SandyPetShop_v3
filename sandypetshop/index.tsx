@@ -1,0 +1,65 @@
+
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import { ToastProvider } from './src/components/ui/toast';
+import MobileUiDemo from './src/pages/MobileUiDemo';
+import FeedbackPage from './src/pages/FeedbackPage';
+import { AvailableTimesPage } from './src/pages/AvailableTimesPage';
+import { ManageAppointmentPage } from './src/pages/ManageAppointmentPage';
+
+// Proactively remove any existing service workers to avoid stale caches in preview/dev
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    registrations.forEach(r => r.unregister());
+  }).catch(() => {});
+}
+
+// Safe Service Worker registration: register only in production and only if sw.js exists
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', async () => {
+    try {
+      const res = await fetch('/sw.js', { method: 'HEAD' });
+      if (!res.ok) return;
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      console.log('ServiceWorker registration successful with scope: ', registration.scope);
+    } catch (error) {
+      console.log('ServiceWorker registration skipped:', error);
+    }
+  });
+}
+
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  throw new Error("Could not find root element to mount to");
+}
+
+const root = ReactDOM.createRoot(rootElement);
+
+function renderApp() {
+  const hash = window.location.hash;
+  const path = window.location.pathname;
+  const useMobileDemo = hash === '#mobile-ui-demo';
+  const useFeedback = hash.startsWith('#feedback');
+  const useAvailableTimes = hash.startsWith('#horarios') || hash.startsWith('#horários') || path === '/horarios' || path === '/horários' || path === '/horarios/' || path === '/horários/';
+  const useManageAppointment = path === '/gerenciar' || path === '/manage';
+  const searchParams = new URLSearchParams(window.location.search);
+  const prefillService = searchParams.get('service');
+  const prefillDate = searchParams.get('date');
+  const prefillTime = searchParams.get('time');
+
+  root.render(
+    <React.StrictMode>
+      <ToastProvider>
+        {useManageAppointment ? <ManageAppointmentPage /> : useFeedback ? <FeedbackPage /> : useMobileDemo ? <MobileUiDemo /> : useAvailableTimes ? <AvailableTimesPage /> : <App prefillService={prefillService} prefillDate={prefillDate} prefillTime={prefillTime} />}
+      </ToastProvider>
+    </React.StrictMode>
+  );
+}
+
+// Initial render
+renderApp();
+
+// Listen for hash and popstate changes to update the view without reload
+window.addEventListener('hashchange', renderApp);
+window.addEventListener('popstate', renderApp);
