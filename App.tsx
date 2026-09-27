@@ -13516,9 +13516,8 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                                         <SafeImage src="https://cdn-icons-png.flaticon.com/512/9881/9881335.png" alt="CPF/CNPJ Icon" className="h-4 w-4 opacity-60" />
                                     </span>
                                     <input
-                                        type="tel"
+                                        type="text"
                                         inputMode="numeric"
-                                        pattern="[0-9]*"
                                         autoComplete="off"
                                         name="owner_cpf"
                                         id="owner_cpf"
@@ -13891,33 +13890,112 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                         {/* SECTION 4: RESUMO E CONFIRMAÇÃO */}
                         {selectedTime && (
                             <div className="space-y-6 pt-6 animate-fadeIn">
-                                <h2 className="text-3xl font-extrabold text-pink-950 leading-tight tracking-tight mb-4 break-words whitespace-nowrap">Resumo do Agendamento</h2>
-                                {/* Foto do pet no resumo - so exibe se houver foto adicionada */}
-                                {formData.petPhoto && (
-                                    <div className="flex flex-col items-center justify-center -mt-2 mb-2">
-                                        <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-pink-100 to-rose-200 flex items-center justify-center">
-                                            <img
-                                                src={formData.petPhoto}
-                                                alt={`Foto de ${formData.petName}`}
-                                                className="w-full h-full object-cover"
-                                            />
+                                <h2 className="text-base sm:text-3xl font-extrabold text-pink-950 leading-tight tracking-tight mb-4 text-center break-words whitespace-nowrap">Resumo do Agendamento</h2>
+                                {/* Card de resumo estilizado */}
+                                <div className="relative overflow-hidden rounded-3xl border border-pink-200/70 bg-gradient-to-br from-white via-pink-50/60 to-rose-50 shadow-xl shadow-pink-200/40">
+                                    {/* Faixa superior colorida */}
+                                    <div className="h-1.5 w-full bg-gradient-to-r from-pink-500 via-rose-500 to-fuchsia-500" />
+
+                                    {/* Cabeçalho com foto do pet */}
+                                    <div className="relative px-5 pt-5 pb-4 flex items-center gap-4 border-b border-pink-100/80 bg-white/60 backdrop-blur-sm">
+                                        <div className="relative shrink-0">
+                                            <div className="w-20 h-20 rounded-full overflow-hidden border-[3px] border-white shadow-lg ring-2 ring-pink-300 bg-gradient-to-br from-pink-100 to-rose-200 flex items-center justify-center">
+                                                {formData.petPhoto ? (
+                                                    <img
+                                                        src={formData.petPhoto}
+                                                        alt={`Foto de ${formData.petName}`}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <LottieAnimation
+                                                        src="https://lottie.host/ee823306-d890-4936-8032-f1bae7614d82/A1LpnduBwz.json"
+                                                        style={{ width: '100%', height: '100%' }}
+                                                    />
+                                                )}
+                                            </div>
                                         </div>
-                                        <p className="mt-2 text-sm font-extrabold text-pink-950">{formData.petName}</p>
+
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-pink-500 whitespace-nowrap">Resumo do Agendamento</p>
+                                            <h3 className="mt-0.5 text-xl font-extrabold text-pink-950 truncate leading-tight">{formData.petName || 'Pet'}</h3>
+                                            {formData.petBreed && (
+                                                <p className="text-xs text-pink-700/80 truncate">{formData.petBreed}</p>
+                                            )}
+                                        </div>
+
+                                        <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-pink-100 text-pink-700 border border-pink-200">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3">
+                                                <path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm.75 5h-1.5v5.25l4.5 2.7.75-1.23-3.75-2.22Z" />
+                                            </svg>
+                                            {selectedTime}:00
+                                        </span>
                                     </div>
-                                )}
-                                <div className="p-6 bg-white rounded-lg space-y-2 text-gray-700 border border-gray-200">
-                                    <p><strong>Pet:</strong> {formData.petName} ({formData.petBreed})</p>
-                                    <p><strong>Responsável:</strong> {formData.ownerName}</p>
-                                    <p><strong>WhatsApp:</strong> {formData.whatsapp}</p>
-                                    <p><strong>Serviço:</strong> {selectedService ? SERVICES[selectedService].label : 'Nenhum'}</p>
-                                    {!isVisitService && <p><strong>Peso:</strong> {selectedWeight ? PET_WEIGHT_OPTIONS[selectedWeight] : 'Nenhum'}</p>}
-                                    {!isVisitService && selectedAddons && Object.keys(selectedAddons).some(k => selectedAddons[k]) && (
-                                        <p><strong>Adicionais:</strong> {ADDON_SERVICES.filter(a => selectedAddons[a.id]).map(a => a.label).join(', ')}</p>
-                                    )}
-                                    <p><strong>Data:</strong> {selectedDate.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })} às {selectedTime}:00</p>
+
+                                    {/* Lista de dados */}
+                                    <div className="px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3 text-sm">
+                                        <div className="flex items-start gap-3">
+                                            <img src="https://cdn-icons-png.flaticon.com/512/15494/15494722.png" alt="Responsável" className="mt-0.5 w-7 h-7 object-contain shrink-0" />
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-bold uppercase tracking-wider text-pink-500">Responsável</p>
+                                                <p className="font-semibold text-pink-950 truncate">{formData.ownerName || '—'}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-start gap-3">
+                                            <img src="https://cdn-icons-png.flaticon.com/512/1384/1384023.png" alt="WhatsApp" className="mt-0.5 w-7 h-7 object-contain shrink-0" />
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">WhatsApp</p>
+                                                <p className="font-semibold text-pink-950 truncate">{formData.whatsapp || '—'}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-start gap-3">
+                                            <img src="https://cdn-icons-png.flaticon.com/512/1049/1049504.png" alt="Serviço" className="mt-0.5 w-7 h-7 object-contain shrink-0" />
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-bold uppercase tracking-wider text-violet-600">Serviço</p>
+                                                <p className="font-semibold text-pink-950 truncate">{selectedService ? SERVICES[selectedService].label : 'Nenhum'}</p>
+                                            </div>
+                                        </div>
+
+                                        {!isVisitService && (
+                                            <div className="flex items-start gap-3">
+                                                <img src="https://cdn-icons-png.flaticon.com/512/847/847345.png" alt="Peso" className="mt-0.5 w-7 h-7 object-contain shrink-0" />
+                                                <div className="min-w-0">
+                                                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Peso</p>
+                                                    <p className="font-semibold text-pink-950 truncate">{selectedWeight ? PET_WEIGHT_OPTIONS[selectedWeight] : 'Nenhum'}</p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="flex items-start gap-3 sm:col-span-2">
+                                            <img src="https://cdn-icons-png.flaticon.com/512/12887/12887924.png" alt="Data e Horário" className="mt-0.5 w-7 h-7 object-contain shrink-0" />
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600">Data & Horário</p>
+                                                <p className="font-semibold text-pink-950 truncate">{selectedDate.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })} às {selectedTime}:00</p>
+                                            </div>
+                                        </div>
+
+                                        {!isVisitService && selectedAddons && Object.keys(selectedAddons).some(k => selectedAddons[k]) && (
+                                            <div className="flex items-start gap-3 sm:col-span-2 pt-2 border-t border-pink-100/80">
+                                                <span className="mt-0.5 w-8 h-8 rounded-xl bg-fuchsia-100 text-fuchsia-600 flex items-center justify-center shrink-0">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61Z"/></svg>
+                                                </span>
+                                                <div className="min-w-0">
+                                                    <p className="text-[10px] font-bold uppercase tracking-wider text-fuchsia-600">Adicionais</p>
+                                                    <div className="flex flex-wrap gap-1.5 mt-1">
+                                                        {ADDON_SERVICES.filter(a => selectedAddons[a.id]).map(a => (
+                                                            <span key={a.id} className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-200">
+                                                                {a.label}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                     
                                     {selectedService && !isVisitService && selectedWeight && totalPrice > 0 && (
-                                        <div className="mt-6 p-4 sm:p-6 bg-gradient-to-r from-pink-100 to-rose-100 border-2 border-pink-200 rounded-[1.5rem] sm:rounded-[2rem] animate-fadeIn shadow-lg shadow-pink-200/50 w-full overflow-hidden">
+                                        <div className="mx-5 mb-5 p-4 sm:p-5 bg-gradient-to-r from-pink-100 to-rose-100 border-2 border-pink-200 rounded-2xl animate-fadeIn shadow-lg shadow-pink-200/50 w-[calc(100%-2.5rem)] overflow-hidden">
                                             <div className="flex justify-between items-center gap-2 whitespace-nowrap overflow-hidden">
                                                 <span className="text-sm sm:text-lg font-bold text-pink-900 uppercase tracking-wider whitespace-nowrap">Preço Total:</span>
                                                 <span className="text-xl sm:text-3xl font-extrabold text-pink-700 drop-shadow-sm whitespace-nowrap">R$ {(totalPrice ?? 0).toFixed(2).replace('.', ',')}</span>
@@ -13948,11 +14026,11 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                                             )}
                                         </div>
                                     )}
-                                </div>
+                                    </div>
                                 <div className="mt-8">
-                                    <button type="submit" disabled={isSubmitting || !isStep1Valid || !isStep2Valid || !isStep3Valid} className="group relative overflow-hidden w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-extrabold py-2.5 px-8 rounded-2xl transition-all duration-300 shadow-[0_8px_30px_rgb(244,114,182,0.3)] hover:shadow-[0_8px_30px_rgb(244,114,182,0.5)] transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none text-lg tracking-wide uppercase">
+                                    <button type="submit" disabled={isSubmitting || !isStep1Valid || !isStep2Valid || !isStep3Valid} className="group relative overflow-hidden w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-extrabold py-3 px-4 sm:px-8 rounded-2xl transition-all duration-300 shadow-[0_8px_30px_rgb(244,114,182,0.3)] hover:shadow-[0_8px_30px_rgb(244,114,182,0.5)] transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none text-sm sm:text-lg tracking-wide uppercase whitespace-nowrap">
                                         <div className="absolute inset-0 bg-white/20 w-0 group-hover:w-full transition-all duration-500 ease-out"></div>
-                                        <span className="relative z-10 flex items-center justify-center gap-2">
+                                        <span className="relative z-10 flex items-center justify-center gap-2 whitespace-nowrap">
                                             {isSubmitting ? 'Agendando...' : (<><span>✓</span> Confirmar Agendamento</>)}
                                         </span>
                                     </button>
