@@ -62,18 +62,34 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
             }
             if (clientData.pet_name) {
                 const rawPhone = phone.replace(/\D/g, '');
+                const last4 = rawPhone.slice(-4);
+                const last5 = rawPhone.slice(-5);
+                const last8 = rawPhone.slice(-8);
                 const formatted11 = rawPhone.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2').slice(0, 15);
                 const formatted10 = rawPhone.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d)/, '$1-$2').slice(0, 14);
                 
-                await supabase.from('daycare_enrollments')
-                    .update({ pet_photo_url: publicUrl })
-                    .ilike('pet_name', clientData.pet_name)
-                    .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`);
-
-                await supabase.from('hotel_registrations')
-                    .update({ pet_photo_url: publicUrl })
-                    .ilike('pet_name', clientData.pet_name)
-                    .or(`whatsapp.ilike."%${rawPhone}%",whatsapp.ilike."%${formatted11}%",whatsapp.ilike."%${formatted10}%"`);
+                await Promise.allSettled([
+                    supabase.from('agendamento_banhotosa')
+                        .update({ pet_photo_url: publicUrl })
+                        .ilike('pet_name', clientData.pet_name)
+                        .or(`whatsapp.ilike.%${last4}%,whatsapp.ilike.%${last5}%,whatsapp.ilike.%${last8}%,whatsapp.ilike.%${rawPhone}%,whatsapp.ilike.%${formatted11}%,whatsapp.ilike.%${formatted10}%`),
+                    supabase.from('pet_movel_appointments')
+                        .update({ pet_photo_url: publicUrl })
+                        .ilike('pet_name', clientData.pet_name)
+                        .or(`whatsapp.ilike.%${last4}%,whatsapp.ilike.%${last5}%,whatsapp.ilike.%${last8}%,whatsapp.ilike.%${rawPhone}%,whatsapp.ilike.%${formatted11}%,whatsapp.ilike.%${formatted10}%`),
+                    supabase.from('appointments')
+                        .update({ pet_photo_url: publicUrl })
+                        .ilike('pet_name', clientData.pet_name)
+                        .or(`whatsapp.ilike.%${last4}%,whatsapp.ilike.%${last5}%,whatsapp.ilike.%${last8}%,whatsapp.ilike.%${rawPhone}%,whatsapp.ilike.%${formatted11}%,whatsapp.ilike.%${formatted10}%`),
+                    supabase.from('daycare_enrollments')
+                        .update({ pet_photo_url: publicUrl })
+                        .ilike('pet_name', clientData.pet_name)
+                        .or(`contact_phone.ilike.%${rawPhone}%,contact_phone.ilike.%${formatted11}%,contact_phone.ilike.%${formatted10}%`),
+                    supabase.from('hotel_registrations')
+                        .update({ pet_photo_url: publicUrl })
+                        .ilike('pet_name', clientData.pet_name)
+                        .or(`tutor_phone.ilike.%${rawPhone}%,tutor_phone.ilike.%${formatted11}%,tutor_phone.ilike.%${formatted10}%`)
+                ]);
             }
             
             setPhotoUrl(publicUrl);

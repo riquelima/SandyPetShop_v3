@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 // Chuva de confete realista (60 FPS Canvas) - reutilizavel
 export const ConfettiRain: React.FC = () => {

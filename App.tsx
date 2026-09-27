@@ -4786,6 +4786,31 @@ const AdminAddAppointmentModal: React.FC<{
             return;
         }
 
+        // Upload da foto do pet para o bucket publico (se houver e for base64)
+        let petPhotoUrl: string | null = null;
+        if (formData.petPhoto && formData.petPhoto.startsWith('data:')) {
+            try {
+                const base64 = formData.petPhoto.split(',')[1] || '';
+                const mimeMatch = formData.petPhoto.match(/^data:(.*?);base64,/);
+                const mime = mimeMatch?.[1] || 'image/jpeg';
+                const ext = mime.split('/')[1] || 'jpg';
+                const bytes = atob(base64);
+                const buffer = new Uint8Array(bytes.length);
+                for (let i = 0; i < bytes.length; i++) buffer[i] = bytes.charCodeAt(i);
+                const blob = new Blob([buffer], { type: mime });
+                const fileName = `public/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+                const { error: upErr } = await supabase.storage.from('appointment_pet_photos').upload(fileName, blob, { upsert: true, contentType: mime });
+                if (upErr) throw upErr;
+                const { data: pub } = supabase.storage.from('appointment_pet_photos').getPublicUrl(fileName);
+                petPhotoUrl = pub.publicUrl;
+            } catch (uploadErr) {
+                console.error('Falha no upload da foto do pet:', uploadErr);
+                petPhotoUrl = null;
+            }
+        } else if (formData.petPhoto) {
+            petPhotoUrl = formData.petPhoto;
+        }
+
         const basePayload = {
             appointment_time: appointmentTime.toISOString(),
             pet_name: formData.petName,
@@ -4798,7 +4823,7 @@ const AdminAddAppointmentModal: React.FC<{
             addons: isVisitService ? [] : ADDON_SERVICES.filter(addon => selectedAddons[addon.id]).map(addon => addon.label),
             price: totalPrice,
             status: 'AGENDADO',
-            pet_photo_url: formData.petPhoto || null
+            pet_photo_url: petPhotoUrl
         };
 
         const supabasePayload = {
@@ -4870,6 +4895,7 @@ const AdminAddAppointmentModal: React.FC<{
                 condominium: newDbAppointment.condominium,
                 extra_services: newDbAppointment.extra_services,
                 owner_cpf: newDbAppointment.owner_cpf,
+                pet_photo_url: newDbAppointment.pet_photo_url || petPhotoUrl || null,
             };
             onAppointmentCreated(createdAdminAppointment);
             onClose();
@@ -13034,6 +13060,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
             pet_breed: formData.petBreed,
             owner_name: formData.ownerName,
             whatsapp: formData.whatsapp,
+            owner_cpf: formData.owner_cpf ? formData.owner_cpf.replace(/\D/g, '') : null,
             service: SERVICES[selectedService].label,
             weight: isVisitService ? 'N/A' : (selectedWeight ? PET_WEIGHT_OPTIONS[selectedWeight] : 'N/A'),
             addons: isVisitService ? [] : ADDON_SERVICES.filter(addon => selectedAddons[addon.id]).map(addon => addon.label),
@@ -13073,7 +13100,8 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                         .from('clients')
                         .insert({
                             name: supabasePayload.owner_name,
-                            phone: supabasePayload.whatsapp
+                            phone: supabasePayload.whatsapp,
+                            owner_cpf: supabasePayload.owner_cpf
                         });
                     if (clientInsertError) {
                         console.error('Failed to auto-register client:', clientInsertError.message);
@@ -13108,6 +13136,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                 service: selectedService,
                 appointmentTime: new Date(newDbAppointment.appointment_time),
                 condominium: selectedCondo || undefined,
+                pet_photo_url: newDbAppointment.pet_photo_url || petPhotoUrl || undefined,
             };
 
             setAppointments(prev => [...prev, newAppointment]);
@@ -19157,6 +19186,7 @@ const AdminDashboard: React.FC<{
                     if (!arr) return [];
                     return arr.map((rec: any) => {
                         const sessionPrice = Number(rec.price ?? 0);
+                        const mc = Array.isArray(rec.monthly_clients) ? rec.monthly_clients[0] : rec.monthly_clients;
 
                         return {
                             id: rec.id,
@@ -19176,8 +19206,8 @@ const AdminDashboard: React.FC<{
                             condominium: rec.condominium ?? rec.condo ?? undefined,
                             extra_services: rec.extra_services ?? undefined,
                             observation: rec.observation ?? rec.notes ?? undefined,
-                            pet_photo_url: rec.pet_photo_url ?? rec.monthly_clients?.pet_photo_url ?? undefined,
-                            recurrence_type: rec.monthly_clients?.recurrence_type ?? undefined,
+                            pet_photo_url: rec.pet_photo_url ?? mc?.pet_photo_url ?? undefined,
+                            recurrence_type: mc?.recurrence_type ?? undefined,
                             responsible: rec.responsible ?? undefined,
                             owner_cpf: rec.owner_cpf ?? undefined,
                         };
@@ -20280,29 +20310,32 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
 
             const normalize = (arr: any[] | null | undefined, tableName: 'appointments' | 'pet_movel_appointments' | 'agendamento_banhotosa'): AdminAppointment[] => {
                 if (!arr) return [];
-                return arr.map((rec: any) => ({
-                    id: rec.id,
-                    appointment_time: rec.appointment_time,
-                    pet_name: rec.pet_name,
-                    pet_breed: rec.pet_breed ?? undefined,
-                    owner_name: rec.owner_name ?? rec.client_name ?? '',
-                    owner_address: rec.owner_address ?? rec.address ?? undefined,
-                    whatsapp: rec.whatsapp ?? rec.phone ?? '',
-                    service: rec.service,
-                    weight: rec.weight,
-                    addons: rec.addons ?? [],
-                    price: rec.price ?? 0,
-                    status: rec.status,
-                    monthly_client_id: rec.monthly_client_id ?? undefined,
-                    condominium: rec.condominium ?? rec.condo ?? undefined,
-                    extra_services: rec.extra_services ?? undefined,
-                    observation: rec.observation ?? rec.notes ?? undefined,
-                    pet_photo_url: rec.pet_photo_url ?? rec.monthly_clients?.pet_photo_url ?? undefined,
-                    recurrence_type: rec.monthly_clients?.recurrence_type ?? undefined,
-                    responsible: rec.responsible ?? undefined,
-                    owner_cpf: rec.owner_cpf ?? undefined,
-                    table: tableName,
-                }));
+                return arr.map((rec: any) => {
+                    const mc = Array.isArray(rec.monthly_clients) ? rec.monthly_clients[0] : rec.monthly_clients;
+                    return {
+                        id: rec.id,
+                        appointment_time: rec.appointment_time,
+                        pet_name: rec.pet_name,
+                        pet_breed: rec.pet_breed ?? undefined,
+                        owner_name: rec.owner_name ?? rec.client_name ?? '',
+                        owner_address: rec.owner_address ?? rec.address ?? undefined,
+                        whatsapp: rec.whatsapp ?? rec.phone ?? '',
+                        service: rec.service,
+                        weight: rec.weight,
+                        addons: rec.addons ?? [],
+                        price: rec.price ?? 0,
+                        status: rec.status,
+                        monthly_client_id: rec.monthly_client_id ?? undefined,
+                        condominium: rec.condominium ?? rec.condo ?? undefined,
+                        extra_services: rec.extra_services ?? undefined,
+                        observation: rec.observation ?? rec.notes ?? undefined,
+                        pet_photo_url: rec.pet_photo_url ?? mc?.pet_photo_url ?? undefined,
+                        recurrence_type: mc?.recurrence_type ?? undefined,
+                        responsible: rec.responsible ?? undefined,
+                        owner_cpf: rec.owner_cpf ?? undefined,
+                        table: tableName,
+                    };
+                });
             };
 
             // Fase 1: Carregamento prioritário de hoje para exibição visual instantânea no Resumo do Dia
