@@ -148,33 +148,57 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
                     <div className="border border-gray-100 p-4 rounded-xl">
                         <h4 className="font-bold text-gray-700 mb-2">Carteira de Vacinação</h4>
                         {docs.carteira_vacinacao_url ? (
-                            <a href={docs.carteira_vacinacao_url} target="_blank" rel="noreferrer" className="text-pink-600 font-medium text-sm block mb-3 underline">Ver Documento Atual</a>
+                            <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <svg className="w-5 h-5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                    <a href={docs.carteira_vacinacao_url} target="_blank" rel="noreferrer" className="text-emerald-700 font-bold text-sm hover:underline">Documento Enviado</a>
+                                </div>
+                                <button onClick={() => { if(window.confirm('Remover documento?')) updateField('carteira_vacinacao_url', ''); }} className="text-[10px] text-gray-400 hover:text-red-500 font-bold px-2 py-1 transition-colors uppercase tracking-wider" title="Remover documento">Excluir</button>
+                            </div>
                         ) : (
-                            <p className="text-sm text-red-500 mb-3 font-medium">Documento pendente!</p>
+                            <>
+                                <p className="text-sm text-red-500 mb-3 font-medium">Documento pendente!</p>
+                                <DragDropFileInput onChange={file => handleUpload(file, 'carteira_vacinacao_url')} />
+                            </>
                         )}
-                        <DragDropFileInput onChange={file => handleUpload(file, 'carteira_vacinacao_url')} />
                     </div>
 
                     {/* Exame Coproparasitológico */}
                     <div className="border border-gray-100 p-4 rounded-xl">
                         <h4 className="font-bold text-gray-700 mb-2">Exame Coproparasitológico</h4>
                         {docs.exame_coproparasitologico_url ? (
-                            <a href={docs.exame_coproparasitologico_url} target="_blank" rel="noreferrer" className="text-pink-600 font-medium text-sm block mb-3 underline">Ver Documento Atual</a>
+                            <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <svg className="w-5 h-5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                    <a href={docs.exame_coproparasitologico_url} target="_blank" rel="noreferrer" className="text-emerald-700 font-bold text-sm hover:underline">Documento Enviado</a>
+                                </div>
+                                <button onClick={() => { if(window.confirm('Remover documento?')) updateField('exame_coproparasitologico_url', ''); }} className="text-[10px] text-gray-400 hover:text-red-500 font-bold px-2 py-1 transition-colors uppercase tracking-wider" title="Remover documento">Excluir</button>
+                            </div>
                         ) : (
-                            <p className="text-sm text-red-500 mb-3 font-medium">Documento pendente!</p>
+                            <>
+                                <p className="text-sm text-red-500 mb-3 font-medium">Documento pendente!</p>
+                                <DragDropFileInput onChange={file => handleUpload(file, 'exame_coproparasitologico_url')} />
+                            </>
                         )}
-                        <DragDropFileInput onChange={file => handleUpload(file, 'exame_coproparasitologico_url')} />
                     </div>
 
                     {/* Atestado Veterinário */}
                     <div className="border border-gray-100 p-4 rounded-xl">
                         <h4 className="font-bold text-gray-700 mb-2">Atestado Veterinário</h4>
                         {docs.atestado_veterinario_url ? (
-                            <a href={docs.atestado_veterinario_url} target="_blank" rel="noreferrer" className="text-pink-600 font-medium text-sm block mb-3 underline">Ver Documento Atual</a>
+                            <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <svg className="w-5 h-5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                    <a href={docs.atestado_veterinario_url} target="_blank" rel="noreferrer" className="text-emerald-700 font-bold text-sm hover:underline">Documento Enviado</a>
+                                </div>
+                                <button onClick={() => { if(window.confirm('Remover documento?')) updateField('atestado_veterinario_url', ''); }} className="text-[10px] text-gray-400 hover:text-red-500 font-bold px-2 py-1 transition-colors uppercase tracking-wider" title="Remover documento">Excluir</button>
+                            </div>
                         ) : (
-                            <p className="text-sm text-red-500 mb-3 font-medium">Documento pendente!</p>
+                            <>
+                                <p className="text-sm text-red-500 mb-3 font-medium">Documento pendente!</p>
+                                <DragDropFileInput onChange={file => handleUpload(file, 'atestado_veterinario_url')} />
+                            </>
                         )}
-                        <DragDropFileInput onChange={file => handleUpload(file, 'atestado_veterinario_url')} />
                     </div>
 
                     {/* Pulga e Carrapato */}
@@ -183,11 +207,21 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
                         <div>
                             <label className="block text-sm text-gray-500 mb-1">Comprovante</label>
                             {docs.comprovante_pulga_url ? (
-                                <a href={docs.comprovante_pulga_url} target="_blank" rel="noreferrer" className="text-pink-600 font-medium text-sm block mb-3 underline">Ver Documento Atual</a>
+                                <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <svg className="w-5 h-5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                        <a href={docs.comprovante_pulga_url} target="_blank" rel="noreferrer" className="text-emerald-700 font-bold text-sm hover:underline">Documento Enviado</a>
+                                    </div>
+                                    <button onClick={() => { if(window.confirm('Remover documento?')) updateField('comprovante_pulga_url', ''); }} className="text-[10px] text-gray-400 hover:text-red-500 font-bold px-2 py-1 transition-colors uppercase tracking-wider" title="Remover documento">Excluir</button>
+                                </div>
                             ) : (
-                                <p className="text-sm text-red-500 mb-3 font-medium">Documento pendente!</p>
+                                <>
+                                    <p className="text-sm text-red-500 mb-3 font-medium">Documento pendente!</p>
+                                    <div className="mb-3">
+                                        <DragDropFileInput onChange={file => handleUpload(file, 'comprovante_pulga_url')} />
+                                    </div>
+                                </>
                             )}
-                            <DragDropFileInput onChange={file => handleUpload(file, 'comprovante_pulga_url')} />
                         </div>
                         <div>
                             <label className="block text-sm text-gray-500 mb-1">Data de Validade</label>
