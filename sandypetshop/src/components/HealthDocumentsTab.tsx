@@ -105,10 +105,18 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
             const healthDocs = currentExtra.health_docs || {};
             healthDocs[field] = value;
             
-            await supabase.from(targetTable).update({
+            const { error: firstError } = await supabase.from(targetTable).update({
                 [field]: value,
                 extra_services: { ...currentExtra, health_docs: healthDocs }
             }).eq('id', selectedPetId);
+
+            if (firstError) {
+                const { error: secondError } = await supabase.from(targetTable).update({
+                    extra_services: { ...currentExtra, health_docs: healthDocs }
+                }).eq('id', selectedPetId);
+                
+                if (secondError) throw secondError;
+            }
             
             alert('Salvo com sucesso!');
         } catch (e) {
