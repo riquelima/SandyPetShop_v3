@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
+import { HealthDocumentsTab } from './HealthDocumentsTab';
 
 const cleanServiceName = (service: string) => {
     return (service || '')
@@ -26,7 +27,7 @@ const FallbackLottieAvatar = ({ className = "" }: { className?: string }) => (
 );
 
 export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout: () => void }> = ({ clientData, phone, onLogout }) => {
-    const [activeTab, setActiveTab] = useState<'appointments' | 'fidelity' | 'invoices' | 'daycare'>('appointments');
+    const [activeTab, setActiveTab] = useState<'appointments' | 'fidelity' | 'invoices' | 'daycare' | 'health'>('appointments');
     const [appointments, setAppointments] = useState<any[]>([]);
     const [loadingAppts, setLoadingAppts] = useState(true);
     const [daycareDiaries, setDaycareDiaries] = useState<any[]>([]);
@@ -345,6 +346,15 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                             className={`flex-1 min-w-[100px] snap-center py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'fidelity' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
                         >
                             Fidelidade
+                        </button>
+                    )}
+
+                    {(clientData.isDaycare || clientData.isHotel) && (
+                        <button 
+                            onClick={() => setActiveTab('health')}
+                            className={`flex-1 min-w-[100px] snap-center py-3 text-sm font-semibold rounded-xl transition-all ${activeTab === 'health' ? 'bg-pink-100 text-pink-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
+                        >
+                            Saúde
                         </button>
                     )}
                 </div>
@@ -716,6 +726,11 @@ export const ClientAreaView: React.FC<{ clientData: any; phone: string; onLogout
                             })()}
                         </div>
                     </div>
+                )}
+
+                {/* Health Documents View */}
+                {activeTab === 'health' && (clientData.isDaycare || clientData.isHotel) && (
+                    <HealthDocumentsTab clientData={clientData} phone={phone} />
                 )}
             </div>
         </div>

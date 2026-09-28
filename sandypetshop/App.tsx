@@ -1874,8 +1874,34 @@ const ViewHotelRegistrationModal: React.FC<{
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                             <div><span className="font-semibold">RG:</span> {registration.has_rg_document ? 'Sim' : 'Não'}</div>
                             <div><span className="font-semibold">Comprovante de residência:</span> {registration.has_residence_proof ? 'Sim' : 'Não'}</div>
-                            <div><span className="font-semibold">Carteira de vacinação:</span> {registration.has_vaccination_card ? 'Sim' : 'Não'}</div>
-                            <div><span className="font-semibold">Atestado veterinário:</span> {registration.has_vet_certificate ? 'Sim' : 'Não'}</div>
+                            <div>
+                                <span className="font-semibold">Carteira de vacinação:</span> {registration.has_vaccination_card ? 'Sim' : 'Não'}
+                                {((registration as any).carteira_vacinacao_url || (registration as any).extra_services?.health_docs?.carteira_vacinacao_url) && (
+                                    <a href={(registration as any).carteira_vacinacao_url || (registration as any).extra_services?.health_docs?.carteira_vacinacao_url} target="_blank" rel="noreferrer" className="text-pink-600 underline ml-2 text-xs font-semibold">Ver Documento</a>
+                                )}
+                            </div>
+                            <div>
+                                <span className="font-semibold">Atestado veterinário:</span> {registration.has_vet_certificate ? 'Sim' : 'Não'}
+                                {((registration as any).atestado_veterinario_url || (registration as any).extra_services?.health_docs?.atestado_veterinario_url) && (
+                                    <a href={(registration as any).atestado_veterinario_url || (registration as any).extra_services?.health_docs?.atestado_veterinario_url} target="_blank" rel="noreferrer" className="text-pink-600 underline ml-2 text-xs font-semibold">Ver Documento</a>
+                                )}
+                            </div>
+                            <div>
+                                <span className="font-semibold">Exame Coproparasitológico:</span> {((registration as any).exame_coproparasitologico_url || (registration as any).extra_services?.health_docs?.exame_coproparasitologico_url) ? (
+                                    <a href={(registration as any).exame_coproparasitologico_url || (registration as any).extra_services?.health_docs?.exame_coproparasitologico_url} target="_blank" rel="noreferrer" className="text-pink-600 underline ml-2 text-xs font-semibold">Ver Documento</a>
+                                ) : 'Não enviado'}
+                            </div>
+                            <div>
+                                <span className="font-semibold">Comprovante Pulga/Carrapato:</span> {((registration as any).comprovante_pulga_url || (registration as any).extra_services?.health_docs?.comprovante_pulga_url) ? (
+                                    <a href={(registration as any).comprovante_pulga_url || (registration as any).extra_services?.health_docs?.comprovante_pulga_url} target="_blank" rel="noreferrer" className="text-pink-600 underline ml-2 text-xs font-semibold">Ver Documento</a>
+                                ) : 'Não enviado'}
+                            </div>
+                            <div>
+                                <span className="font-semibold">Validade Pulga/Carrapato:</span> {((registration as any).data_validade_pulga || (registration as any).extra_services?.health_docs?.data_validade_pulga) ? formatDateToBR(((registration as any).data_validade_pulga || (registration as any).extra_services?.health_docs?.data_validade_pulga)) : 'Não informado'}
+                            </div>
+                            <div className="sm:col-span-2">
+                                <span className="font-semibold">Veterinário(a) Responsável:</span> {((registration as any).vet_name || (registration as any).extra_services?.health_docs?.vet_name) || 'Não informado'} - {((registration as any).vet_phone || (registration as any).extra_services?.health_docs?.vet_phone) || 'Sem telefone'}
+                            </div>
                         </div>
                     </div>
 
@@ -9080,6 +9106,14 @@ const DaycareEnrollmentCard: React.FC<{
         }
     }
 
+    const healthDocs = (enrollment as any).extra_services?.health_docs || {};
+    const healthDocsList: {name: string, url: string}[] = [];
+    if ((enrollment as any).carteira_vacinacao_url || healthDocs.carteira_vacinacao_url) healthDocsList.push({ name: 'Carteira de Vacinação', url: (enrollment as any).carteira_vacinacao_url || healthDocs.carteira_vacinacao_url });
+    if ((enrollment as any).exame_coproparasitologico_url || healthDocs.exame_coproparasitologico_url) healthDocsList.push({ name: 'Exame Coproparasitológico', url: (enrollment as any).exame_coproparasitologico_url || healthDocs.exame_coproparasitologico_url });
+    if ((enrollment as any).atestado_veterinario_url || healthDocs.atestado_veterinario_url) healthDocsList.push({ name: 'Atestado Veterinário', url: (enrollment as any).atestado_veterinario_url || healthDocs.atestado_veterinario_url });
+    if ((enrollment as any).comprovante_pulga_url || healthDocs.comprovante_pulga_url) healthDocsList.push({ name: 'Remédio Pulga/Carrapato', url: (enrollment as any).comprovante_pulga_url || healthDocs.comprovante_pulga_url });
+
+
     const weekDaysArr = enrollment.attendance_days && enrollment.attendance_days.length > 0 
         ? (enrollment.attendance_days as number[]).map(idx => (['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][idx]))
         : [];
@@ -9268,6 +9302,17 @@ const DaycareEnrollmentCard: React.FC<{
                                     <button onClick={(e) => { e.stopPropagation(); if (window.confirm('Remover documento?')) onRemoveChecklist?.(enrollment, idx); }} className="absolute -right-1 -top-1 p-0.5 text-red-500 bg-white border border-red-200 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" title="Remover">
                                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                                     </button>
+                                </div>
+                            ))}
+                            {healthDocsList.map((doc, idx) => (
+                                <div key={`health-${idx}`} className="relative group">
+                                    <a href={doc.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="w-full flex items-center justify-between px-2 py-1 bg-white hover:bg-gray-100 text-gray-700 rounded-lg border border-gray-200 text-[9px] sm:text-[10px] font-semibold shadow-sm transition-colors">
+                                        <span className="flex items-center gap-1.5 truncate">
+                                            <DocumentTextIcon className="w-3.5 h-3.5 text-pink-500 shrink-0" />
+                                            <span className="truncate">{doc.name}</span>
+                                        </span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-pink-500 shrink-0"></span>
+                                    </a>
                                 </div>
                             ))}
                             <label onClick={e => e.stopPropagation()} className={`w-full flex items-center justify-center px-2 py-1 rounded-lg border border-dashed transition-colors text-[9px] sm:text-[10px] font-semibold ${isUploadingChecklist ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300' : 'bg-white text-purple-600 hover:bg-purple-50 cursor-pointer border-purple-200'}`} title="Anexar documento">
@@ -9470,6 +9515,18 @@ const DaycareEnrollmentDetailsModal: React.FC<{
                             {enrollment.needs_special_care && <DetailItem label="Descrição do Cuidado" value={enrollment.special_care_description} />}
                         </div>
 
+                    </section>
+                    {/* Health Documents Info */}
+                    <section>
+                        <h3 className="text-lg font-semibold text-pink-700 border-b pb-2 mb-4">Documentos de Saúde</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                            <DetailItem label="Carteira de Vacinação" value={((enrollment as any).carteira_vacinacao_url || (enrollment as any).extra_services?.health_docs?.carteira_vacinacao_url) ? <a href={(enrollment as any).carteira_vacinacao_url || (enrollment as any).extra_services?.health_docs?.carteira_vacinacao_url} target="_blank" rel="noreferrer" className="text-pink-600 underline font-semibold">Ver Documento</a> : 'Não enviado'} />
+                            <DetailItem label="Exame Coproparasitológico" value={((enrollment as any).exame_coproparasitologico_url || (enrollment as any).extra_services?.health_docs?.exame_coproparasitologico_url) ? <a href={(enrollment as any).exame_coproparasitologico_url || (enrollment as any).extra_services?.health_docs?.exame_coproparasitologico_url} target="_blank" rel="noreferrer" className="text-pink-600 underline font-semibold">Ver Documento</a> : 'Não enviado'} />
+                            <DetailItem label="Atestado Veterinário" value={((enrollment as any).atestado_veterinario_url || (enrollment as any).extra_services?.health_docs?.atestado_veterinario_url) ? <a href={(enrollment as any).atestado_veterinario_url || (enrollment as any).extra_services?.health_docs?.atestado_veterinario_url} target="_blank" rel="noreferrer" className="text-pink-600 underline font-semibold">Ver Documento</a> : 'Não enviado'} />
+                            <DetailItem label="Comprovante Pulga/Carrapato" value={((enrollment as any).comprovante_pulga_url || (enrollment as any).extra_services?.health_docs?.comprovante_pulga_url) ? <a href={(enrollment as any).comprovante_pulga_url || (enrollment as any).extra_services?.health_docs?.comprovante_pulga_url} target="_blank" rel="noreferrer" className="text-pink-600 underline font-semibold">Ver Documento</a> : 'Não enviado'} />
+                            <DetailItem label="Validade Pulga/Carrapato" value={((enrollment as any).data_validade_pulga || (enrollment as any).extra_services?.health_docs?.data_validade_pulga) ? formatDateToBR(((enrollment as any).data_validade_pulga || (enrollment as any).extra_services?.health_docs?.data_validade_pulga)) : 'Não informado'} />
+                            <DetailItem label="Veterinário(a) Responsável" value={`${((enrollment as any).vet_name || (enrollment as any).extra_services?.health_docs?.vet_name) || 'Não informado'} - ${((enrollment as any).vet_phone || (enrollment as any).extra_services?.health_docs?.vet_phone) || 'Sem telefone'}`} />
+                        </div>
                     </section>
                     {/* Plan & Belongings */}
                     <section>
@@ -15348,6 +15405,14 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                                     checklists = [{ name: 'Documento Anexado', url: registration.checklist_url }];
                                 }
                             }
+
+                            const healthDocs = (registration as any).extra_services?.health_docs || {};
+                            const healthDocsList: {name: string, url: string}[] = [];
+                            if ((registration as any).carteira_vacinacao_url || healthDocs.carteira_vacinacao_url) healthDocsList.push({ name: 'Carteira de Vacinação', url: (registration as any).carteira_vacinacao_url || healthDocs.carteira_vacinacao_url });
+                            if ((registration as any).exame_coproparasitologico_url || healthDocs.exame_coproparasitologico_url) healthDocsList.push({ name: 'Exame Coproparasitológico', url: (registration as any).exame_coproparasitologico_url || healthDocs.exame_coproparasitologico_url });
+                            if ((registration as any).atestado_veterinario_url || healthDocs.atestado_veterinario_url) healthDocsList.push({ name: 'Atestado Veterinário', url: (registration as any).atestado_veterinario_url || healthDocs.atestado_veterinario_url });
+                            if ((registration as any).comprovante_pulga_url || healthDocs.comprovante_pulga_url) healthDocsList.push({ name: 'Remédio Pulga/Carrapato', url: (registration as any).comprovante_pulga_url || healthDocs.comprovante_pulga_url });
+
                             return (
                                 <div className="flex flex-nowrap overflow-x-auto items-center gap-1.5 pb-1 -mb-1 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
                                     <label onClick={(e) => e.stopPropagation()} className={`inline-flex flex-shrink-0 items-center justify-center w-8 h-8 rounded-lg border transition-all shadow-sm ${isUploadingChecklist ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-400 border-gray-200 hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer hover:border-indigo-200 hover:shadow-indigo-100'}`} title="Anexar arquivo PDF ou Imagem">
@@ -15387,6 +15452,14 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                                             >
                                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                                             </button>
+                                        </div>
+                                    ))}
+                                    {healthDocsList.map((doc, idx) => (
+                                        <div key={`health-${idx}`} className="relative group inline-flex flex-shrink-0">
+                                            <a href={doc.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 pl-2 pr-6 py-1 rounded-md text-[10px] font-semibold bg-pink-50 text-pink-700 border border-pink-200 hover:bg-pink-100 transition-colors shadow-sm max-w-[130px]" title={doc.name}>
+                                                <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                                <span className="truncate">{doc.name}</span>
+                                            </a>
                                         </div>
                                     ))}
                                 </div>
