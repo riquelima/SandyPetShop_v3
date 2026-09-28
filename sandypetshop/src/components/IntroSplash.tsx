@@ -8,6 +8,19 @@ interface IntroSplashProps {
 
 const IntroSplash: React.FC<IntroSplashProps> = ({ onDone }) => {
   const rootRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.defaultMuted = true;
+      videoRef.current.muted = true;
+      videoRef.current.play().catch((err) => {
+        console.warn("Autoplay prevented:", err);
+        onDone();
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleVideoEnded = () => {
     if (!rootRef.current) return;
@@ -27,7 +40,8 @@ const IntroSplash: React.FC<IntroSplashProps> = ({ onDone }) => {
       style={{ opacity: 1 }}
     >
       <video
-        src="/splash_video.mp4"
+        ref={videoRef}
+        src="/sandysintro.mp4"
         autoPlay
         muted
         playsInline
