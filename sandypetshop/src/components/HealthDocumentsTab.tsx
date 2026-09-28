@@ -40,6 +40,8 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
                 // If columns exist, they will be here. Otherwise we check extra_services.health_docs
                 const healthDocs = data.health_docs || (data.extra_services ? data.extra_services.health_docs : {}) || {};
                 setDocs({
+                    checklist_hospedagem_url: data.checklist_hospedagem_url || healthDocs.checklist_hospedagem_url || '',
+                    contrato_prestacao_servico_url: data.contrato_prestacao_servico_url || healthDocs.contrato_prestacao_servico_url || '',
                     carteira_vacinacao_url: data.carteira_vacinacao_url || healthDocs.carteira_vacinacao_url || '',
                     exame_coproparasitologico_url: data.exame_coproparasitologico_url || healthDocs.exame_coproparasitologico_url || '',
                     atestado_veterinario_url: data.atestado_veterinario_url || healthDocs.atestado_veterinario_url || '',
@@ -144,6 +146,51 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
                 <p className="text-sm text-gray-500 mb-6">Mantenha os documentos do seu pet atualizados para a creche e hotel.</p>
 
                 <div className="space-y-6">
+                    {/* CheckList Hospedagem */}
+                    <div className="border border-gray-100 p-4 rounded-xl">
+                        <h4 className="font-bold text-gray-700 mb-2">CheckList Hospedagem</h4>
+                        <p className="text-sm text-gray-500 mb-3">
+                            <a href="https://docs.google.com/document/d/1BE4UrgsUzXljtNkzLf-WmLyQn2lFOFde2DHkW2urXLQ/edit?tab=t.0" target="_blank" rel="noreferrer" className="text-pink-600 font-bold underline mr-1">Baixe aqui</a>
+                            o documento, preencha e insira abaixo.
+                        </p>
+                        {docs.checklist_hospedagem_url ? (
+                            <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <svg className="w-5 h-5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                    <a href={docs.checklist_hospedagem_url} target="_blank" rel="noreferrer" className="text-emerald-700 font-bold text-sm hover:underline">Documento Enviado</a>
+                                </div>
+                                <button onClick={() => { if(window.confirm('Remover documento?')) updateField('checklist_hospedagem_url', ''); }} className="text-[10px] text-gray-400 hover:text-red-500 font-bold px-2 py-1 transition-colors uppercase tracking-wider" title="Remover documento">Excluir</button>
+                            </div>
+                        ) : (
+                            <>
+                                <p className="text-sm text-red-500 mb-3 font-medium">Documento pendente!</p>
+                                <DragDropFileInput onChange={file => handleUpload(file, 'checklist_hospedagem_url')} />
+                            </>
+                        )}
+                    </div>
+
+                    {/* Contrato Prestação de Serviço */}
+                    <div className="border border-gray-100 p-4 rounded-xl">
+                        <h4 className="font-bold text-gray-700 mb-2">Contrato Prestação de Serviço</h4>
+                        <p className="text-sm text-gray-500 mb-3">
+                            Você deve preencher e fazer o <a href="https://docs.google.com/document/d/1YxMDR9dFdpdKv73dTiuFnktmcJ-cdV6CVIJIEdrpXyE/edit?tab=t.0" target="_blank" rel="noreferrer" className="text-pink-600 font-bold underline mx-1">download do contrato aqui</a> e depois enviar abaixo.
+                        </p>
+                        {docs.contrato_prestacao_servico_url ? (
+                            <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <svg className="w-5 h-5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                    <a href={docs.contrato_prestacao_servico_url} target="_blank" rel="noreferrer" className="text-emerald-700 font-bold text-sm hover:underline">Documento Enviado</a>
+                                </div>
+                                <button onClick={() => { if(window.confirm('Remover documento?')) updateField('contrato_prestacao_servico_url', ''); }} className="text-[10px] text-gray-400 hover:text-red-500 font-bold px-2 py-1 transition-colors uppercase tracking-wider" title="Remover documento">Excluir</button>
+                            </div>
+                        ) : (
+                            <>
+                                <p className="text-sm text-red-500 mb-3 font-medium">Documento pendente!</p>
+                                <DragDropFileInput onChange={file => handleUpload(file, 'contrato_prestacao_servico_url')} />
+                            </>
+                        )}
+                    </div>
+
                     {/* Carteira de Vacinação */}
                     <div className="border border-gray-100 p-4 rounded-xl">
                         <h4 className="font-bold text-gray-700 mb-2">Carteira de Vacinação</h4>

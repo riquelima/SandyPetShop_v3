@@ -9108,6 +9108,8 @@ const DaycareEnrollmentCard: React.FC<{
 
     const healthDocs = (enrollment as any).extra_services?.health_docs || {};
     const healthDocsList: {name: string, url: string}[] = [];
+    if ((enrollment as any).checklist_hospedagem_url || healthDocs.checklist_hospedagem_url) healthDocsList.push({ name: 'CheckList Hospedagem', url: (enrollment as any).checklist_hospedagem_url || healthDocs.checklist_hospedagem_url });
+    if ((enrollment as any).contrato_prestacao_servico_url || healthDocs.contrato_prestacao_servico_url) healthDocsList.push({ name: 'Contrato Prestação', url: (enrollment as any).contrato_prestacao_servico_url || healthDocs.contrato_prestacao_servico_url });
     if ((enrollment as any).carteira_vacinacao_url || healthDocs.carteira_vacinacao_url) healthDocsList.push({ name: 'Carteira de Vacinação', url: (enrollment as any).carteira_vacinacao_url || healthDocs.carteira_vacinacao_url });
     if ((enrollment as any).exame_coproparasitologico_url || healthDocs.exame_coproparasitologico_url) healthDocsList.push({ name: 'Exame Coproparasitológico', url: (enrollment as any).exame_coproparasitologico_url || healthDocs.exame_coproparasitologico_url });
     if ((enrollment as any).atestado_veterinario_url || healthDocs.atestado_veterinario_url) healthDocsList.push({ name: 'Atestado Veterinário', url: (enrollment as any).atestado_veterinario_url || healthDocs.atestado_veterinario_url });
@@ -15439,6 +15441,8 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
 
                             const healthDocs = (registration as any).extra_services?.health_docs || {};
                             const healthDocsList: {name: string, url: string}[] = [];
+                            if ((registration as any).checklist_hospedagem_url || healthDocs.checklist_hospedagem_url) healthDocsList.push({ name: 'CheckList Hospedagem', url: (registration as any).checklist_hospedagem_url || healthDocs.checklist_hospedagem_url });
+                            if ((registration as any).contrato_prestacao_servico_url || healthDocs.contrato_prestacao_servico_url) healthDocsList.push({ name: 'Contrato Prestação', url: (registration as any).contrato_prestacao_servico_url || healthDocs.contrato_prestacao_servico_url });
                             if ((registration as any).carteira_vacinacao_url || healthDocs.carteira_vacinacao_url) healthDocsList.push({ name: 'Carteira de Vacinação', url: (registration as any).carteira_vacinacao_url || healthDocs.carteira_vacinacao_url });
                             if ((registration as any).exame_coproparasitologico_url || healthDocs.exame_coproparasitologico_url) healthDocsList.push({ name: 'Exame Coproparasitológico', url: (registration as any).exame_coproparasitologico_url || healthDocs.exame_coproparasitologico_url });
                             if ((registration as any).atestado_veterinario_url || healthDocs.atestado_veterinario_url) healthDocsList.push({ name: 'Atestado Veterinário', url: (registration as any).atestado_veterinario_url || healthDocs.atestado_veterinario_url });
