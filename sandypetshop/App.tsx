@@ -14552,6 +14552,37 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
 
     useEffect(() => {
         fetchRegistrations();
+
+        const channel = supabase.channel('hotel_view_realtime')
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'hotel_registrations' },
+                (payload) => {
+                    const updated = payload.new as HotelRegistration;
+                    setRegistrations(prev => {
+                        const exists = prev.find(r => String(r.id) === String(updated.id));
+                        if (!exists) return prev;
+                        return prev.map(r => String(r.id) === String(updated.id) ? updated : r);
+                    });
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'daycare_enrollments' },
+                (payload) => {
+                    const updated = payload.new as DaycareRegistration;
+                    setDaycareEnrollmentsForHotel(prev => {
+                        const exists = prev.find(e => String(e.id) === String(updated.id));
+                        if (!exists) return prev;
+                        return prev.map(e => String(e.id) === String(updated.id) ? updated : e);
+                    });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [fetchRegistrations, refreshKey]);
 
     const handleArchiveDaycareExtra = async (enrollment: DaycareRegistration, type: 'diaria' | 'pernoite') => {
@@ -17054,6 +17085,29 @@ const DaycareView: React.FC<{ refreshKey?: number; onFiscalNote?: (enrollment: D
 
     useEffect(() => {
         fetchEnrollments();
+
+        const channel = supabase.channel('daycare_enrollments_realtime_admin')
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'daycare_enrollments' },
+                (payload) => {
+                    const updated = payload.new as DaycareRegistration;
+                    setEnrollments(prev => {
+                        const exists = prev.find(e => String(e.id) === String(updated.id));
+                        if (!exists) return prev;
+                        return prev.map(e => String(e.id) === String(updated.id) ? updated : e);
+                    });
+                    setPetsInDaycareNow(prev => {
+                        const newPets = prev.map(e => String(e.id) === String(updated.id) ? updated : e);
+                        return newPets.filter(e => e.extra_services?.checked_in === true);
+                    });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [fetchEnrollments, refreshKey]);
 
     const handleUpdateStatus = async (id: string, status: 'Pendente' | 'Aprovado' | 'Rejeitado') => {
