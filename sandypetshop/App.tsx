@@ -11376,6 +11376,7 @@ const DaycareRegistrationForm: React.FC<{
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [showSubmissionWarning, setShowSubmissionWarning] = useState(false);
+    const [isOtherBreed, setIsOtherBreed] = useState(false);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -11753,16 +11754,47 @@ const DaycareRegistrationForm: React.FC<{
                             <div>
                                 <label className="block text-sm font-bold text-pink-900 uppercase tracking-widest mb-3">Raça</label>
                                 <div className="relative">
-                                    <span className="absolute inset-y-0 left-0 flex items-center pl-4"><BreedIcon /></span>
-                                    <input
-                                        type="text"
-                                        name="pet_breed"
-                                        value={formData.pet_breed}
-                                        onChange={handleInputChange}
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><BreedIcon /></span>
+                                    <select
+                                        id="daycare-pet-breed-select"
+                                        value={isOtherBreed ? "Outra" : formData.pet_breed}
+                                        onChange={(e) => {
+                                            if (e.target.value === "Outra") {
+                                                setIsOtherBreed(true);
+                                                setFormData(prev => ({ ...prev, pet_breed: '' }));
+                                            } else {
+                                                setIsOtherBreed(false);
+                                                setFormData(prev => ({ ...prev, pet_breed: e.target.value }));
+                                            }
+                                        }}
                                         required
-                                        className="block w-full pl-12 pr-5 py-4 bg-pink-50/50 border-2 border-pink-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-200 focus:border-pink-400 text-pink-950 font-medium transition-all"
-                                    />
+                                        className="block w-full pl-12 pr-10 py-4 bg-pink-50/50 border-2 border-pink-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-200 focus:border-pink-400 text-pink-950 font-medium transition-all appearance-none cursor-pointer"
+                                    >
+                                        <option value="">Selecione a Raça</option>
+                                        {POPULAR_BREEDS.map(breed => (
+                                            <option key={breed} value={breed}>{breed}</option>
+                                        ))}
+                                        <option value="Outra">Outra raça...</option>
+                                    </select>
+                                    <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-pink-400">
+                                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
                                 </div>
+                                {isOtherBreed && (
+                                    <div className="relative mt-3 animate-fadeIn">
+                                        <input
+                                            type="text"
+                                            name="pet_breed"
+                                            placeholder="Digite a raça do seu pet"
+                                            value={formData.pet_breed}
+                                            onChange={handleInputChange}
+                                            required
+                                            className="block w-full px-5 py-3 bg-white border-2 border-pink-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-pink-200 text-pink-950 font-medium transition-all"
+                                        />
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-bold text-pink-900 uppercase tracking-widest mb-3">Idade</label>
