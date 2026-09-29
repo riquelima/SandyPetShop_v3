@@ -12064,7 +12064,7 @@ const DaycareRegistrationForm: React.FC<{
 
                     {/* PERTENCES */}
                     <div className="space-y-8 pb-4">
-                        <h2 className="text-3xl font-extrabold text-pink-950 tracking-tight">Pertences Frequentes</h2>
+                        <h2 className="text-2xl sm:text-3xl font-extrabold text-pink-950 tracking-tight whitespace-nowrap">Pertences Frequentes</h2>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                             {['Bolinha', 'Pelucia', 'Cama', 'Coleira', 'Comedouro'].map(item => {
                                 const isChecked = formData.delivered_items.items.includes(item);
