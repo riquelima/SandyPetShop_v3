@@ -12219,7 +12219,7 @@ const DaycareRegistrationForm: React.FC<{
                                 </div>
 
                                 <div className="flex items-start gap-3">
-                                    <img src="https://cdn-icons-png.flaticon.com/512/847/847345.png" alt="Raça" className="mt-0.5 w-7 h-7 object-contain shrink-0" />
+                                    <img src="https://static.thenounproject.com/png/pet-icon-7326432-512.png" alt="Raça" className="mt-0.5 w-7 h-7 object-contain shrink-0" />
                                     <div className="min-w-0">
                                         <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Raça</p>
                                         <p className="font-semibold text-pink-950 truncate">{formData.pet_breed || '—'}</p>
@@ -12287,9 +12287,9 @@ const DaycareRegistrationForm: React.FC<{
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="flex-[2] relative group overflow-hidden px-8 py-5 rounded-[2rem] bg-pink-600 hover:bg-pink-700 text-white font-black uppercase tracking-[0.2em] shadow-xl shadow-pink-200 transition-all hover:-translate-y-1 active:scale-95 disabled:grayscale disabled:cursor-wait"
+                            className="flex-[2] relative group overflow-hidden px-4 sm:px-8 py-4 sm:py-5 rounded-[2rem] bg-pink-600 hover:bg-pink-700 text-white font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] shadow-xl shadow-pink-200 transition-all hover:-translate-y-1 active:scale-95 disabled:grayscale disabled:cursor-wait whitespace-nowrap text-sm sm:text-base"
                         >
-                            <span className="relative z-10 flex items-center justify-center gap-3">
+                            <span className="relative z-10 flex items-center justify-center gap-2 sm:gap-3">
                                 {isSubmitting ? (
                                     <>
                                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
