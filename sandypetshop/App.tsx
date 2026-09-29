@@ -11371,6 +11371,7 @@ const DaycareRegistrationForm: React.FC<{
         status: 'Pendente',
         check_in_date: '', check_in_time: '', check_out_date: '', check_out_time: '', attendance_days: [],
         agreed_to_checklist: false, agreed_to_contract: false,
+        pet_photo_url: null,
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
@@ -11587,6 +11588,65 @@ const DaycareRegistrationForm: React.FC<{
 
                     {/* DADOS DO TUTOR */}
                     <div className="space-y-8 border-b border-pink-50 pb-12">
+                        {/* Avatar de upload da foto do pet */}
+                        <div className="flex flex-col items-center justify-center mb-2">
+                            <label
+                                htmlFor="daycare-pet-photo-upload"
+                                className="relative group cursor-pointer"
+                                title="Adicionar foto do pet"
+                            >
+                                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-pink-100 to-rose-200 flex items-center justify-center transition-all group-hover:scale-105 group-hover:shadow-xl">
+                                    {formData.pet_photo_url ? (
+                                        <img
+                                            src={formData.pet_photo_url}
+                                            alt="Foto do pet"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <LottieAnimation
+                                            src="https://lottie.host/ee823306-d890-4936-8032-f1bae7614d82/A1LpnduBwz.json"
+                                            style={{ width: '100%', height: '100%' }}
+                                        />
+                                    )}
+                                </div>
+                                {/* Icone de camera/badge */}
+                                <div className="absolute bottom-0 right-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-pink-600 border-4 border-white shadow-md flex items-center justify-center group-hover:bg-pink-700 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 sm:w-5 sm:h-5 text-white">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    id="daycare-pet-photo-upload"
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        const reader = new FileReader();
+                                        reader.onload = (ev) => {
+                                            const dataUrl = ev.target?.result as string;
+                                            setFormData(prev => ({ ...prev, pet_photo_url: dataUrl }));
+                                        };
+                                        reader.readAsDataURL(file);
+                                    }}
+                                />
+                            </label>
+                            <p className="mt-3 text-xs sm:text-sm text-pink-700 font-bold uppercase tracking-wider">
+                                {formData.pet_photo_url ? 'Foto carregada com sucesso' : 'Adicione a foto do seu pet'}
+                            </p>
+                            {formData.pet_photo_url && (
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData(prev => ({ ...prev, pet_photo_url: null }))}
+                                    className="mt-1 text-[11px] font-bold text-pink-500 hover:text-pink-700 underline underline-offset-2"
+                                >
+                                    Remover foto
+                                </button>
+                            )}
+                        </div>
+
                         <h2 className="text-3xl font-extrabold text-pink-950 tracking-tight">Dados do Tutor</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="md:col-span-2">
