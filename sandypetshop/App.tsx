@@ -11581,7 +11581,6 @@ const DaycareRegistrationForm: React.FC<{
                                     <SafeImage src="https://cdn-icons-png.flaticon.com/512/11201/11201086.png" alt="Creche Pet" className="w-10 h-10 rounded-full object-contain" />
                                     <span className="text-2xl font-extrabold text-pink-950">Creche Pet</span>
                                 </div>
-                                <span className="text-sm font-bold text-pink-600 uppercase tracking-widest mt-1">Formulário de Matrícula</span>
                             </div>
 
                             <div className="space-y-10">
@@ -12150,23 +12149,127 @@ const DaycareRegistrationForm: React.FC<{
                     </div>
 
                     {/* RESUMO DA MATRÍCULA */}
-                    <div className="mt-16 bg-gradient-to-br from-pink-600 to-pink-700 rounded-[3rem] p-10 text-white shadow-2xl relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 -m-10 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-700"></div>
-                        <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-center mb-8 md:mb-10 tracking-tight uppercase italic whitespace-nowrap overflow-hidden text-ellipsis w-full">Resumo da Matrícula</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12 relative z-10">
-                            {[
-                                { label: 'Pet', value: formData.pet_name },
-                                { label: 'Tutor', value: formData.tutor_name },
-                                { label: 'Plano', value: formData.contracted_plan ? formData.contracted_plan.replace('x_month', 'x Mês').replace('x_week', 'x Sem').toUpperCase() : '-' },
-                                { label: 'Início', value: formData.check_in_date ? formatDateToBR(formData.check_in_date) : '-' },
-                                { label: 'Fim', value: formData.check_out_date ? formatDateToBR(formData.check_out_date) : '-' },
-                                { label: 'Dias', value: formData.attendance_days && formData.attendance_days.length > 0 ? formData.attendance_days.map(d => ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][d]).join(', ') : '-' }
-                            ].map(item => (
-                                <div key={item.label} className="flex justify-between items-center border-b border-white/20 pb-3">
-                                    <span className="text-pink-100 font-bold uppercase text-xs tracking-widest">{item.label}</span>
-                                    <span className="font-black text-lg">{item.value || '-'}</span>
+                    <div className="space-y-6 pt-6 animate-fadeIn">
+                        <h2 className="text-base sm:text-3xl font-extrabold text-pink-950 leading-tight tracking-tight mb-4 text-center break-words whitespace-nowrap">Resumo da Matrícula</h2>
+                        <div className="relative overflow-hidden rounded-3xl border border-pink-200/70 bg-gradient-to-br from-white via-pink-50/60 to-rose-50 shadow-xl shadow-pink-200/40">
+                            {/* Faixa superior colorida */}
+                            <div className="h-1.5 w-full bg-gradient-to-r from-pink-500 via-rose-500 to-fuchsia-500" />
+
+                            {/* Cabeçalho com foto do pet */}
+                            <div className="relative px-5 pt-5 pb-4 flex items-center gap-4 border-b border-pink-100/80 bg-white/60 backdrop-blur-sm">
+                                <div className="relative shrink-0">
+                                    <div className="w-20 h-20 rounded-full overflow-hidden border-[3px] border-white shadow-lg ring-2 ring-pink-300 bg-gradient-to-br from-pink-100 to-rose-200 flex items-center justify-center">
+                                        {formData.pet_photo_url ? (
+                                            <img
+                                                src={formData.pet_photo_url}
+                                                alt={`Foto de ${formData.pet_name}`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <LottieAnimation
+                                                src="https://lottie.host/ee823306-d890-4936-8032-f1bae7614d82/A1LpnduBwz.json"
+                                                style={{ width: '100%', height: '100%' }}
+                                            />
+                                        )}
+                                    </div>
                                 </div>
-                            ))}
+
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-pink-500 whitespace-nowrap">Resumo da Matrícula</p>
+                                    <h3 className="mt-0.5 text-xl font-extrabold text-pink-950 truncate leading-tight">{formData.pet_name || 'Pet'}</h3>
+                                    {formData.pet_breed && (
+                                        <p className="text-xs text-pink-700/80 truncate">{formData.pet_breed}</p>
+                                    )}
+                                </div>
+
+                                {formData.contracted_plan && (
+                                    <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-pink-100 text-pink-700 border border-pink-200">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3">
+                                            <path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm.75 5h-1.5v5.25l4.5 2.7.75-1.23-3.75-2.22Z" />
+                                        </svg>
+                                        {formData.contracted_plan.replace('x_month', 'x Mês').replace('x_week', 'x Sem').toUpperCase()}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Lista de dados */}
+                            <div className="px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3 text-sm">
+                                <div className="flex items-start gap-3">
+                                    <img src="https://cdn-icons-png.flaticon.com/512/15494/15494722.png" alt="Tutor" className="mt-0.5 w-7 h-7 object-contain shrink-0" />
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-pink-500">Tutor</p>
+                                        <p className="font-semibold text-pink-950 truncate">{formData.tutor_name || '—'}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-3">
+                                    <img src="https://cdn-icons-png.flaticon.com/512/1384/1384023.png" alt="WhatsApp" className="mt-0.5 w-7 h-7 object-contain shrink-0" />
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">WhatsApp</p>
+                                        <p className="font-semibold text-pink-950 truncate">{formData.contact_phone || '—'}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-3">
+                                    <img src="https://cdn-icons-png.flaticon.com/512/1049/1049504.png" alt="Plano" className="mt-0.5 w-7 h-7 object-contain shrink-0" />
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-violet-600">Plano</p>
+                                        <p className="font-semibold text-pink-950 truncate">{formData.contracted_plan ? formData.contracted_plan.replace('x_month', 'x Mês').replace('x_week', 'x Sem').toUpperCase() : '—'}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-3">
+                                    <img src="https://cdn-icons-png.flaticon.com/512/847/847345.png" alt="Raça" className="mt-0.5 w-7 h-7 object-contain shrink-0" />
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Raça</p>
+                                        <p className="font-semibold text-pink-950 truncate">{formData.pet_breed || '—'}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-3">
+                                    <img src="https://cdn-icons-png.flaticon.com/512/12887/12887924.png" alt="Início" className="mt-0.5 w-7 h-7 object-contain shrink-0" />
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600">Início</p>
+                                        <p className="font-semibold text-pink-950 truncate">{formData.check_in_date ? formatDateToBR(formData.check_in_date) : '—'}{formData.check_in_time ? ` às ${formData.check_in_time}` : ''}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-3">
+                                    <img src="https://cdn-icons-png.flaticon.com/512/12887/12887924.png" alt="Fim" className="mt-0.5 w-7 h-7 object-contain shrink-0" />
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600">Fim</p>
+                                        <p className="font-semibold text-pink-950 truncate">{formData.check_out_date ? formatDateToBR(formData.check_out_date) : '—'}{formData.check_out_time ? ` às ${formData.check_out_time}` : ''}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-3 sm:col-span-2">
+                                    <img src="https://cdn-icons-png.flaticon.com/512/3652/3652191.png" alt="Dias" className="mt-0.5 w-7 h-7 object-contain shrink-0" />
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-sky-600">Dias da Semana</p>
+                                        <div className="flex flex-wrap gap-1.5 mt-1">
+                                            {formData.attendance_days && formData.attendance_days.length > 0 ? (
+                                                formData.attendance_days.map(d => (
+                                                    <span key={d} className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+                                                        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][d]}
+                                                    </span>
+                                                ))
+                                            ) : (
+                                                <span className="text-pink-950/50">—</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Preço Total */}
+                            {formData.total_price !== undefined && formData.total_price !== null && formData.total_price > 0 && (
+                                <div className="mx-5 mb-5 p-4 sm:p-5 bg-gradient-to-r from-pink-100 to-rose-100 border-2 border-pink-200 rounded-2xl animate-fadeIn shadow-lg shadow-pink-200/50 w-[calc(100%-2.5rem)] overflow-hidden">
+                                    <div className="flex justify-between items-center gap-2 whitespace-nowrap overflow-hidden">
+                                        <span className="text-sm sm:text-lg font-bold text-pink-900 uppercase tracking-wider whitespace-nowrap">Preço Total:</span>
+                                        <span className="text-xl sm:text-3xl font-extrabold text-pink-700 drop-shadow-sm whitespace-nowrap">R$ {Number(formData.total_price).toFixed(2).replace('.', ',')}</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
