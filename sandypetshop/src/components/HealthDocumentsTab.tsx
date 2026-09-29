@@ -181,7 +181,7 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
                     <div className="border border-gray-100 p-4 rounded-xl">
                         <h4 className="font-bold text-gray-700 mb-2">Contrato Prestação de Serviço</h4>
                         <p className="text-sm text-gray-500 mb-3">
-                            <a href="https://docs.google.com/document/d/1BE4UrgsUzXljtNkzLf-WmLyQn2lFOFde2DHkW2urXLQ/edit?tab=t.0" target="_blank" rel="noreferrer" className="text-pink-600 font-bold underline mr-1">Baixe aqui</a>
+                            <a href="https://docs.google.com/document/d/1YxMDR9dFdpdKv73dTiuFnktmcJ-cdV6CVIJIEdrpXyE/edit?tab=t.0" target="_blank" rel="noreferrer" className="text-pink-600 font-bold underline mr-1">Baixe aqui</a>
                             o documento, preencha e insira abaixo.
                         </p>
                         {docs.contrato_prestacao_servico_url ? (
