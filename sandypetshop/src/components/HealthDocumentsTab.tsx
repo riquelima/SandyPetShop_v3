@@ -16,19 +16,44 @@ const DragDropFileInput: React.FC<{ onChange: (file: File) => void }> = ({ onCha
     </label>
 );
 
+// Toast animado de confirmação
+const Toast: React.FC<{ message: string; visible: boolean }> = ({ message, visible }) => (
+    <div
+        className={`fixed inset-x-0 top-6 z-[9999] flex justify-center pointer-events-none transition-all duration-500 ease-out ${
+            visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
+        }`}
+        aria-live="polite"
+        role="status"
+    >
+        <div className="pointer-events-auto flex items-center gap-3 px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-2xl shadow-emerald-500/30 ring-1 ring-emerald-400/40">
+            <span className="flex items-center justify-center w-7 h-7 rounded-full bg-white/20 backdrop-blur-sm">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+            </span>
+            <div className="flex flex-col">
+                <span className="text-[10px] uppercase tracking-widest font-bold opacity-90">Sucesso</span>
+                <span className="text-sm font-semibold leading-tight">{message}</span>
+            </div>
+        </div>
+    </div>
+);
+
 export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = ({ clientData, phone }) => {
     const [loading, setLoading] = useState(false);
     const [docs, setDocs] = useState<any>({});
-    
-    // We will use the extra_services jsonb column to store these health_docs if the columns don't exist yet,
-    // but ideally we try to read from the columns first.
-    // However, since we might not have added columns, let's use a dedicated table or just use extra_services.
-    // For now, let's assume we can fetch from the main table (daycare_enrollments or hotel_registrations).
-    // Or we can save them in 'clients' table? No, it's per pet.
+    const [toastVisible, setToastVisible] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
+
+    const showToast = (msg: string) => {
+        setToastMessage(msg);
+        setToastVisible(true);
+        window.setTimeout(() => setToastVisible(false), 2400);
+    };
 
     const targetTable = clientData.isHotel ? 'hotel_registrations' : 'daycare_enrollments';
     const pets = clientData.isHotel ? (clientData.hotelPets || [clientData.hotelData]) : (clientData.daycarePets || [clientData.daycareData]);
-    
+
     const [selectedPetId, setSelectedPetId] = useState<string>(pets[0]?.id || '');
 
     const fetchDocs = async () => {
@@ -37,7 +62,6 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
         try {
             const { data, error } = await supabase.from(targetTable).select('*').eq('id', selectedPetId).single();
             if (data) {
-                // If columns exist, they will be here. Otherwise we check extra_services.health_docs
                 const healthDocs = data.health_docs || (data.extra_services ? data.extra_services.health_docs : {}) || {};
                 setDocs({
                     checklist_hospedagem_url: data.checklist_hospedagem_url || healthDocs.checklist_hospedagem_url || '',
@@ -68,25 +92,25 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
         try {
             const fileExt = file.name.split('.').pop();
             const fileName = `${selectedPetId}_${fieldName}_${Date.now()}.${fileExt}`;
-            
+
             const { error: uploadError } = await supabase.storage
                 .from('pets-media')
                 .upload(fileName, file);
 
+            let publicUrl: string | undefined;
+
             if (uploadError) {
-                // If bucket doesn't exist, try monthly_pet_photos
+                // Se o bucket não existir, tenta monthly_pet_photos
                 const { error: uploadError2 } = await supabase.storage
                     .from('monthly_pet_photos')
                     .upload(fileName, file);
                 if (uploadError2) throw uploadError2;
-                
-                const { data: { publicUrl } } = supabase.storage.from('monthly_pet_photos').getPublicUrl(fileName);
-                await updateField(fieldName, publicUrl);
-                return;
+                publicUrl = supabase.storage.from('monthly_pet_photos').getPublicUrl(fileName).data.publicUrl;
+            } else {
+                publicUrl = supabase.storage.from('pets-media').getPublicUrl(fileName).data.publicUrl;
             }
 
-            const { data: { publicUrl } } = supabase.storage.from('pets-media').getPublicUrl(fileName);
-            await updateField(fieldName, publicUrl);
+            await updateField(fieldName, publicUrl, true);
         } catch (e) {
             console.error(e);
             alert('Erro ao enviar arquivo.');
@@ -95,16 +119,15 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
         }
     };
 
-    const updateField = async (field: string, value: any) => {
+    const updateField = async (field: string, value: any, showFeedback: boolean = false) => {
         setDocs((prev: any) => ({ ...prev, [field]: value }));
-        
+
         try {
-            // We will save to the dedicated column AND to extra_services.health_docs as a fallback
             const { data: currentData } = await supabase.from(targetTable).select('extra_services').eq('id', selectedPetId).single();
             const currentExtra = currentData?.extra_services || {};
             const healthDocs = currentExtra.health_docs || {};
             healthDocs[field] = value;
-            
+
             const { error: firstError } = await supabase.from(targetTable).update({
                 [field]: value,
                 extra_services: { ...currentExtra, health_docs: healthDocs }
@@ -114,27 +137,38 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
                 const { error: secondError } = await supabase.from(targetTable).update({
                     extra_services: { ...currentExtra, health_docs: healthDocs }
                 }).eq('id', selectedPetId);
-                
+
                 if (secondError) throw secondError;
             }
-            
-            alert('Salvo com sucesso!');
+
+            if (showFeedback) showToast('Documento enviado com sucesso!');
         } catch (e) {
             console.error(e);
             alert('Erro ao salvar os dados.');
         }
     };
 
-    const handleSaveText = () => {
-        updateField('vet_name', docs.vet_name);
-        updateField('vet_phone', docs.vet_phone);
-        updateField('data_validade_pulga', docs.data_validade_pulga);
+    const handleSaveText = async () => {
+        setLoading(true);
+        try {
+            await updateField('vet_name', docs.vet_name);
+            await updateField('vet_phone', docs.vet_phone);
+            await updateField('data_validade_pulga', docs.data_validade_pulga);
+            showToast('Dados de saúde salvos com sucesso!');
+        } catch (e) {
+            console.error(e);
+            alert('Erro ao salvar os dados.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (!selectedPetId) return null;
 
     return (
         <div className="space-y-6 animate-fadeIn">
+            <Toast message={toastMessage} visible={toastVisible} />
+
             {pets.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto hide-scrollbar mb-4">
                     {pets.map((p: any) => (
@@ -151,7 +185,7 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
 
             <div className="bg-white rounded-2xl shadow-sm border border-pink-100 p-6">
                 <h3 className="text-xl font-bold text-gray-800 mb-2">Saúde e Documentos</h3>
-                <p className="text-sm text-gray-500 mb-6">Mantenha os documentos do seu pet atualizados para a creche e hotel.</p>
+                <p className="text-sm text-gray-500 mb-6">Você pode salvar e voltar a qualquer momento. Os documentos são opcionais.</p>
 
                 <div className="space-y-6">
                     {/* CheckList Hospedagem */}
@@ -170,10 +204,7 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
                                 <button onClick={() => { if(window.confirm('Remover documento?')) updateField('checklist_hospedagem_url', ''); }} className="text-[10px] text-gray-400 hover:text-red-500 font-bold px-2 py-1 transition-colors uppercase tracking-wider" title="Remover documento">Excluir</button>
                             </div>
                         ) : (
-                            <>
-                                <p className="text-sm text-red-500 mb-3 font-medium">Documento pendente!</p>
-                                <DragDropFileInput onChange={file => handleUpload(file, 'checklist_hospedagem_url')} />
-                            </>
+                            <DragDropFileInput onChange={file => handleUpload(file, 'checklist_hospedagem_url')} />
                         )}
                     </div>
 
@@ -193,10 +224,7 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
                                 <button onClick={() => { if(window.confirm('Remover documento?')) updateField('contrato_prestacao_servico_url', ''); }} className="text-[10px] text-gray-400 hover:text-red-500 font-bold px-2 py-1 transition-colors uppercase tracking-wider" title="Remover documento">Excluir</button>
                             </div>
                         ) : (
-                            <>
-                                <p className="text-sm text-red-500 mb-3 font-medium">Documento pendente!</p>
-                                <DragDropFileInput onChange={file => handleUpload(file, 'contrato_prestacao_servico_url')} />
-                            </>
+                            <DragDropFileInput onChange={file => handleUpload(file, 'contrato_prestacao_servico_url')} />
                         )}
                     </div>
 
@@ -212,10 +240,7 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
                                 <button onClick={() => { if(window.confirm('Remover documento?')) updateField('carteira_vacinacao_url', ''); }} className="text-[10px] text-gray-400 hover:text-red-500 font-bold px-2 py-1 transition-colors uppercase tracking-wider" title="Remover documento">Excluir</button>
                             </div>
                         ) : (
-                            <>
-                                <p className="text-sm text-red-500 mb-3 font-medium">Documento pendente!</p>
-                                <DragDropFileInput onChange={file => handleUpload(file, 'carteira_vacinacao_url')} />
-                            </>
+                            <DragDropFileInput onChange={file => handleUpload(file, 'carteira_vacinacao_url')} />
                         )}
                     </div>
 
@@ -231,10 +256,7 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
                                 <button onClick={() => { if(window.confirm('Remover documento?')) updateField('exame_coproparasitologico_url', ''); }} className="text-[10px] text-gray-400 hover:text-red-500 font-bold px-2 py-1 transition-colors uppercase tracking-wider" title="Remover documento">Excluir</button>
                             </div>
                         ) : (
-                            <>
-                                <p className="text-sm text-red-500 mb-3 font-medium">Documento pendente!</p>
-                                <DragDropFileInput onChange={file => handleUpload(file, 'exame_coproparasitologico_url')} />
-                            </>
+                            <DragDropFileInput onChange={file => handleUpload(file, 'exame_coproparasitologico_url')} />
                         )}
                     </div>
 
@@ -250,10 +272,7 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
                                 <button onClick={() => { if(window.confirm('Remover documento?')) updateField('atestado_veterinario_url', ''); }} className="text-[10px] text-gray-400 hover:text-red-500 font-bold px-2 py-1 transition-colors uppercase tracking-wider" title="Remover documento">Excluir</button>
                             </div>
                         ) : (
-                            <>
-                                <p className="text-sm text-red-500 mb-3 font-medium">Documento pendente!</p>
-                                <DragDropFileInput onChange={file => handleUpload(file, 'atestado_veterinario_url')} />
-                            </>
+                            <DragDropFileInput onChange={file => handleUpload(file, 'atestado_veterinario_url')} />
                         )}
                     </div>
 
@@ -271,21 +290,18 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
                                     <button onClick={() => { if(window.confirm('Remover documento?')) updateField('comprovante_pulga_url', ''); }} className="text-[10px] text-gray-400 hover:text-red-500 font-bold px-2 py-1 transition-colors uppercase tracking-wider" title="Remover documento">Excluir</button>
                                 </div>
                             ) : (
-                                <>
-                                    <p className="text-sm text-red-500 mb-3 font-medium">Documento pendente!</p>
-                                    <div className="mb-3">
-                                        <DragDropFileInput onChange={file => handleUpload(file, 'comprovante_pulga_url')} />
-                                    </div>
-                                </>
+                                <div className="mb-3">
+                                    <DragDropFileInput onChange={file => handleUpload(file, 'comprovante_pulga_url')} />
+                                </div>
                             )}
                         </div>
                         <div>
                             <label className="block text-sm text-gray-500 mb-1">Data de Validade</label>
-                            <input 
-                                type="date" 
-                                value={docs.data_validade_pulga || ''} 
-                                onChange={e => setDocs({...docs, data_validade_pulga: e.target.value})} 
-                                className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none" 
+                            <input
+                                type="date"
+                                value={docs.data_validade_pulga || ''}
+                                onChange={e => setDocs({...docs, data_validade_pulga: e.target.value})}
+                                className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none"
                             />
                         </div>
                     </div>
@@ -295,28 +311,28 @@ export const HealthDocumentsTab: React.FC<{ clientData: any, phone: string }> = 
                         <h4 className="font-bold text-gray-700">Veterinário(a) Responsável</h4>
                         <div>
                             <label className="block text-sm text-gray-500 mb-1">Nome do(a) Veterinário(a)</label>
-                            <input 
-                                type="text" 
-                                placeholder="Dr(a). Fulano" 
-                                value={docs.vet_name || ''} 
-                                onChange={e => setDocs({...docs, vet_name: e.target.value})} 
-                                className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none" 
+                            <input
+                                type="text"
+                                placeholder="Dr(a). Fulano"
+                                value={docs.vet_name || ''}
+                                onChange={e => setDocs({...docs, vet_name: e.target.value})}
+                                className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none"
                             />
                         </div>
                         <div>
                             <label className="block text-sm text-gray-500 mb-1">Telefone do(a) Veterinário(a)</label>
-                            <input 
-                                type="tel" 
-                                placeholder="(00) 00000-0000" 
-                                value={docs.vet_phone || ''} 
-                                onChange={e => setDocs({...docs, vet_phone: e.target.value})} 
-                                className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none" 
+                            <input
+                                type="tel"
+                                placeholder="(00) 00000-0000"
+                                value={docs.vet_phone || ''}
+                                onChange={e => setDocs({...docs, vet_phone: e.target.value})}
+                                className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none"
                             />
                         </div>
                     </div>
 
-                    <button 
-                        onClick={handleSaveText} 
+                    <button
+                        onClick={handleSaveText}
                         disabled={loading}
                         className="w-full bg-pink-600 text-white font-bold py-3 rounded-xl hover:bg-pink-700 transition-colors disabled:opacity-50"
                     >
