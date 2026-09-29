@@ -7,6 +7,7 @@ import MobileUiDemo from './src/pages/MobileUiDemo';
 import FeedbackPage from './src/pages/FeedbackPage';
 import { AvailableTimesPage } from './src/pages/AvailableTimesPage';
 import { ManageAppointmentPage } from './src/pages/ManageAppointmentPage';
+import ClientAreaPage from './src/pages/ClientAreaPage';
 
 // Proactively remove any existing service workers to avoid stale caches in preview/dev
 if ('serviceWorker' in navigator) {
@@ -38,11 +39,12 @@ const root = ReactDOM.createRoot(rootElement);
 
 function renderApp() {
   const hash = window.location.hash;
-  const path = window.location.pathname;
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
   const useMobileDemo = hash === '#mobile-ui-demo';
   const useFeedback = hash.startsWith('#feedback');
-  const useAvailableTimes = hash.startsWith('#horarios') || hash.startsWith('#horários') || path === '/horarios' || path === '/horários' || path === '/horarios/' || path === '/horários/';
+  const useAvailableTimes = hash.startsWith('#horarios') || hash.startsWith('#horários') || path === '/horarios' || path === '/horários';
   const useManageAppointment = path === '/gerenciar' || path === '/manage';
+  const useClientArea = path === '/cliente';
   const searchParams = new URLSearchParams(window.location.search);
   const prefillService = searchParams.get('service');
   const prefillDate = searchParams.get('date');
@@ -51,7 +53,19 @@ function renderApp() {
   root.render(
     <React.StrictMode>
       <ToastProvider>
-        {useManageAppointment ? <ManageAppointmentPage /> : useFeedback ? <FeedbackPage /> : useMobileDemo ? <MobileUiDemo /> : useAvailableTimes ? <AvailableTimesPage /> : <App prefillService={prefillService} prefillDate={prefillDate} prefillTime={prefillTime} />}
+        {useClientArea ? (
+          <ClientAreaPage />
+        ) : useManageAppointment ? (
+          <ManageAppointmentPage />
+        ) : useFeedback ? (
+          <FeedbackPage />
+        ) : useMobileDemo ? (
+          <MobileUiDemo />
+        ) : useAvailableTimes ? (
+          <AvailableTimesPage />
+        ) : (
+          <App prefillService={prefillService} prefillDate={prefillDate} prefillTime={prefillTime} />
+        )}
       </ToastProvider>
     </React.StrictMode>
   );
