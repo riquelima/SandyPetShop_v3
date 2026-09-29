@@ -12207,7 +12207,6 @@ const DaycareRegistrationForm: React.FC<{
                                 </div>
 
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-pink-500 whitespace-nowrap">Resumo da Matrícula</p>
                                     <h3 className="mt-0.5 text-xl font-extrabold text-pink-950 truncate leading-tight">{formData.pet_name || 'Pet'}</h3>
                                     {formData.pet_breed && (
                                         <p className="text-xs text-pink-700/80 truncate">{formData.pet_breed}</p>
