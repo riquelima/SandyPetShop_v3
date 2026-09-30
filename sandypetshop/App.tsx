@@ -20781,8 +20781,28 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
                     ...normalize(todayBanhoTosa.data, 'agendamento_banhotosa')
                 ].sort((a, b) => new Date(a.appointment_time).getTime() - new Date(b.appointment_time).getTime());
 
+                // Deduplicação: se o mesmo agendamento (pet + tutor + whatsapp + horário)
+                // aparecer em mais de uma tabela, mantém o primeiro (Pet Móvel tem prioridade).
+                const dedupeKey = (a: any) =>
+                    `${String(a.pet_name || '').trim().toLowerCase()}|${String(a.owner_name || '').trim().toLowerCase()}|${String(a.whatsapp || '').replace(/\D/g, '')}|${new Date(a.appointment_time).getTime()}`;
+                const tablePriority: Record<string, number> = {
+                    'pet_movel_appointments': 0,
+                    'appointments': 1,
+                    'agendamento_banhotosa': 2,
+                };
+                const seenToday = new Map<string, any>();
+                for (const appt of todayCombined) {
+                    const key = dedupeKey(appt);
+                    const existing = seenToday.get(key);
+                    if (!existing || (tablePriority[appt.table] ?? 99) < (tablePriority[existing.table] ?? 99)) {
+                        seenToday.set(key, appt);
+                    }
+                }
+                const todayDeduped = Array.from(seenToday.values())
+                    .sort((a, b) => new Date(a.appointment_time).getTime() - new Date(b.appointment_time).getTime());
+
                 if (!cancelled) {
-                    setAppointments(todayCombined);
+                    setAppointments(todayDeduped);
                 }
             } catch (todayErr) {
                 console.warn('Falha no carregamento prioritário de hoje:', todayErr);
@@ -20834,13 +20854,34 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
                     ...normalize(banhoTosaAppointments, 'agendamento_banhotosa'),
                 ].sort((a, b) => new Date(a.appointment_time).getTime() - new Date(b.appointment_time).getTime());
 
+                // Deduplicação: se o mesmo agendamento (pet + tutor + whatsapp + horário)
+                // aparecer em mais de uma tabela, mantém o de maior prioridade
+                // (Pet Móvel > appointments > agendamento_banhotosa).
+                const dedupeKey = (a: any) =>
+                    `${String(a.pet_name || '').trim().toLowerCase()}|${String(a.owner_name || '').trim().toLowerCase()}|${String(a.whatsapp || '').replace(/\D/g, '')}|${new Date(a.appointment_time).getTime()}`;
+                const tablePriority: Record<string, number> = {
+                    'pet_movel_appointments': 0,
+                    'appointments': 1,
+                    'agendamento_banhotosa': 2,
+                };
+                const seenCombined = new Map<string, any>();
+                for (const appt of combined) {
+                    const key = dedupeKey(appt);
+                    const existing = seenCombined.get(key);
+                    if (!existing || (tablePriority[appt.table] ?? 99) < (tablePriority[existing.table] ?? 99)) {
+                        seenCombined.set(key, appt);
+                    }
+                }
+                const combinedDeduped = Array.from(seenCombined.values())
+                    .sort((a, b) => new Date(a.appointment_time).getTime() - new Date(b.appointment_time).getTime());
+
                 const { data: inactiveClients } = await supabase
                     .from('monthly_clients')
                     .select('id')
                     .eq('is_active', false);
                 const inactiveIds = new Set((inactiveClients || []).map((c: any) => c.id));
 
-                const filteredCombined = combined.filter(app => {
+                const filteredCombined = combinedDeduped.filter(app => {
                     if (app.monthly_client_id && inactiveIds.has(app.monthly_client_id)) {
                         return false;
                     }
