@@ -161,6 +161,195 @@ export function getSlotBlockRange(appt: any): number {
     return 1;
 }
 
+/**
+ * Converte a chave de capacidade máxima de um agendamento/serviço.
+ * Por enquanto: 2 slots para Pet Móvel (qualquer sub) ou Golden Retriever (banho/tosa);
+ * 1 slot para os demais.
+ */
+export function getSlotCapacity(appt: any): number {
+    return getSlotBlockRange(appt);
+}
+
+/**
+ * Formato YYYY-MM-DD no fuso de São Paulo para uma data JS.
+ */
+export function getSaoPauloYMD(d: Date): string {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(d);
+    const y = parts.find(p => p.type === 'year')?.value;
+    const m = parts.find(p => p.type === 'month')?.value;
+    const day = parts.find(p => p.type === 'day')?.value;
+    return `${y}-${m}-${day}`;
+}
+
+/**
+ * Verifica se um serviço textual (label) representa Pet Móvel.
+ */
+function isPetMovelServiceLabel(service: any): boolean {
+    if (!service) return false;
+    const s = String(service).toUpperCase();
+    return s.includes('PET_MOBILE') || s.includes('MÓVEL') || s.includes('MOVEL') || s.includes('MOBILE');
+}
+
+/**
+ * Conta quantos mensalistas ativos (recorrentes) ocupam um slot específico.
+ *
+ * Regras:
+ *  - Mensalista ativo (is_active=true) cujo recurrence_day === dayOfWeek (0=Dom..6=Sáb)
+ *    e recurrence_time === hour ocupa 1 slot no calendário correspondente:
+ *      · Banho / Banho & Tosa / Só Tosa (fixo): conta no calendário FIXO
+ *      · Banho (Pet Móvel) / Banho & Tosa (Pet Móvel) / etc.: conta no calendário MÓVEL
+ *        mas apenas se o cliente agendou para o condomínio dele (ou sem condo definido)
+ *  - excluded_dates contendo a data (YYYY-MM-DD) libera o slot
+ *  - Pet Móvel com Golden Retriever bloqueia 2 slots (a hora agendada + próxima)
+ *  - Pet Móvel padrão bloqueia 1 slot (a hora agendada)
+ *  - Demais casos: 1 slot
+ *
+ * @param monthlyClients lista de mensalistas ativos (ou todos; filtra internamente)
+ * @param ymd data YYYY-MM-DD em SP
+ * @param hour hora inteira (0..23)
+ * @param type 'fixed' | 'mobile'
+ * @param condo filtro de condomínio (apenas para 'mobile'). Se omitido, conta qualquer Pet Móvel.
+ * @returns capacidade total ocupada por mensalistas recorrentes
+ */
+export function countMonthlyBookedAt(
+    monthlyClients: any[] | null | undefined,
+    ymd: string,
+    hour: number,
+    type: 'fixed' | 'mobile',
+    condo?: string
+): number {
+    if (!Array.isArray(monthlyClients) || monthlyClients.length === 0) return 0;
+
+    // dayOfWeek em SP a partir de ymd (yyyy-mm-dd)
+    const [y, m, d] = ymd.split('-').map(Number);
+    if (!y || !m || !d) return 0;
+    const utcRef = new Date(Date.UTC(y, m - 1, d, 12, 0, 0)); // meio-dia UTC evita off-by-one em SP
+    const dayOfWeek = new Intl.DateTimeFormat('en-US', {
+        weekday: 'short',
+        timeZone: 'America/Sao_Paulo'
+    }).formatToParts(utcRef).find(p => p.type === 'weekday')?.value;
+    const weekdayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    const targetDay = weekdayMap[dayOfWeek ?? ''];
+    if (typeof targetDay !== 'number') return 0;
+
+    let count = 0;
+    for (const c of monthlyClients) {
+        if (!c || c.is_active === false || c.is_active === 'false') continue;
+        const recDay = Number(c.recurrence_day);
+        const recTime = Number(c.recurrence_time);
+        if (!Number.isFinite(recDay) || !Number.isFinite(recTime)) continue;
+        if (recDay !== targetDay) continue;
+        if (recTime !== hour) continue;
+        // excluded_dates libera o slot
+        const exc = Array.isArray(c.excluded_dates) ? c.excluded_dates : [];
+        if (exc.includes(ymd)) continue;
+        const serviceLabel = String(c.service || '').toUpperCase();
+        const isMobileSvc = isPetMovelServiceLabel(serviceLabel);
+        if (type === 'mobile') {
+            if (!isMobileSvc) continue;
+            // Se o cliente passou um condo, contar apenas mensalistas do mesmo condo
+            if (condo) {
+                const cCondo = String(c.condominium || c.condo || '').trim();
+                if (cCondo && cCondo !== condo) continue;
+            }
+        } else {
+            // 'fixed': só conta mensalistas cujo serviço NÃO é Pet Móvel
+            if (isMobileSvc) continue;
+        }
+        // Capacidade: Pet Móvel ou Golden = 2, demais = 1
+        count += getSlotCapacity({
+            service: serviceLabel,
+            pet_breed: c.pet_breed || c.petBreed,
+            condominium: c.condominium || c.condo
+        });
+    }
+    return count;
+}
+
+/**
+ * Verifica se um slot está disponível considerando:
+ *  - consultas existentes nas 3 tabelas
+ *  - mensalistas recorrentes ativos (não excluídos)
+ *  - capacidade (Pet Móvel/Golden = 2, demais = 1)
+ *
+ * Retorna { available, occupied, capacity } para diagnóstico.
+ */
+export function evaluateSlotAvailability(args: {
+    date: Date;        // data no fuso local (será normalizada para SP)
+    hour: number;      // 0..23 em SP
+    type: 'fixed' | 'mobile';
+    condo?: string;
+    appointments: any[]; // registros das 3 tabelas (já carregados pelo chamador)
+    monthlyClients?: any[];
+    // Para excluir o próprio registro em reagendamentos
+    ignoreAppointmentId?: string;
+    ignoreAppointmentTable?: 'appointments' | 'pet_movel_appointments' | 'agendamento_banhotosa';
+}): { available: boolean; occupied: number; capacity: number; reason: string } {
+    const ymd = getSaoPauloYMD(args.date);
+    const isVisit = (a: any) => isVisitAppointment(a);
+    const isMobile = (a: any) => isMobileAppointment(a);
+
+    const relevant = (args.appointments || []).filter(a => {
+        if (!a) return false;
+        const s = String(a.status || '').toUpperCase();
+        if (s === 'CANCELADO' || s === 'CANCELLED' || a.cancelled_by_client === true) return false;
+        if (isVisit(a)) return false;
+        // Mesmo dia em SP?
+        const at = new Date(a.appointment_time);
+        if (!at || isNaN(at.getTime())) return false;
+        if (getSaoPauloYMD(at) !== ymd) return false;
+        // Diferencia mobile x fixed
+        if (args.type === 'mobile' && !isMobile(a)) return false;
+        if (args.type === 'fixed' && isMobile(a)) return false;
+        // Filtra o próprio agendamento em reagendamento
+        if (args.ignoreAppointmentId && a.id === args.ignoreAppointmentId) return false;
+        return true;
+    });
+
+    let occupiedFromTables = 0;
+    const processedHours = new Set<number>();
+    for (const a of relevant) {
+        const at = new Date(a.appointment_time);
+        const { hour: ah } = getSaoPauloTimeParts(at);
+        // Considera bloco: Pet Móvel/Golden ocupa 2 slots; demais 1
+        const block = getSlotCapacity(a);
+        // Só conta se o slot base (ah) está dentro do alcance que afeta args.hour
+        // Estratégia: somamos a capacidade no slot base; blocos sobrepõem args.hour quando ah === args.hour
+        // ou (block === 2 && ah + 1 === args.hour)
+        if (ah === args.hour) {
+            occupiedFromTables += block;
+            processedHours.add(ah);
+        } else if (block === 2 && ah + 1 === args.hour) {
+            occupiedFromTables += 1;
+            processedHours.add(ah);
+        }
+    }
+
+    const occupiedFromMonthly = countMonthlyBookedAt(args.monthlyClients, ymd, args.hour, args.type, args.condo);
+    const occupied = occupiedFromTables + occupiedFromMonthly;
+    const capacity = args.type === 'mobile' ? 2 : 1; // Fixed padrão = 1; mobile = 2
+
+    if (occupied >= capacity) {
+        return {
+            available: false,
+            occupied,
+            capacity,
+            reason: `slot ocupado (${occupied}/${capacity})`
+        };
+    }
+    return {
+        available: true,
+        occupied,
+        capacity,
+        reason: 'slot disponível'
+    };
+}
+
 
 const FALLBACK_IMG = 'data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"64\" height=\"64\" viewBox=\"0 0 64 64\"><rect width=\"64\" height=\"64\" fill=\"%23f3f4f6\"/><text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-size=\"28\">🐾</text></svg>';
 
@@ -4803,44 +4992,32 @@ const AdminAddAppointmentModal: React.FC<{
             const queryStart = new Date(startOfDay); queryStart.setHours(queryStart.getHours() - 4);
             const queryEnd = new Date(endOfDay); queryEnd.setHours(queryEnd.getHours() + 4);
 
-            // Verificação de capacidade de slots unificada: sempre busca em todas as três tabelas em paralelo para evitar furos de concorrência
-            const [regR, pmR, btR, inactiveClientsRes] = await Promise.all([
+            // Verificação de capacidade de slots unificada: sempre busca em todas as três tabelas
+            // e também nos mensalistas recorrentes ativos, respeitando excluded_dates.
+            const [regR, pmR, btR, monthlyR] = await Promise.all([
                 supabase.from('appointments').select('*').gte('appointment_time', queryStart.toISOString()).lte('appointment_time', queryEnd.toISOString()),
                 supabase.from('pet_movel_appointments').select('*').gte('appointment_time', queryStart.toISOString()).lte('appointment_time', queryEnd.toISOString()),
                 supabase.from('agendamento_banhotosa').select('*').gte('appointment_time', queryStart.toISOString()).lte('appointment_time', queryEnd.toISOString()),
-                supabase.from('monthly_clients').select('id').eq('is_active', false)
+                supabase.from('monthly_clients').select('*').eq('is_active', true)
             ]);
 
-            const inactiveIds = new Set((inactiveClientsRes.data || []).map((c: any) => c.id));
-
             const allReal = [
-                ...(regR.data || []).map(r => ({ ...r, appointmentTime: new Date(r.appointment_time) })),
-                ...(pmR.data || []).map(r => ({ ...r, appointmentTime: new Date(r.appointment_time) })),
-                ...(btR.data || []).map(r => ({ ...r, appointmentTime: new Date(r.appointment_time) }))
-            ].filter(appt => {
-                const s = String(appt.status || '').toUpperCase();
-                if (s === 'CANCELADO') return false;
-                if (appt.monthly_client_id && inactiveIds.has(appt.monthly_client_id)) return false;
-                return true;
+                ...(regR.data || []),
+                ...(pmR.data || []),
+                ...(btR.data || [])
+            ];
+
+            const slotCheck = evaluateSlotAvailability({
+                date: selectedDate,
+                hour: selectedTime,
+                type: isPetMovelSubmit ? 'mobile' : 'fixed',
+                condo: selectedCondo || undefined,
+                appointments: allReal,
+                monthlyClients: monthlyR.data || []
             });
 
-
-            const allExistingAtTime = allReal.filter(a => {
-                const at = new Date(a.appointment_time);
-                const { hour: ah } = getSaoPauloTimeParts(at);
-                
-                const isSameSlot = isSameSaoPauloDay(at, selectedDate) && ah === selectedTime;
-                if (!isSameSlot) return false;
-                
-                // VISITS DO NOT BLOCK SLOTS
-                if (isVisitAppointment(a)) return false;
-
-                // Differentiate between Mobile and Fixed calendars
-                const appIsMobile = isMobileAppointment(a);
-                return isPetMovelSubmit ? appIsMobile : !appIsMobile;
-            });
-
-            if (!isVisitService && allExistingAtTime.length >= MAX_CAPACITY_PER_SLOT) {
+            if (!isVisitService && !slotCheck.available) {
+                console.warn('[slotCheck]', slotCheck);
                 alert('Este horário já está ocupado. Por favor, selecione outro horário.');
                 setIsSubmitting(false);
                 return;
@@ -13329,25 +13506,23 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
 
         const isPetMovelSubmit = !!selectedService && [ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_BATH_AND_GROOMING, ServiceType.PET_MOBILE_GROOMING_ONLY].includes(selectedService);
         const relevantAppointments = appointments;
-        const appointmentsAtHour = relevantAppointments.filter(app => {
-            const appDate = new Date(app.appointmentTime);
-            
-            // VISITS DO NOT BLOCK SLOTS and CANCELLED should be ignored
-            if (String(app.status || '').toUpperCase() === 'CANCELADO' || isVisitAppointment(app)) {
-                return false;
-            }
 
-            const isSameSlot = isSameSaoPauloDay(appDate, selectedDate) && 
-                              getSaoPauloTimeParts(appDate).hour === selectedTime;
-            
-            if (!isSameSlot) return false;
-
-            // Differentiate between Mobile and Fixed calendars
-            const appIsMobile = isMobileAppointment(app);
-            return isPetMovelSubmit ? appIsMobile : !appIsMobile;
+        // Re-checa capacidade considerando mensalistas recorrentes e blocos de Pet Móvel/Golden
+        const monthlyCheck = await supabase.from('monthly_clients').select('*').eq('is_active', true);
+        const slotCheck = evaluateSlotAvailability({
+            date: selectedDate,
+            hour: selectedTime,
+            type: isPetMovelSubmit ? 'mobile' : 'fixed',
+            condo: selectedCondo || undefined,
+            appointments: relevantAppointments.map(a => ({
+                ...a,
+                appointment_time: a.appointmentTime instanceof Date ? a.appointmentTime.toISOString() : a.appointment_time
+            })),
+            monthlyClients: monthlyCheck.data || []
         });
 
-        if (!isVisitService && appointmentsAtHour.length >= MAX_CAPACITY_PER_SLOT) {
+        if (!isVisitService && !slotCheck.available) {
+            console.warn('[slotCheck admin-flow]', slotCheck);
             alert('Desculpe, este horário acabou de ser preenchido. Por favor, escolha outro horário.');
             setIsSubmitting(false);
             return;

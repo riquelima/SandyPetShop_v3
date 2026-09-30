@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
+import { evaluateSlotAvailability, getSaoPauloYMD } from '../../../App';
 import { 
     Clock, 
     Scissors, 
@@ -33,6 +34,7 @@ export const AvailableTimesPage: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState<string>('');
     const [dates, setDates] = useState<string[]>([]);
     const [appointments, setAppointments] = useState<any[]>([]);
+    const [monthlyClients, setMonthlyClients] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'fixed' | 'mobile'>('fixed');
 
@@ -70,22 +72,21 @@ export const AvailableTimesPage: React.FC = () => {
                 const startOfDay = `${selectedDate}T00:00:00-03:00`;
                 const endOfDay   = `${selectedDate}T23:59:59-03:00`;
 
-                const [bathGroomData, petMobileData, regularData, inactiveClientsRes] = await Promise.all([
-                    supabase.from('agendamento_banhotosa').select('appointment_time, condominium, status, monthly_client_id, service').gte('appointment_time', startOfDay).lte('appointment_time', endOfDay),
-                    supabase.from('pet_movel_appointments').select('appointment_time, condominium, status, monthly_client_id, service').gte('appointment_time', startOfDay).lte('appointment_time', endOfDay),
-                    supabase.from('appointments').select('appointment_time, condominium, status, monthly_client_id, service').gte('appointment_time', startOfDay).lte('appointment_time', endOfDay),
-                    supabase.from('monthly_clients').select('id').eq('is_active', false)
+                const [bathGroomData, petMobileData, regularData, monthlyR] = await Promise.all([
+                    supabase.from('agendamento_banhotosa').select('*').gte('appointment_time', startOfDay).lte('appointment_time', endOfDay),
+                    supabase.from('pet_movel_appointments').select('*').gte('appointment_time', startOfDay).lte('appointment_time', endOfDay),
+                    supabase.from('appointments').select('*').gte('appointment_time', startOfDay).lte('appointment_time', endOfDay),
+                    supabase.from('monthly_clients').select('*').eq('is_active', true)
                 ]);
-
-                const inactiveIds = new Set((inactiveClientsRes.data || []).map((c: any) => c.id));
 
                 const allAppointments = [
                     ...(bathGroomData.data || []).map(a => ({ ...a, source: 'bath' })),
                     ...(petMobileData.data || []).map(a => ({ ...a, source: 'movel' })),
                     ...(regularData.data || []).map(a => ({ ...a, source: 'regular' }))
-                ].filter(apt => !apt.monthly_client_id || !inactiveIds.has(apt.monthly_client_id));
+                ];
 
                 setAppointments(allAppointments);
+                setMonthlyClients(monthlyR.data || []);
             } catch (err) {
                 console.error('Error fetching appointments:', err);
             } finally {
@@ -103,41 +104,22 @@ export const AvailableTimesPage: React.FC = () => {
         return s.includes('VISIT') || s.includes('VISITA') || s.includes('CRECHE') || s.includes('HOTEL');
     };
 
-    // Extrai a hora do agendamento sempre no fuso de Brasília (America/Sao_Paulo)
-    const getHourBRT = (appointmentTime: string) => {
-        return parseInt(
-            new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/Sao_Paulo' })
-                .format(new Date(appointmentTime)),
-            10
-        );
-    };
-
-    const getBookedHours = (type: 'fixed' | 'mobile', condo?: string) => {
-        return appointments
-            .filter(apt => !isCancelled(apt))
-            .filter(apt => !isVisitAppointment(apt))
-            .filter(apt => {
-                if (type === 'fixed') {
-                    return !apt.condominium || apt.condominium === 'Nenhum Condomínio' || apt.condominium === 'Banho & Tosa Fixo';
-                } else {
-                    if (condo) {
-                        return apt.condominium === condo;
-                    }
-                    return apt.condominium && apt.condominium !== 'Nenhum Condomínio' && apt.condominium !== 'Banho & Tosa Fixo';
-                }
-            })
-            .map(apt => getHourBRT(apt.appointment_time));
+    const isAvailable = (hour: number, type: 'fixed' | 'mobile', condo?: string) => {
+        const dateObj = new Date(`${selectedDate}T12:00:00`);
+        const check = evaluateSlotAvailability({
+            date: dateObj,
+            hour,
+            type,
+            condo,
+            appointments,
+            monthlyClients
+        });
+        return check.available;
     };
 
     const getAvailableHours = (type: 'fixed' | 'mobile', condo?: string) => {
         const allHours = type === 'fixed' ? BATH_GROOMING_HOURS : PET_MOBILE_HOURS;
-        const bookedHours = getBookedHours(type, condo);
-        return allHours.filter(hour => !bookedHours.includes(hour));
-    };
-
-    const isAvailable = (hour: number, type: 'fixed' | 'mobile', condo?: string) => {
-        const available = getAvailableHours(type, condo);
-        return available.includes(hour);
+        return allHours.filter(hour => isAvailable(hour, type, condo));
     };
 
     const handleTimeClick = (hour: number, type: 'fixed' | 'mobile', condo?: string) => {

@@ -23,6 +23,7 @@ import {
     Download
 } from 'lucide-react';
 import { useRealtime } from '../hooks/useRealtime';
+import { evaluateSlotAvailability } from '../../App';
 
 const LOGO_URL = 'https://i.imgur.com/M3Gt3OA.png';
 
@@ -225,40 +226,46 @@ export const ManageAppointmentPage: React.FC = () => {
 
     const fetchBookedHours = async (date: string) => {
         if (!selectedAppointment) return;
-        
-        const type = getServiceType(selectedAppointment.table);
-        const startOfDay = `${date}T00:00:00`;
-        const endOfDay = `${date}T23:59:59`;
 
+        const type = getServiceType(selectedAppointment.table);
+        const startOfDay = `${date}T00:00:00-03:00`;
+        const endOfDay = `${date}T23:59:59-03:00`;
         const targetTable = type === 'fixed' ? 'agendamento_banhotosa' : 'pet_movel_appointments';
-        
-        const [bookedRes, inactiveClientsRes] = await Promise.all([
-            supabase.from(targetTable).select('appointment_time, monthly_client_id, service').gte('appointment_time', startOfDay).lte('appointment_time', endOfDay),
-            supabase.from('monthly_clients').select('id').eq('is_active', false)
+
+        const [bookedRes, petMobileRes, regularRes, monthlyRes] = await Promise.all([
+            supabase.from(targetTable).select('*').gte('appointment_time', startOfDay).lte('appointment_time', endOfDay),
+            supabase.from('pet_movel_appointments').select('*').gte('appointment_time', startOfDay).lte('appointment_time', endOfDay),
+            supabase.from('appointments').select('*').gte('appointment_time', startOfDay).lte('appointment_time', endOfDay),
+            supabase.from('monthly_clients').select('*').eq('is_active', true)
         ]);
 
-        if (bookedRes.error) {
-            console.error('Erro ao buscar horários:', bookedRes.error);
+        if (bookedRes.error || petMobileRes.error || regularRes.error) {
+            console.error('Erro ao buscar horários:', bookedRes.error || petMobileRes.error || regularRes.error);
             setBookedHours([]);
             return;
         }
 
-        const inactiveIds = new Set((inactiveClientsRes.data || []).map((c: any) => c.id));
-        const isVisitAppointment = (apt: any) => {
-            if (!apt) return false;
-            const s = String(apt.service || '').toUpperCase();
-            return s.includes('VISIT') || s.includes('VISITA') || s.includes('CRECHE') || s.includes('HOTEL');
-        };
-
-        const hours = (bookedRes.data || [])
-            .filter(apt => !apt.monthly_client_id || !inactiveIds.has(apt.monthly_client_id))
-            .filter(apt => !isVisitAppointment(apt))
-            .map(apt => {
-                const d = new Date(apt.appointment_time);
-                return d.getHours();
+        const allAppointments = [
+            ...(bookedRes.data || []),
+            ...(petMobileRes.data || []),
+            ...(regularRes.data || [])
+        ];
+        const monthlyClients = monthlyRes.data || [];
+        const hours = (type === 'fixed' ? BATH_GROOMING_HOURS : PET_MOBILE_HOURS).filter(h => {
+            const dateObj = new Date(`${date}T12:00:00`);
+            const check = evaluateSlotAvailability({
+                date: dateObj,
+                hour: h,
+                type,
+                condo: selectedAppointment.condominium,
+                appointments: allAppointments,
+                monthlyClients,
+                ignoreAppointmentId: selectedAppointment.id
             });
-        
-        console.log('Horários ocupados para', date, ':', hours, 'total:', hours.length);
+            return !check.available;
+        });
+
+        console.log('Horários ocupados para', date, ':', hours);
         setBookedHours(hours);
     };
 
