@@ -12418,7 +12418,7 @@ export const TimeSlotPicker: React.FC<{
                            (selectedService && String(selectedService).toLowerCase().includes('creche')) ||
                            (selectedService && String(selectedService).toLowerCase().includes('hotel'));
 
-    const isHourAvailable = (hour: number) => {
+    const isHourAvailable = (hour: number, slotIdx: number = 0) => {
         // 1. Past Time Check
         if (disablePastTimes && !isAdmin) {
             const now = new Date();
@@ -12433,9 +12433,16 @@ export const TimeSlotPicker: React.FC<{
             return true;
         }
 
-        // 2. Capacity Check — ANY appointment at this hour blocks the slot
+        // 2. Capacity Check — cada slot duplicado representa uma vaga separada
         let load = getAppointmentsAtHour(hour);
 
+        // Quando duplicado, capacidade = 2. slotIdx 0 ocupado se load>=1,
+        // slotIdx 1 ocupado se load>=2.
+        if (isDuplicatedPetMovelSlot) {
+            return load <= slotIdx;
+        }
+
+        // Capacidade padrão = 1
         if (load >= 1) return false;
 
         return true;
@@ -12453,7 +12460,7 @@ export const TimeSlotPicker: React.FC<{
                     : [{ hour, label: `${hour}:00`, slotIdx: 0 }];
 
                 return slots.map(slot => {
-                    const available = isHourAvailable(slot.hour);
+                    const available = isHourAvailable(slot.hour, slot.slotIdx);
                     const isSelected = selectedTime === slot.hour && slot.slotIdx === 0;
 
                     return (
