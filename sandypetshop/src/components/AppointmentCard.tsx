@@ -254,7 +254,7 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
                         </div>
                         <div>
                             <h3 className={`font-outfit font-bold text-xl text-gray-900 leading-tight group-hover:text-pink-600 transition-colors ${isCancelledByClient ? 'line-through text-gray-400' : ''}`}>
-                                {pet_name}
+                                {pet_name ? pet_name.charAt(0).toUpperCase() + pet_name.slice(1).toLowerCase() : ''}
                             </h3>
                             <div className="flex flex-wrap gap-1 mt-1.5">
                                 {isCancelledByClient ? (
