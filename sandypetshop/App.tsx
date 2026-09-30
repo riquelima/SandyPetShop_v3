@@ -12368,6 +12368,18 @@ export const TimeSlotPicker: React.FC<{
 
     const isSameDaySP = (d1: Date, d2: Date) => isSameSaoPauloDay(d1, d2);
 
+    // Duplicação de slots para Pet Móvel nos condomínios/dias específicos:
+    // - Vitta Parque: quartas-feiras (3)
+    // - Paseo: sextas-feiras (5)
+    // Cada horário gera DOIS botões: hora cheia e meia-hora (ex: 9:00 e 9:30).
+    const condoWeekday = selectedDate?.getDay();
+    const isDuplicatedPetMovelSlot = !!(
+        isPetMovel &&
+        selectedCondo &&
+        ((selectedCondo === 'Vitta Parque' && condoWeekday === 3) ||
+         (selectedCondo === 'Paseo' && condoWeekday === 5))
+    );
+
     // Separate calendars logic
 
     const getAppointmentsAtHour = (hour: number) => {
@@ -12431,34 +12443,40 @@ export const TimeSlotPicker: React.FC<{
 
     return (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-            {workingHours.map(hour => {
-                const available = isHourAvailable(hour);
-                const isSelected = selectedTime === hour;
+            {workingHours.flatMap(hour => {
+                const slots = isDuplicatedPetMovelSlot
+                    ? [{ hour, label: `${hour}:00` }, { hour, label: `${hour}:30` }]
+                    : [{ hour, label: `${hour}:00` }];
 
-                return (
-                    <button
-                        key={hour}
-                        type="button"
-                        title={available ? "Disponível" : "Indisponível"}
-                        disabled={!available}
-                        onClick={() => {
-                            if (available) {
-                                onTimeSelect(hour);
-                            }
-                        }}
-                        className={`px-3 py-2 rounded-md text-center font-medium transition-colors border flex items-center justify-center gap-1
-                            ${isSelected
-                                ? 'bg-pink-600 text-white border-pink-600 shadow-md'
-                                : available
-                                    ? 'bg-white hover:bg-pink-50 border-gray-200 text-gray-900'
-                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-100 opacity-60'
-                            }
-                            leading-tight text-sm
-                        `}
-                    >
-                        {`${hour}:00`}
-                    </button>
-                );
+                return slots.map(slot => {
+                    const available = isHourAvailable(slot.hour);
+                    const isSelected = selectedTime === slot.hour;
+
+                    return (
+                        <button
+                            key={`${slot.hour}-${slot.label}`}
+                            type="button"
+                            title={available ? "Disponível" : "Indisponível"}
+                            disabled={!available}
+                            onClick={() => {
+                                if (available) {
+                                    onTimeSelect(slot.hour);
+                                }
+                            }}
+                            className={`px-3 py-2 rounded-md text-center font-medium transition-colors border flex items-center justify-center gap-1
+                                ${isSelected
+                                    ? 'bg-pink-600 text-white border-pink-600 shadow-md'
+                                    : available
+                                        ? 'bg-white hover:bg-pink-50 border-gray-200 text-gray-900'
+                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-100 opacity-60'
+                                }
+                                leading-tight text-sm
+                            `}
+                        >
+                            {slot.label}
+                        </button>
+                    );
+                });
             })}
         </div>
     );
