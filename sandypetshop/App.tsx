@@ -122,6 +122,45 @@ export function isFixedAppointment(appt: any) {
     return !isMobileAppointment(appt) && !isVisitAppointment(appt);
 }
 
+// Identifica serviços de banho / tosa (fixo ou Pet Móvel).
+// Banho, Banho & Tosa, Só Tosa, e suas variantes Pet Móvel.
+export function isBathGroomService(service: any): boolean {
+    if (!service) return false;
+    const s = String(service).toUpperCase();
+    if (s.includes('VISITA') || s.includes('VISIT') || s.includes('CRECHE') || s.includes('HOTEL')) return false;
+    return (
+        s.includes('BANHO') ||
+        s.includes('TOSA') ||
+        s === 'BATH' ||
+        s === 'BATH_AND_GROOMING' ||
+        s === 'GROOMING_ONLY' ||
+        s === 'PET_MOBILE_BATH' ||
+        s === 'PET_MOBILE_BATH_AND_GROOMING' ||
+        s === 'PET_MOBILE_GROOMING_ONLY'
+    );
+}
+
+// Identifica se a raça é Golden Retriever (case/acentos-insensitive).
+export function isGoldenRetriever(appt: any): boolean {
+    if (!appt) return false;
+    const breed = String(appt.pet_breed || appt.petBreed || '').toLowerCase().trim();
+    return breed.includes('golden retriever');
+}
+
+// Retorna quantos slots consecutivos um agendamento ocupa, começando na sua hora cheia.
+// Regra:
+//  - Pet Móvel (qualquer sub-serviço): bloqueia 2 slots (a hora agendada + a próxima)
+//  - Banho ou Banho & Tosa (fixo OU Pet Móvel) com pet Golden Retriever: bloqueia 2 slots
+//  - Demais casos: bloqueia 1 slot
+export function getSlotBlockRange(appt: any): number {
+    if (!appt) return 1;
+    const isMobile = isMobileAppointment(appt);
+    const isBathGroom = isBathGroomService(appt.service);
+    const isGolden = isGoldenRetriever(appt);
+    if (isMobile || (isBathGroom && isGolden)) return 2;
+    return 1;
+}
+
 
 const FALLBACK_IMG = 'data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"64\" height=\"64\" viewBox=\"0 0 64 64\"><rect width=\"64\" height=\"64\" fill=\"%23f3f4f6\"/><text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-size=\"28\">🐾</text></svg>';
 
@@ -12397,7 +12436,16 @@ export const TimeSlotPicker: React.FC<{
                 return false;
             }
 
-            if (!isSameSaoPauloDay(apptTime, selectedDate) || apptHour !== hour) {
+            if (!isSameSaoPauloDay(apptTime, selectedDate)) {
+                return false;
+            }
+
+            // Regra de expansão de slots: alguns agendamentos bloqueiam
+            // também a próxima hora. Ex.: Pet Móvel sempre; Banho/Tosa
+            // com Golden Retriever também.
+            const blockRange = getSlotBlockRange(appt);
+            const hourDiff = hour - apptHour;
+            if (hourDiff < 0 || hourDiff >= blockRange) {
                 return false;
             }
 
