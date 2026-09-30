@@ -12443,18 +12443,22 @@ export const TimeSlotPicker: React.FC<{
 
     return (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-            {workingHours.flatMap(hour => {
+            {workingHours.flatMap((hour, hourIdx) => {
+                // Duplicação: dois botões idênticos por horário (mesma hora cheia)
                 const slots = isDuplicatedPetMovelSlot
-                    ? [{ hour, label: `${hour}:00` }, { hour, label: `${hour}:30` }]
-                    : [{ hour, label: `${hour}:00` }];
+                    ? [
+                        { hour, label: `${hour}:00`, slotIdx: 0 },
+                        { hour, label: `${hour}:00`, slotIdx: 1 },
+                      ]
+                    : [{ hour, label: `${hour}:00`, slotIdx: 0 }];
 
                 return slots.map(slot => {
                     const available = isHourAvailable(slot.hour);
-                    const isSelected = selectedTime === slot.hour;
+                    const isSelected = selectedTime === slot.hour && slot.slotIdx === 0;
 
                     return (
                         <button
-                            key={`${slot.hour}-${slot.label}`}
+                            key={`${slot.hour}-${slot.slotIdx}`}
                             type="button"
                             title={available ? "Disponível" : "Indisponível"}
                             disabled={!available}
