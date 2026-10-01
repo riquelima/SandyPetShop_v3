@@ -11686,9 +11686,7 @@ const HotelRegistrationForm: React.FC<{
                     <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative overflow-hidden border border-pink-100">
                         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-pink-400 to-pink-600" />
                         <div className="flex flex-col items-center text-center space-y-4">
-                            <div className="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center mb-2 shadow-inner">
-                                <PawIcon />
-                            </div>
+                            <img src="https://cdn-icons-png.flaticon.com/512/15892/15892071.png" alt="Aviso" className="w-20 h-20 mb-1 object-contain drop-shadow-sm" />
                             <h3 className="text-2xl font-extrabold text-pink-950">Aviso Importante</h3>
                             <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
                                 Este serviço de hospedagem é exclusivo para <strong>clientes regulares</strong> da Sandy Pet Shop. 
