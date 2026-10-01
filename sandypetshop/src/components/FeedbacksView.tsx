@@ -314,24 +314,11 @@ const FeedbacksView: React.FC<FeedbacksViewProps> = ({ adminTheme }) => {
             `}</style>
 
             {/* ── Header ──────────────────────────────────────────────────────── */}
-            <div className="relative flex flex-col items-center text-center mb-8">
-                {/* Botão de exportação CSV */}
-                <button
-                    onClick={exportFeedbacksCsv}
-                    disabled={loading || exporting}
-                    className="ml-4 mb-2 px-4 py-2 text-white rounded-xl hover:brightness-110 transition-colors disabled:opacity-60"
-                    style={{
-                        background: isDark ? 'var(--admin-bg-hover)' : 'linear-gradient(to right, #FF9A44, #E93D8E)',
-                        border: isDark ? '1px solid var(--admin-border-color)' : 'none',
-                        color: isDark ? 'var(--admin-text-primary)' : 'white',
-                    }}
-                >
-                    {exporting ? 'Exportando...' : 'Exportar CSV'}
-                </button>
+            <div className="flex items-center justify-between gap-3 mb-8">
                  <button
                     onClick={fetchFeedbacks}
                     disabled={loading}
-                    className="absolute left-0 top-1 filter-btn flex items-center justify-center w-10 h-10 rounded-xl transition-all"
+                    className="filter-btn flex items-center justify-center w-10 h-10 rounded-xl transition-all shrink-0"
                     style={{
                         background: isDark ? 'var(--admin-bg-hover)' : 'rgba(252, 231, 243, 0.4)',
                         border: isDark ? '1px solid var(--admin-border-color)' : '1px solid rgba(252, 231, 243, 0.5)',
@@ -341,18 +328,18 @@ const FeedbacksView: React.FC<FeedbacksViewProps> = ({ adminTheme }) => {
                     }}
                     title="Atualizar"
                 >
-                    <svg 
-                        className={loading ? 'animate-spin' : ''} 
-                        width="20" height="20" 
-                        fill="none" 
-                        stroke="currentColor" 
+                    <svg
+                        className={loading ? 'animate-spin' : ''}
+                        width="20" height="20"
+                        fill="none"
+                        stroke="currentColor"
                         viewBox="0 0 24 24"
                     >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                 </button>
 
-                <div>
+                <div className="flex-1 text-center">
                     <h1 className="text-pink-600" style={{
                         fontFamily: '"Lobster Two", cursive',
                         fontSize: '2.25rem',
@@ -366,6 +353,9 @@ const FeedbacksView: React.FC<FeedbacksViewProps> = ({ adminTheme }) => {
                         O que os tutores estão dizendo sobre seus pets
                     </p>
                 </div>
+
+                {/* Espaço reservado para manter o título centralizado */}
+                <div className="w-10 h-10 shrink-0" aria-hidden="true" />
             </div>
 
             {/* ── Stats Cards ─────────────────────────────────────────────────── */}

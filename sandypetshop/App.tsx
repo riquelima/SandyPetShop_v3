@@ -779,23 +779,23 @@ const AlbumManagementView: React.FC = () => {
                 <p className="text-pink-800/60 font-medium tracking-tight whitespace-nowrap text-[10px] xs:text-xs sm:text-sm">Gerencie as fotos que os clientes verão em mosaico</p>
             </div>
             
-            <div className="w-full max-w-lg mb-8 bg-pink-50/50 p-1.5 rounded-2xl border border-pink-100 flex gap-2">
+            <div className="w-full max-w-lg mb-8 bg-pink-50/50 p-1.5 rounded-2xl border border-pink-100 flex gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <button
                     onClick={() => setActiveTab('gallery')}
-                    className={`flex-1 py-2.5 px-1 sm:px-4 rounded-xl font-bold whitespace-nowrap text-[11px] sm:text-sm transition-all ${activeTab === 'gallery' ? 'bg-white text-pink-600 shadow-md' : 'text-pink-800/50 hover:text-pink-600'}`}
+                    className={`flex-1 min-w-[33%] sm:min-w-0 snap-start py-2.5 px-1 sm:px-4 rounded-xl font-bold whitespace-nowrap text-[11px] sm:text-sm transition-all ${activeTab === 'gallery' ? 'bg-white text-pink-600 shadow-md' : 'text-pink-800/50 hover:text-pink-600'}`}
                 >
                     Galeria<span className="hidden sm:inline"> de Fotos</span>
                 </button>
                 <button
                     onClick={() => setActiveTab('fame')}
-                    className={`flex-1 py-2.5 px-1 sm:px-4 rounded-xl font-bold whitespace-nowrap text-[11px] sm:text-sm transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${activeTab === 'fame' ? 'bg-white text-pink-600 shadow-md' : 'text-pink-800/50 hover:text-pink-600'}`}
+                    className={`flex-1 min-w-[33%] sm:min-w-0 snap-start py-2.5 px-1 sm:px-4 rounded-xl font-bold whitespace-nowrap text-[11px] sm:text-sm transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${activeTab === 'fame' ? 'bg-white text-pink-600 shadow-md' : 'text-pink-800/50 hover:text-pink-600'}`}
                 >
                     <SparklesIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
                     Mural<span className="hidden sm:inline"> da Fama</span>
                 </button>
                 <button
                     onClick={() => setActiveTab('adocao')}
-                    className={`flex-1 py-2.5 px-1 sm:px-4 rounded-xl font-bold whitespace-nowrap text-[11px] sm:text-sm transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${activeTab === 'adocao' ? 'bg-white text-pink-600 shadow-md' : 'text-pink-800/50 hover:text-pink-600'}`}
+                    className={`flex-1 min-w-[33%] sm:min-w-0 snap-start py-2.5 px-1 sm:px-4 rounded-xl font-bold whitespace-nowrap text-[11px] sm:text-sm transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${activeTab === 'adocao' ? 'bg-white text-pink-600 shadow-md' : 'text-pink-800/50 hover:text-pink-600'}`}
                 >
                     <span className="text-sm sm:text-base leading-none">🐾</span>
                     Adoção
@@ -962,7 +962,7 @@ const AlbumManagementView: React.FC = () => {
                             <ChevronLeftIcon className="w-6 h-6" />
                         </button>
                         <div className="text-center">
-                            <h3 className="text-xl font-bold text-pink-800 capitalize">
+                            <h3 className="text-base sm:text-xl font-bold text-pink-800 capitalize whitespace-nowrap">
                                 {rankingDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
                             </h3>
                             <p className="text-[10px] uppercase tracking-widest text-pink-800/40 font-black">Histórico do Mural da Fama</p>
@@ -10483,8 +10483,8 @@ const HotelRegistrationForm: React.FC<{
         service_bath: null, service_transport: null, service_daily_rate: null, service_extra_hour: null,
         service_vet: null, service_training: null, total_services_price: 0, additional_info: '',
         professional_name: '', registration_date: new Date().toISOString().split('T')[0],
-        tutor_check_in_signature: '', tutor_check_out_signature: '', tutor_signature: '', declaration_accepted: false, status: 'Ativo',
-        last_vaccination_date: '',
+        tutor_check_in_signature: '', tutor_check_out_signature: '', tutor_signature: '', declaration_accepted: false, contract_accepted: false, status: 'Ativo',
+        last_vaccination_date: '', pet_photo_url: null,
         extra_services: {
             pernoite: false, pernoite_quantity: 0, pernoite_price: 0,
             banho_tosa: false, banho_tosa_price: 0,
@@ -10574,6 +10574,7 @@ const HotelRegistrationForm: React.FC<{
     const [hasAllergies, setHasAllergies] = useState(false);
     const [showContractModal, setShowContractModal] = useState(false);
     const [showCheckinWarning, setShowCheckinWarning] = useState(false);
+    const [isOtherBreed, setIsOtherBreed] = useState(false);
     const [lastSearchedPhone, setLastSearchedPhone] = useState<string>('');
 
     // --- AUTO-FILL LOGIC ---
@@ -10870,7 +10871,8 @@ const HotelRegistrationForm: React.FC<{
                 checked_out_at: null,
                 payment_status: 'Pendente',
                 responsible_signature: formData.tutor_signature || '', // Usar tutor_signature como fallback
-                veterinarian: formData.veterinarian || ''
+                veterinarian: formData.veterinarian || '',
+                pet_photo_url: formData.pet_photo_url || null
             };
 
             console.log('Payload completo:', payload);
@@ -12575,6 +12577,7 @@ export const TimeSlotPicker: React.FC<{
     disablePastTimes?: boolean;
     isAdmin?: boolean;
 }> = ({ selectedDate, selectedService, appointments: allAppointments, onTimeSelect, selectedTime, workingHours, isPetMovel, allowedDays, selectedCondo, disablePastTimes, isAdmin = false }) => {
+    const [selectedSlotIdx, setSelectedSlotIdx] = React.useState<number | null>(null);
 
     // FIX: Use ALL appointments for availability checks — any existing appointment at a time slot
     // should block it regardless of whether it's a Pet Móvel or Store service.
@@ -12686,7 +12689,11 @@ export const TimeSlotPicker: React.FC<{
 
                 return slots.map(slot => {
                     const available = isHourAvailable(slot.hour, slot.slotIdx);
-                    const isSelected = selectedTime === slot.hour && slot.slotIdx === 0;
+                    // Para slots duplicados, exigir match exato de slotIdx
+                    // para que cada botão mantenha seu próprio estado de seleção.
+                    const isSelected = isDuplicatedPetMovelSlot
+                        ? (selectedTime === slot.hour && selectedSlotIdx === slot.slotIdx)
+                        : (selectedTime === slot.hour && slot.slotIdx === 0);
 
                     return (
                         <button
@@ -12696,6 +12703,7 @@ export const TimeSlotPicker: React.FC<{
                             disabled={!available}
                             onClick={() => {
                                 if (available) {
+                                    setSelectedSlotIdx(slot.slotIdx);
                                     onTimeSelect(slot.hour);
                                 }
                             }}
@@ -13046,7 +13054,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
     const [petMovelOnlyAppointments, setPetMovelOnlyAppointments] = useState<Appointment[]>([]);
     const [formData, setFormData] = useState({ petName: '', ownerName: '', whatsapp: '', owner_cpf: '', petBreed: '', ownerAddress: '', observation: '' });
     const [selectedService, setSelectedService] = useState<ServiceType | null>(null);
-    const [serviceStepView, setServiceStepView] = useState<'main' | 'bath_groom' | 'pet_movel' | 'pet_movel_condo' | 'hotel_pet'>('main');
+    const [serviceStepView, setServiceStepView] = useState<'main' | 'bath_groom' | 'pet_movel' | 'pet_movel_condo' | 'hotel_pet' | 'daycare_options' | 'hotel_options'>('main');
     const [selectedCondo, setSelectedCondo] = useState<string | null>(null);
     const [selectedWeight, setSelectedWeight] = useState<PetWeight | null>(null);
     const [selectedAddons, setSelectedAddons] = useState<Record<string, boolean>>({});
@@ -13698,7 +13706,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                     {/* Título com fonte brand preservada */}
                     <h1 className="font-brand text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-pink-900 tracking-tight leading-none mb-3">Sandy's <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400">Pet Shop</span></h1>
                     {/* Subtítulo emocional */}
-                    <p className="text-pink-700/70 text-sm sm:text-base md:text-lg font-medium tracking-wide max-w-md" style={{ fontFamily: '"Lobster Two", cursive' }}>Onde cada patinha é tratada com amor 🐾</p>
+                    <p className="text-pink-700/70 text-sm sm:text-base md:text-lg font-medium tracking-wide max-w-md" style={{ fontFamily: '"Lobster Two", cursive' }}>Onde cada patinha é tratada com amor</p>
 
                     {/* Chips de ação rápida — glassmorphism */}
                     <div className="grid grid-cols-4 gap-1.5 sm:gap-3 mt-8 w-full max-w-2xl px-1 sm:px-4">
@@ -13868,21 +13876,44 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                             <button 
                                 type="button" 
                                 onClick={() => { setSelectedService(null); setView('daycareRegistration'); }} 
-                                className="group relative col-span-1 md:col-span-5 overflow-hidden rounded-2xl md:rounded-[2rem] bg-white/70 backdrop-blur-md p-5 md:p-8 text-center md:text-left transition-all duration-500 hover:shadow-[0_20px_60px_-15px_rgba(236,72,153,0.3)] border border-pink-100/60 flex flex-col items-center md:flex-row md:items-center md:justify-between gap-2 md:gap-4 justify-center min-h-[140px] md:min-h-[170px] hover:-translate-y-2 active:scale-[0.97]"
+                                className="group relative col-span-1 md:col-span-4 overflow-hidden rounded-2xl md:rounded-[2rem] bg-white/70 backdrop-blur-md p-5 md:p-8 text-center md:text-left transition-all duration-500 hover:shadow-[0_20px_60px_-15px_rgba(236,72,153,0.3)] border border-pink-100/60 flex flex-col items-center md:flex-row md:items-center md:justify-between gap-2 md:gap-4 justify-center min-h-[140px] md:min-h-[170px] hover:-translate-y-2 active:scale-[0.97]"
                             >
                                 <div className="absolute top-0 left-0 w-28 md:w-40 h-28 md:h-40 bg-gradient-to-br from-rose-50/80 to-transparent rounded-full blur-2xl -translate-y-1/2 -translate-x-1/4"></div>
                                 <div className="relative z-10 md:hidden mb-2">
                                     <SafeImage src="https://cdn-icons-png.flaticon.com/512/11201/11201086.png" alt="Creche Pet" className="w-12 h-12" loading="lazy" />
                                 </div>
                                 <div className="relative z-10 flex flex-col items-center md:items-start">
-                                    <h3 className="text-lg md:text-4xl font-extrabold text-pink-950 mb-0.5 md:mb-1.5 tracking-tight leading-tight">Creche Pet</h3>
+                                    <h3 className="text-lg md:text-3xl font-extrabold text-pink-950 mb-0.5 md:mb-1.5 tracking-tight leading-tight">Creche Pet</h3>
                                     <p className="text-pink-700/50 font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] text-[8px] md:text-xs">Matrícula</p>
                                 </div>
-                                <div className="relative z-10 bg-pink-50/80 backdrop-blur-sm p-4 sm:p-5 rounded-2xl group-hover:bg-pink-100/80 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 hidden md:flex">
-                                    <SafeImage src="https://cdn-icons-png.flaticon.com/512/11201/11201086.png" alt="Creche Pet" className="w-12 h-12 sm:w-14 sm:h-14" loading="lazy" />
+                                <div className="relative z-10 bg-pink-50/80 backdrop-blur-sm p-3 sm:p-4 rounded-2xl group-hover:bg-pink-100/80 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 hidden md:flex">
+                                    <SafeImage src="https://cdn-icons-png.flaticon.com/512/11201/11201086.png" alt="Creche Pet" className="w-10 h-10 sm:w-12 sm:h-12" loading="lazy" />
                                 </div>
                                 <div className="hidden md:block absolute bottom-3 right-5 opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all duration-400">
                                     <span className="text-pink-400 text-sm font-bold tracking-wide">Agendar →</span>
+                                </div>
+                            </button>
+
+                            {/* HOTEL PET */}
+                            <button
+                                type="button"
+                                onClick={() => { setSelectedService(null); setView('hotelRegistration'); }}
+                                aria-label="Hotel Pet — solicitar hospedagem"
+                                className="group relative col-span-1 md:col-span-4 overflow-hidden rounded-2xl md:rounded-[2rem] bg-white/70 backdrop-blur-md p-5 md:p-8 text-center md:text-left transition-all duration-500 hover:shadow-[0_20px_60px_-15px_rgba(236,72,153,0.3)] border border-pink-100/60 flex flex-col items-center md:flex-row md:items-center md:justify-between gap-2 md:gap-4 justify-center min-h-[140px] md:min-h-[170px] hover:-translate-y-2 active:scale-[0.97]"
+                            >
+                                <div className="absolute top-0 right-0 w-28 md:w-40 h-28 md:h-40 bg-gradient-to-bl from-rose-50/80 to-transparent rounded-full blur-2xl -translate-y-1/2 translate-x-1/4"></div>
+                                <div className="relative z-10 md:hidden mb-2">
+                                    <SafeImage src="https://cdn-icons-png.flaticon.com/512/3009/3009489.png" alt="Hotel Pet" className="w-12 h-12" loading="lazy" />
+                                </div>
+                                <div className="relative z-10 flex flex-col items-center md:items-start">
+                                    <h3 className="text-lg md:text-3xl font-extrabold text-pink-950 mb-0.5 md:mb-1.5 tracking-tight leading-tight">Hotel Pet</h3>
+                                    <p className="text-pink-700/50 font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] text-[8px] md:text-xs">Hospedagem</p>
+                                </div>
+                                <div className="relative z-10 bg-pink-50/80 backdrop-blur-sm p-3 sm:p-4 rounded-2xl group-hover:bg-pink-100/80 transition-all duration-300 group-hover:scale-110 group-hover:-rotate-3 hidden md:flex">
+                                    <SafeImage src="https://cdn-icons-png.flaticon.com/512/3009/3009489.png" alt="Hotel Pet" className="w-10 h-10 sm:w-12 sm:h-12" loading="lazy" />
+                                </div>
+                                <div className="hidden md:block absolute bottom-3 right-5 opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all duration-400">
+                                    <span className="text-pink-400 text-sm font-bold tracking-wide">Solicitar →</span>
                                 </div>
                             </button>
 
@@ -13890,18 +13921,15 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                             <button 
                                 type="button" 
                                 onClick={() => { setView('visitSelector'); }} 
-                                className="group relative col-span-1 md:col-span-7 overflow-hidden rounded-2xl md:rounded-[2rem] bg-white/70 backdrop-blur-md p-5 md:p-8 text-center md:text-left transition-all duration-500 hover:shadow-[0_20px_60px_-15px_rgba(236,72,153,0.3)] border border-pink-100/60 flex flex-col items-center md:flex-row md:items-center md:justify-between gap-2 md:gap-4 justify-center min-h-[140px] md:min-h-[170px] hover:-translate-y-2 active:scale-[0.97]"
+                                className="group relative col-span-2 md:col-span-4 overflow-hidden rounded-2xl md:rounded-[2rem] bg-white/70 backdrop-blur-md p-5 md:p-8 text-center md:text-left transition-all duration-500 hover:shadow-[0_20px_60px_-15px_rgba(236,72,153,0.3)] border border-pink-100/60 flex flex-row items-center justify-between gap-3 md:gap-4 min-h-[100px] md:min-h-[170px] hover:-translate-y-2 active:scale-[0.97]"
                             >
                                 <div className="absolute bottom-0 right-0 w-32 md:w-48 h-32 md:h-48 bg-gradient-to-br from-rose-50/80 to-transparent rounded-full blur-2xl translate-y-1/3 translate-x-1/4"></div>
-                                <div className="relative z-10 md:hidden mb-2">
-                                    <SafeImage src="https://cdn-icons-png.flaticon.com/512/2196/2196747.png" alt="Visita" className="w-12 h-12" loading="lazy" />
-                                </div>
-                                <div className="relative z-10 flex flex-col items-center md:items-start">
-                                    <h3 className="text-lg md:text-4xl font-extrabold text-pink-950 mb-0.5 md:mb-1.5 tracking-tight leading-tight">Visita</h3>
+                                <div className="relative z-10 flex flex-col items-start text-left">
+                                    <h3 className="text-lg md:text-3xl font-extrabold text-pink-950 mb-0.5 md:mb-1.5 tracking-tight leading-tight">Visita</h3>
                                     <p className="text-pink-700/50 font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] text-[8px] md:text-xs">Agendar Tour</p>
                                 </div>
-                                <div className="relative z-10 bg-pink-50/80 backdrop-blur-sm p-4 sm:p-5 rounded-2xl group-hover:bg-pink-100/80 transition-all duration-300 group-hover:scale-110 group-hover:-rotate-3 hidden md:flex">
-                                    <SafeImage src="https://cdn-icons-png.flaticon.com/512/2196/2196747.png" alt="Visita" className="w-12 h-12 sm:w-14 sm:h-14" loading="lazy" />
+                                <div className="relative z-10 bg-pink-50/80 backdrop-blur-sm p-3 sm:p-4 rounded-2xl group-hover:bg-pink-100/80 transition-all duration-300 group-hover:scale-110 group-hover:-rotate-3 flex">
+                                    <SafeImage src="https://cdn-icons-png.flaticon.com/512/2196/2196747.png" alt="Visita" className="w-10 h-10 sm:w-12 sm:h-12" loading="lazy" />
                                 </div>
                                 <div className="hidden md:block absolute bottom-3 right-5 opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all duration-400">
                                     <span className="text-pink-400 text-sm font-bold tracking-wide">Agendar →</span>
@@ -18404,8 +18432,8 @@ const DaycareView: React.FC<{ refreshKey?: number; onFiscalNote?: (enrollment: D
                 </div>
 
                 {/* Resumo Rápido */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mt-6 sm:mt-8 relative z-10">
-                    <div className="bg-green-50 rounded-xl p-2 sm:p-4 border border-green-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden">
+                <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mt-6 sm:mt-8 relative z-10 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none pb-1">
+                    <div className="bg-green-50 rounded-xl p-2 sm:p-4 border border-green-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden snap-start shrink-0 min-w-[70vw] md:min-w-0">
                         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-200 rounded-full flex items-center justify-center shrink-0">
                             <span className="relative flex h-2 w-2 sm:h-3 sm:w-3">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
@@ -18417,7 +18445,7 @@ const DaycareView: React.FC<{ refreshKey?: number; onFiscalNote?: (enrollment: D
                             <p className="text-lg sm:text-2xl font-black text-green-900 truncate">{petsInDaycareNow.length}</p>
                         </div>
                     </div>
-                    <div className="bg-blue-50 rounded-xl p-2 sm:p-4 border border-blue-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden">
+                    <div className="bg-blue-50 rounded-xl p-2 sm:p-4 border border-blue-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden snap-start shrink-0 min-w-[70vw] md:min-w-0">
                         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-200 text-blue-700 rounded-full flex items-center justify-center shrink-0 font-bold">
                             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         </div>
@@ -18426,7 +18454,7 @@ const DaycareView: React.FC<{ refreshKey?: number; onFiscalNote?: (enrollment: D
                             <p className="text-lg sm:text-2xl font-black text-blue-900 truncate">{categorizedEnrollments.approved.length}</p>
                         </div>
                     </div>
-                    <div className="bg-yellow-50 rounded-xl p-2 sm:p-4 border border-yellow-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden">
+                    <div className="bg-yellow-50 rounded-xl p-2 sm:p-4 border border-yellow-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden snap-start shrink-0 min-w-[70vw] md:min-w-0">
                         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-200 text-yellow-700 rounded-full flex items-center justify-center shrink-0 font-bold">
                             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         </div>
@@ -18440,7 +18468,7 @@ const DaycareView: React.FC<{ refreshKey?: number; onFiscalNote?: (enrollment: D
                             setSelectedBirthdayMonth(new Date().getMonth());
                             setIsBirthdayModalOpen(true);
                         }}
-                        className="bg-purple-50 rounded-xl p-2 sm:p-4 border border-purple-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden cursor-pointer hover:shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+                        className="bg-purple-50 rounded-xl p-2 sm:p-4 border border-purple-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden cursor-pointer hover:shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] snap-start shrink-0 min-w-[70vw] md:min-w-0"
                     >
                         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-200 text-purple-700 rounded-full flex items-center justify-center shrink-0 font-bold text-base sm:text-lg">
                             🎂
@@ -18769,12 +18797,18 @@ const ResumoView: React.FC<{
             {allTodayAppointments.length > 0 && (
                 <div className="space-y-4">
                     <h3 className="text-gray-400 text-xs font-bold uppercase tracking-widest ml-1">Agendamentos de Hoje</h3>
-                    <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1 pb-4 custom-scrollbar">
+                    <div className="flex md:flex-col md:space-y-3 md:space-x-0 space-x-3 md:max-h-[460px] md:overflow-y-auto overflow-x-auto pr-1 pb-4 custom-scrollbar snap-x snap-mandatory md:snap-none">
                         {allTodayAppointments.map(app => {
                             const isDone = (app.status || '').toUpperCase() === 'CONCLUÍDO' || (app.status || '').toUpperCase() === 'CONCLUIDO';
+                            const formatPetName = (name: string) =>
+                                (name || '')
+                                    .trim()
+                                    .toLowerCase()
+                                    .replace(/\s+/g, ' ')
+                                    .replace(/\b\w/g, c => c.toUpperCase());
                             
                             return (
-                                <div key={app.id} className={`flex items-center gap-4 p-4 bg-white rounded-2xl border shadow-sm hover:shadow-md transition-all active:scale-[0.98] ${isDone ? 'opacity-70 border-gray-100 shadow-none' : 'border-pink-50 shadow-pink-100/50'}`}>
+                                <div key={app.id} className={`flex items-center gap-4 p-4 bg-white rounded-2xl border shadow-sm hover:shadow-md transition-all active:scale-[0.98] snap-start shrink-0 min-w-[85vw] md:min-w-0 ${isDone ? 'opacity-70 border-gray-100 shadow-none' : 'border-pink-50 shadow-pink-100/50'}`}>
                                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden border shadow-inner relative ${isDone ? 'bg-gray-50 border-gray-200' : 'bg-pink-50 border-pink-100'}`}>
                                         {app.pet_photo_url ? (
                                             <SafeImage src={app.pet_photo_url} alt={app.pet_name} className={`w-full h-full object-cover transition-all ${isDone ? 'grayscale-[0.5]' : ''}`} />
@@ -18791,7 +18825,7 @@ const ResumoView: React.FC<{
                                     </div>
                                     <div className="flex-1 flex flex-col">
                                         <div className="flex items-center justify-between">
-                                            <span className={`font-black text-lg tracking-tight uppercase ${isDone ? 'text-gray-500' : 'text-gray-800'}`} style={{ fontFamily: '"Inter", sans-serif' }}>{app.pet_name}</span>
+                                            <span className={`font-black text-lg tracking-tight ${isDone ? 'text-gray-500' : 'text-gray-800'}`} style={{ fontFamily: '"Inter", sans-serif' }}>{formatPetName(app.pet_name)}</span>
                                             <span className={`font-black text-sm px-2 py-0.5 rounded-lg border ${isDone ? 'bg-gray-100 text-gray-400 border-gray-100' : 'bg-pink-50 text-pink-600 border-pink-100'}`}>
                                                 {new Date(app.appointment_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                             </span>
@@ -21371,9 +21405,13 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
                 <main className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-pink-100">
                     <h2 className="text-2xl font-bold text-gray-800 text-center mb-4">Escolha o local da visita</h2>
                     <div className="grid grid-cols-1 gap-3">
-                        <button type="button" onClick={() => { setVisitServiceType('Creche Pet'); setViewWithLog('visitAppointment'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200">
+                        <button type="button" onClick={() => { setVisitServiceType('Creche Pet'); setViewWithLog('visitAppointment'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[44px]">
                             <img src="https://cdn-icons-png.flaticon.com/512/11201/11201086.png" alt="Creche Pet" className="w-12 h-12 rounded-full object-contain mb-2" />
                             <span className="text-lg">Creche Pet</span>
+                        </button>
+                        <button type="button" onClick={() => { setVisitServiceType('Hotel Pet'); setViewWithLog('visitAppointment'); }} className="p-5 rounded-2xl text-center font-semibold transition-all border-2 flex flex-col items-center justify-center bg-white hover:bg-pink-50 border-gray-200 min-h-[44px]">
+                            <img src="https://cdn-icons-png.flaticon.com/512/3009/3009489.png" alt="Hotel Pet" className="w-12 h-12 rounded-full object-contain mb-2" />
+                            <span className="text-lg">Hotel Pet</span>
                         </button>
                     </div>
                 </main>

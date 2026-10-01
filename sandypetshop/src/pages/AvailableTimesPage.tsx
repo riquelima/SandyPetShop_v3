@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { evaluateSlotAvailability, getSaoPauloYMD } from '../../../App';
+import { evaluateSlotAvailability, getSaoPauloYMD } from '../../App';
 import { 
     Clock, 
     Scissors, 
