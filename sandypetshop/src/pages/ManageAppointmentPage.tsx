@@ -246,9 +246,9 @@ export const ManageAppointmentPage: React.FC = () => {
         }
 
         const allAppointments = [
-            ...(bookedRes.data || []),
-            ...(petMobileRes.data || []),
-            ...(regularRes.data || [])
+            ...(bookedRes.data || []).map((a: any) => ({ ...a, table: 'agendamento_banhotosa' })),
+            ...(petMobileRes.data || []).map((a: any) => ({ ...a, table: 'pet_movel_appointments' })),
+            ...(regularRes.data || []).map((a: any) => ({ ...a, table: 'appointments' }))
         ];
         const monthlyClients = monthlyRes.data || [];
         const hours = (type === 'fixed' ? BATH_GROOMING_HOURS : PET_MOBILE_HOURS).filter(h => {

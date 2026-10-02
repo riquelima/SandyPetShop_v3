@@ -97,8 +97,28 @@ import { ClientLoginView } from './src/components/ClientLoginView';
 import { ClientAreaView } from './src/components/ClientAreaView';
 
 // HELPERS DE IDENTIFICAÇÃO DE SERVIÇO (UNIFICADOS)
+export function matchesCondo(apptCondo?: string, targetCondo?: string): boolean {
+    if (!targetCondo) return true;
+    if (!apptCondo) return true;
+    const c1 = apptCondo.toLowerCase().trim();
+    const c2 = targetCondo.toLowerCase().trim();
+    if (c2.includes('paseo') && c1.includes('paseo')) return true;
+    if (c2.includes('vitta') && c1.includes('vitta')) return true;
+    if (c2.includes('max') && c1.includes('max')) return true;
+    return c1.includes(c2) || c2.includes(c1);
+}
+
 export function isMobileAppointment(appt: any) {
     if (!appt) return false;
+    // Se a tabela de origem for explicitamente agendamento_banhotosa, é Banho e Tosa Fixo (loja)
+    if (appt.table === 'agendamento_banhotosa') {
+        return false;
+    }
+    // Se a tabela de origem for explicitamente pet_movel_appointments, é SEMPRE Pet Móvel
+    if (appt.table === 'pet_movel_appointments') {
+        return true;
+    }
+
     const s = String(appt.service || '').toUpperCase();
     const c = String(appt.condominium || appt.condo || '').toUpperCase();
     
@@ -149,21 +169,19 @@ export function isGoldenRetriever(appt: any): boolean {
 
 // Retorna quantos slots consecutivos um agendamento ocupa, começando na sua hora cheia.
 // Regra:
-//  - Pet Móvel (qualquer sub-serviço): bloqueia 2 slots (a hora agendada + a próxima)
-//  - Banho ou Banho & Tosa (fixo OU Pet Móvel) com pet Golden Retriever: bloqueia 2 slots
-//  - Demais casos: bloqueia 1 slot
+//  - Banho ou Banho & Tosa com pet Golden Retriever: bloqueia 2 slots (a hora agendada + a próxima)
+//  - Demais casos (inclusive Pet Móvel padrão): ocupa 1 slot (1 hora)
 export function getSlotBlockRange(appt: any): number {
     if (!appt) return 1;
-    const isMobile = isMobileAppointment(appt);
     const isBathGroom = isBathGroomService(appt.service);
     const isGolden = isGoldenRetriever(appt);
-    if (isMobile || (isBathGroom && isGolden)) return 2;
+    if (isBathGroom && isGolden) return 2;
     return 1;
 }
 
 /**
  * Converte a chave de capacidade máxima de um agendamento/serviço.
- * Por enquanto: 2 slots para Pet Móvel (qualquer sub) ou Golden Retriever (banho/tosa);
+ * 2 slots apenas para Golden Retriever (banho/tosa);
  * 1 slot para os demais.
  */
 export function getSlotCapacity(appt: any): number {
@@ -205,8 +223,7 @@ function isPetMovelServiceLabel(service: any): boolean {
  *      · Banho (Pet Móvel) / Banho & Tosa (Pet Móvel) / etc.: conta no calendário MÓVEL
  *        mas apenas se o cliente agendou para o condomínio dele (ou sem condo definido)
  *  - excluded_dates contendo a data (YYYY-MM-DD) libera o slot
- *  - Pet Móvel com Golden Retriever bloqueia 2 slots (a hora agendada + próxima)
- *  - Pet Móvel padrão bloqueia 1 slot (a hora agendada)
+ *  - Mensalistas cujos agendamentos JÁ FORAM gerados e persistidos no banco para a data NÃO são duplicados
  *  - Demais casos: 1 slot
  *
  * @param monthlyClients lista de mensalistas ativos (ou todos; filtra internamente)
@@ -214,14 +231,16 @@ function isPetMovelServiceLabel(service: any): boolean {
  * @param hour hora inteira (0..23)
  * @param type 'fixed' | 'mobile'
  * @param condo filtro de condomínio (apenas para 'mobile'). Se omitido, conta qualquer Pet Móvel.
- * @returns capacidade total ocupada por mensalistas recorrentes
+ * @param alreadyBookedMonthlyIds IDs de mensalistas que já possuem agendamento no banco nesta data
+ * @returns capacidade total ocupada por mensalistas recorrentes não persistidos
  */
 export function countMonthlyBookedAt(
     monthlyClients: any[] | null | undefined,
     ymd: string,
     hour: number,
     type: 'fixed' | 'mobile',
-    condo?: string
+    condo?: string,
+    alreadyBookedMonthlyIds?: Set<string>
 ): number {
     if (!Array.isArray(monthlyClients) || monthlyClients.length === 0) return 0;
 
@@ -240,6 +259,13 @@ export function countMonthlyBookedAt(
     let count = 0;
     for (const c of monthlyClients) {
         if (!c || c.is_active === false || c.is_active === 'false') continue;
+        
+        // Se este mensalista já possui um agendamento concreto persistido nas tabelas para esta data,
+        // ele já foi contabilizado em occupiedFromTables! Evita double-counting:
+        if (alreadyBookedMonthlyIds && alreadyBookedMonthlyIds.has(String(c.id))) {
+            continue;
+        }
+
         const recDay = Number(c.recurrence_day);
         const recTime = Number(c.recurrence_time);
         if (!Number.isFinite(recDay) || !Number.isFinite(recTime)) continue;
@@ -255,18 +281,14 @@ export function countMonthlyBookedAt(
             // Se o cliente passou um condo, contar apenas mensalistas do mesmo condo
             if (condo) {
                 const cCondo = String(c.condominium || c.condo || '').trim();
-                if (cCondo && cCondo !== condo) continue;
+                if (cCondo && !matchesCondo(cCondo, condo)) continue;
             }
         } else {
             // 'fixed': só conta mensalistas cujo serviço NÃO é Pet Móvel
             if (isMobileSvc) continue;
         }
-        // Capacidade: Pet Móvel ou Golden = 2, demais = 1
-        count += getSlotCapacity({
-            service: serviceLabel,
-            pet_breed: c.pet_breed || c.petBreed,
-            condominium: c.condominium || c.condo
-        });
+        // Cada mensalista recorrente ocupa 1 vaga
+        count += 1;
     }
     return count;
 }
@@ -274,8 +296,8 @@ export function countMonthlyBookedAt(
 /**
  * Verifica se um slot está disponível considerando:
  *  - consultas existentes nas 3 tabelas
- *  - mensalistas recorrentes ativos (não excluídos)
- *  - capacidade (Pet Móvel/Golden = 2, demais = 1)
+ *  - mensalistas recorrentes ativos (sem duplicar com registros já gerados)
+ *  - capacidade (Pet Móvel Paseo/Vitta = 2, demais = 1)
  *
  * Retorna { available, occupied, capacity } para diagnóstico.
  */
@@ -300,11 +322,17 @@ export function evaluateSlotAvailability(args: {
         if (s === 'CANCELADO' || s === 'CANCELLED' || a.cancelled_by_client === true) return false;
         if (isVisit(a)) return false;
         // Mesmo dia em SP?
-        const at = new Date(a.appointment_time);
+        const at = new Date(a.appointment_time || a.appointmentTime);
         if (!at || isNaN(at.getTime())) return false;
         if (getSaoPauloYMD(at) !== ymd) return false;
         // Diferencia mobile x fixed
-        if (args.type === 'mobile' && !isMobile(a)) return false;
+        if (args.type === 'mobile') {
+            if (!isMobile(a)) return false;
+            // Se for mobile e o chamador especificou condomínio, só considerar agendamentos do mesmo condomínio
+            if (args.condo && !matchesCondo(a.condominium || a.condo, args.condo)) {
+                return false;
+            }
+        }
         if (args.type === 'fixed' && isMobile(a)) return false;
         // Filtra o próprio agendamento em reagendamento
         if (args.ignoreAppointmentId && a.id === args.ignoreAppointmentId) return false;
@@ -312,27 +340,49 @@ export function evaluateSlotAvailability(args: {
     });
 
     let occupiedFromTables = 0;
-    const processedHours = new Set<number>();
+    const bookedMonthlyIds = new Set<string>();
+
     for (const a of relevant) {
-        const at = new Date(a.appointment_time);
+        const at = new Date(a.appointment_time || a.appointmentTime);
         const { hour: ah } = getSaoPauloTimeParts(at);
-        // Considera bloco: Pet Móvel/Golden ocupa 2 slots; demais 1
-        const block = getSlotCapacity(a);
-        // Só conta se o slot base (ah) está dentro do alcance que afeta args.hour
-        // Estratégia: somamos a capacidade no slot base; blocos sobrepõem args.hour quando ah === args.hour
-        // ou (block === 2 && ah + 1 === args.hour)
+        const block = getSlotBlockRange(a);
+
+        if (a.monthly_client_id) {
+            bookedMonthlyIds.add(String(a.monthly_client_id));
+        }
+
+        // Cada agendamento ocupa 1 slot no horário agendado
         if (ah === args.hour) {
-            occupiedFromTables += block;
-            processedHours.add(ah);
-        } else if (block === 2 && ah + 1 === args.hour) {
             occupiedFromTables += 1;
-            processedHours.add(ah);
+        } 
+        // Se for serviço de 2 horas (ex: Golden Retriever), também ocupa 1 slot na próxima hora
+        else if (block === 2 && ah + 1 === args.hour) {
+            occupiedFromTables += 1;
         }
     }
 
-    const occupiedFromMonthly = countMonthlyBookedAt(args.monthlyClients, ymd, args.hour, args.type, args.condo);
+    const occupiedFromMonthly = countMonthlyBookedAt(
+        args.monthlyClients,
+        ymd,
+        args.hour,
+        args.type,
+        args.condo,
+        bookedMonthlyIds
+    );
+
     const occupied = occupiedFromTables + occupiedFromMonthly;
-    const capacity = args.type === 'mobile' ? 2 : 1; // Fixed padrão = 1; mobile = 2
+
+    // Capacidade:
+    // Paseo às sextas (5) e Vitta Parque às quartas (3) possuem 2 vagas por slot no Pet Móvel.
+    // Demais casos Pet Móvel = 1 (ou 2 se condomínio não especificado). Fixo = 1.
+    const [y, m, d] = ymd.split('-').map(Number);
+    const dayOfWeek = new Date(y, m - 1, d).getDay(); // 0=Dom..6=Sáb
+    const isDuplicatedMobile = args.type === 'mobile' && (
+        (matchesCondo(args.condo, 'Paseo') && dayOfWeek === 5) ||
+        (matchesCondo(args.condo, 'Vitta Parque') && dayOfWeek === 3) ||
+        (!args.condo)
+    );
+    const capacity = isDuplicatedMobile ? 2 : (args.type === 'mobile' ? 1 : 1);
 
     if (occupied >= capacity) {
         return {
@@ -5002,9 +5052,9 @@ const AdminAddAppointmentModal: React.FC<{
             ]);
 
             const allReal = [
-                ...(regR.data || []),
-                ...(pmR.data || []),
-                ...(btR.data || [])
+                ...(regR.data || []).map(r => ({ ...r, table: 'appointments' })),
+                ...(pmR.data || []).map(r => ({ ...r, table: 'pet_movel_appointments' })),
+                ...(btR.data || []).map(r => ({ ...r, table: 'agendamento_banhotosa' }))
             ];
 
             const slotCheck = evaluateSlotAvailability({
@@ -12767,11 +12817,15 @@ export const TimeSlotPicker: React.FC<{
                 return false;
             }
 
-            // A agenda Pet Móvel só é bloqueada por atendimentos Pet Móvel
+            // A agenda Pet Móvel só é bloqueada por atendimentos Pet Móvel do mesmo condomínio
             // A agenda Fixo só é bloqueada por atendimentos Fixos
             const apptIsMobile = isMobileAppointment(appt);
             if (isPetMovel) {
-                return apptIsMobile;
+                if (!apptIsMobile) return false;
+                if (selectedCondo && !matchesCondo(appt.condominium || appt.condo, selectedCondo)) {
+                    return false;
+                }
+                return true;
             } else {
                 return !apptIsMobile;
             }
@@ -13313,6 +13367,8 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                     monthly_client_id: rec.monthly_client_id || undefined,
                     status: rec.status,
                     condominium: rec.condominium || rec.condo || undefined,
+                    pet_breed: rec.pet_breed || rec.petBreed,
+                    table: 'appointments' as const
                 };
             })
             .filter(Boolean)
@@ -13346,6 +13402,8 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                     monthly_client_id: rec.monthly_client_id || undefined,
                     condominium: rec.condominium || rec.condo || undefined,
                     status: rec.status,
+                    pet_breed: rec.pet_breed || rec.petBreed,
+                    table: 'pet_movel_appointments' as const
                 };
             })
             .filter(Boolean)
@@ -13376,6 +13434,8 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                     monthly_client_id: rec.monthly_client_id || undefined,
                     status: rec.status,
                     condominium: rec.condominium || rec.condo || undefined,
+                    pet_breed: rec.pet_breed || rec.petBreed,
+                    table: 'agendamento_banhotosa' as const
                 };
             })
             .filter(Boolean)

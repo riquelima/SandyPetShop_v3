@@ -80,9 +80,9 @@ export const AvailableTimesPage: React.FC = () => {
                 ]);
 
                 const allAppointments = [
-                    ...(bathGroomData.data || []).map(a => ({ ...a, source: 'bath' })),
-                    ...(petMobileData.data || []).map(a => ({ ...a, source: 'movel' })),
-                    ...(regularData.data || []).map(a => ({ ...a, source: 'regular' }))
+                    ...(bathGroomData.data || []).map(a => ({ ...a, source: 'bath', table: 'agendamento_banhotosa' })),
+                    ...(petMobileData.data || []).map(a => ({ ...a, source: 'movel', table: 'pet_movel_appointments' })),
+                    ...(regularData.data || []).map(a => ({ ...a, source: 'regular', table: 'appointments' }))
                 ];
 
                 setAppointments(allAppointments);
