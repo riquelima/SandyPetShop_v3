@@ -33,7 +33,7 @@ async function run() {
   await capture(page, 'admin_login.png');
   try {
     await page.fill('input[type="email"]', 'login@sandypetshop.com');
-    await page.fill('input[type="password"]', '1234');
+    await page.fill('input[type="password"]', 'Petmovel2016');
     await page.getByRole('button', { name: /Entrar|Login/i }).click();
   } catch {}
 

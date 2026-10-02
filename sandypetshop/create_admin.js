@@ -13,7 +13,7 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 async function createAdmin() {
   const { data, error } = await supabase.auth.admin.createUser({
     email: 'login@sandypetshop.com',
-    password: '1234',
+    password: 'Petmovel2016',
     email_confirm: true
   });
 

@@ -12,7 +12,7 @@
 
 ## Admin
 login: login@sandypetshop.com
-Senha: 1234
+Senha: Petmovel2016
 - Login Admin — `admin_login.png`
 - Dashboard Admin — Banho & Tosa — Visão Diária — `admin_banho_diario.png`
 - Dashboard Admin — Banho & Tosa — Ver Todos — `admin_banho_todos.png`

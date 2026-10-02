@@ -98,7 +98,7 @@ async def run_test():
         frame = context.pages[-1]
         # Input admin password
         elem = frame.locator('xpath=html/body/div/div/div/form/div[2]/input').nth(0)
-        await page.wait_for_timeout(3000); await elem.fill('1234')
+        await page.wait_for_timeout(3000); await elem.fill('Petmovel2016')
         
 
         frame = context.pages[-1]
