@@ -12,7 +12,8 @@ import {
   RefreshCw,
   AlertCircle,
   Send,
-  Trash2
+  Trash2,
+  User
 } from 'lucide-react';
 
 interface FiscalNote {
@@ -28,6 +29,7 @@ interface FiscalNote {
   hydrated_tutor_name?: string;
   hydrated_phone?: string;
   hydrated_price?: number;
+  hydrated_pet_photo?: string;
 }
 
 const FiscalNotesView: React.FC = () => {
@@ -146,6 +148,15 @@ const FiscalNotesView: React.FC = () => {
       }
   };
 
+  const formatName = (str: string) => {
+    if (!str) return '';
+    return str.toLowerCase().split(' ').map(word => {
+      if (word.length === 0) return '';
+      if (['de', 'da', 'do', 'dos', 'das'].includes(word)) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    }).join(' ');
+  };
+
   const fetchNotes = async () => {
     setLoading(true);
     try {
@@ -213,7 +224,8 @@ const FiscalNotesView: React.FC = () => {
               hydrated_pet_name: match.pet,
               hydrated_tutor_name: match.tutor,
               hydrated_phone: match.phone,
-              hydrated_price: match.price
+              hydrated_price: match.price,
+              hydrated_pet_photo: match.pet_photo_url
             };
           }
           return note;
@@ -253,6 +265,25 @@ const FiscalNotesView: React.FC = () => {
 
       if (response.ok) {
         setSentItems(prev => ({ ...prev, [note.id]: true }));
+        
+        // Mapear no banco de dados (salvando dentro do raw_response para evitar necessidade de alteração de schema)
+        try {
+          const updatedRaw = {
+            ...note.raw_response,
+            webhook_sent: true,
+            webhook_sent_at: new Date().toISOString(),
+            webhook_send_count: (note.raw_response?.webhook_send_count || 0) + 1
+          };
+          
+          await supabase
+            .from('fiscal_notes')
+            .update({ raw_response: updatedRaw })
+            .eq('id', note.id);
+            
+          note.raw_response = updatedRaw; // Atualiza localmente
+        } catch (e) {
+          console.error("Erro ao registrar envio da nota no banco", e);
+        }
       } else {
         throw new Error('Falha ao enviar webhook');
       }
@@ -334,6 +365,15 @@ const FiscalNotesView: React.FC = () => {
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       {/* Header Estilo Mensalistas */}
       <div className="bg-white rounded-2xl shadow-sm border border-pink-100 p-6 mb-6 relative overflow-hidden">
+        {/* Botão Atualizar Discreto Mobile */}
+        <button 
+          onClick={fetchNotes}
+          className="md:hidden absolute top-4 left-4 p-2 text-pink-400 hover:text-pink-600 hover:bg-pink-50 rounded-full transition-all z-20 flex items-center justify-center"
+          title="Atualizar"
+        >
+          <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+        </button>
+
         <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-gradient-to-br from-pink-50 to-purple-50 rounded-full blur-2xl opacity-70 pointer-events-none"></div>
         
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -346,8 +386,8 @@ const FiscalNotesView: React.FC = () => {
             </div>
           </div>
           
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {/* Botão Atualizar */}
+          <div className="hidden md:flex flex-wrap items-center justify-center gap-3">
+            {/* Botão Atualizar Desktop */}
             <button 
               onClick={fetchNotes}
               className="flex items-center gap-2 px-6 py-2.5 bg-pink-50 text-pink-600 rounded-xl hover:bg-pink-100 transition-all font-bold text-sm border border-pink-100 shadow-sm h-11"
@@ -410,135 +450,174 @@ const FiscalNotesView: React.FC = () => {
             <p className="text-gray-400 font-bold">Nenhuma nota fiscal encontrada.</p>
           </div>
         ) : (
-          filteredNotes.map((note) => (
-            <div 
-              key={note.id} 
-              className="group relative bg-white p-5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 border-l-4 hover:border-l-pink-500 flex flex-col sm:flex-row items-center justify-between gap-4"
-              style={{ borderLeftColor: note.status === 'autorizado' ? '#22c55e' : (note.status === 'erro_autorizacao' ? '#ef4444' : '#e5e7eb') }}
-            >
-              {/* Botão de excluir discreto */}
-              <button
-                onClick={() => setNoteToDelete(note)}
-                className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100 z-10"
-                title="Excluir nota fiscal"
-              >
-                <Trash2 size={14} />
-              </button>
-              <div className="flex items-center gap-4 w-full sm:w-auto">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${note.status === 'autorizado' ? 'bg-green-50 text-green-600' : (note.status === 'erro_autorizacao' ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-400')}`}>
-                  <FileText size={24} />
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-lg font-black text-gray-800 uppercase tracking-tight truncate">
-                    {note.hydrated_pet_name ||
-                     note.raw_response?.pet_name || 
-                     note.raw_response?.descricao_servico?.match(/Pet:\s*([^-\n|.]+)/i)?.[1]?.trim() ||
-                     note.raw_response?.discriminacao?.match(/Pet:\s*([^-\n|.]+)/i)?.[1]?.trim() ||
-                     (note.raw_response?.nome_tomador?.includes('(') ? note.raw_response.nome_tomador.split('(')[0].trim() : null) ||
-                     note.raw_response?.descricao_servico ||
-                     (note.focus_nfe_reference.startsWith('daycare') ? 'Creche Pet' : 
-                      note.focus_nfe_reference.startsWith('monthly_client') ? 'Mensalista' : 'Serviço')}
-                    <span className="ml-2 text-sm font-bold text-gray-400 normal-case">
-                      ({note.hydrated_tutor_name ||
-                        note.raw_response?.tutor_real_name || 
-                        (note.raw_response?.nome_tomador?.includes('(') ? note.raw_response.nome_tomador.match(/\(([^)]+)\)/)?.[1] : note.raw_response?.nome_tomador) || 
-                        note.raw_response?.razao_social_tomador || 
-                        'Consumidor'})
-                    </span>
-                  </span>
-                  <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-gray-400">
-                    <span className="text-pink-600 bg-pink-50 px-2 py-0.5 rounded-md">
-                      {note.focus_nfe_reference.startsWith('daycare') ? 'Creche Pet' : 
-                       note.focus_nfe_reference.startsWith('monthly_client') ? 'Mensalista' : 'Agendamento'}
-                    </span>
-                    <span className="opacity-30">•</span>
-                    <span>{new Date(note.created_at).toLocaleDateString('pt-BR')}</span>
-                    <span className="opacity-30">•</span>
-                    <span>{new Date(note.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+          filteredNotes.map((note) => {
+            const rawPetName = note.hydrated_pet_name ||
+                               note.raw_response?.pet_name || 
+                               note.raw_response?.descricao_servico?.match(/Pet:\s*([^-\n|.]+)/i)?.[1]?.trim() ||
+                               note.raw_response?.discriminacao?.match(/Pet:\s*([^-\n|.]+)/i)?.[1]?.trim();
+            const tomadorName = note.hydrated_tutor_name || 
+                                note.raw_response?.tutor_real_name || 
+                                note.raw_response?.nome_tomador || 
+                                note.raw_response?.razao_social_tomador || 
+                                '';
+            const extractedPetFromTomador = !rawPetName && tomadorName.includes('(') ? tomadorName.split('(')[0].trim() : null;
+            
+            const finalRawPetName = rawPetName || extractedPetFromTomador || (note.focus_nfe_reference.startsWith('daycare') ? 'Creche Pet' : note.focus_nfe_reference.startsWith('monthly_client') ? 'Mensalista' : 'Serviço');
+            const petName = formatName(finalRawPetName);
+            
+            const rawTutorName = note.hydrated_tutor_name || 
+                              note.raw_response?.tutor_real_name || 
+                              (tomadorName.includes('(') ? tomadorName.match(/\(([^)]+)\)/)?.[1] : tomadorName) || 
+                              'Consumidor';
+            const tutorName = formatName(rawTutorName);
+            
+            const serviceType = note.focus_nfe_reference.startsWith('daycare') ? 'Creche Pet' : 
+                                note.focus_nfe_reference.startsWith('monthly_client') ? 'Mensalista' : 'Agendamento';
+            
+            const isAuthorized = note.status === 'autorizado';
+            const isError = note.status === 'erro_autorizacao';
+            const priceValue = Number(note.hydrated_price || note.raw_response?.valor_servico || 0);
+
+            const isWebhookSent = sentItems[note.id] || note.raw_response?.webhook_sent;
+            const leftBarColor = isWebhookSent ? '#10b981' : '#ec4899'; // Emerald or Pink
+
+            return (
+              <section key={note.id} className="relative group mb-3 w-full" data-purpose="featured-invoice-card">
+                {/* Left accent bar in vibrant green/red depending on status */}
+                <div 
+                  className="absolute left-0 top-3 bottom-3 w-1.5 rounded-r-full z-10 transition-colors"
+                  style={{ backgroundColor: leftBarColor }}
+                ></div>
+                
+                <article className="bg-white rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden relative p-4 pl-5">
+                  {/* Hover Delete Button */}
+                  <button
+                    onClick={() => setNoteToDelete(note)}
+                    className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-full text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100 z-20"
+                    title="Excluir nota fiscal"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+
+                  {/* Header: Icon, Pet & Owner, Price & Status */}
+                  <div className="flex items-start justify-between gap-3 pr-6">
+                    <div className="flex items-start space-x-3 w-full max-w-[85%]">
+                      {/* Left Icon Badge with photo */}
+                      <div className={`w-11 h-11 rounded-full overflow-hidden shrink-0 shadow-sm border-2 ${isAuthorized ? 'border-emerald-200/60 bg-[#ecfdf5]' : 'border-slate-200/60 bg-slate-50'}`}>
+                        <img 
+                          src={note.hydrated_pet_photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(petName)}&background=ecfdf5&color=059669`} 
+                          alt={petName} 
+                          className="w-full h-full object-cover" 
+                        />
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 text-slate-900 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                          <User className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                          <span className="text-[11px] sm:text-sm font-bold tracking-tight text-slate-900 whitespace-nowrap overflow-visible">{tutorName}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5 text-slate-600 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                          <img src="https://cdn-icons-png.flaticon.com/512/1723/1723750.png" alt="Pet Icon" className="w-3.5 h-3.5 object-contain inline-block shrink-0" />
+                          <span className="text-[10px] sm:text-xs font-semibold tracking-wide text-slate-700 whitespace-nowrap overflow-visible">{petName}</span>
+                        </div>
+                        
+                        <div className="mt-1.5 flex flex-col gap-1">
+                          <div className="flex items-center">
+                            <span className="inline-flex items-center justify-center gap-1.5 px-3 py-0.5 rounded-md text-[10px] font-bold bg-pink-50 text-pink-600 border border-pink-200/60">
+                              <span className="w-1.5 h-1.5 rounded-full bg-pink-500"></span> {serviceType}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 mt-1">
+                            <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span className="whitespace-nowrap">{new Date(note.created_at).toLocaleDateString('pt-BR')}</span>
+                            <span className="text-slate-300">•</span>
+                            <span className="whitespace-nowrap">{new Date(note.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="text-right shrink-0 hidden sm:block">
+                      <div className="flex items-baseline justify-end gap-1">
+                        <span className="text-xs font-bold text-slate-400 tracking-tight">R$</span>
+                        <span className="text-xl font-black text-slate-800 tracking-tight leading-none">{priceValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <span className="text-[10px] font-mono text-gray-300 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
-                      REF: {note.focus_nfe_reference.split('-').slice(0, 2).join('-')}
-                    </span>
-                    {note.raw_response?.nome_tomador && (
-                      <span className="text-[10px] text-gray-400">
-                        Tutor: {note.raw_response.nome_tomador}
+
+                  {/* Reference Code Row */}
+                  <div className="mt-3.5 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                      <span>Ref:</span>
+                      <span className="font-mono text-slate-400 hover:text-slate-600 cursor-pointer inline-flex items-center gap-1 transition" title="Clique para copiar" onClick={() => navigator.clipboard?.writeText(note.focus_nfe_reference)}>
+                        {note.focus_nfe_reference.split('-').slice(0, 2).join('-')}
                       </span>
-                    )}
+                    </div>
+                    {/* Price Mobile */}
+                    <div className="sm:hidden flex items-baseline justify-end gap-1">
+                      <span className="text-[10px] font-bold text-slate-400 tracking-tight">R$</span>
+                      <span className="text-sm font-black text-slate-800 tracking-tight leading-none">{priceValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
-                <div className="text-right hidden md:block">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Valor do Serviço</p>
-                  <p className="text-lg font-black text-pink-600">
-                    R$ {Number(note.hydrated_price || note.raw_response?.valor_servico || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-
-                <div className="flex flex-row sm:flex-col items-center sm:items-end gap-3 w-full sm:w-auto justify-end">
-                  {note.status !== 'autorizado' && (
-                    <div className="flex flex-wrap items-center gap-2 justify-end">
-                      {getStatusBadge(note.status)}
-                      <button
-                        onClick={() => handleConsultNote(note)}
-                        disabled={consultingIds[note.id]}
-                        className={`flex items-center gap-1 px-3 py-1.5 bg-pink-50 hover:bg-pink-100 text-pink-700 rounded-xl text-xs font-bold transition-all shadow-sm border border-pink-100 ${consultingIds[note.id] ? 'opacity-50 cursor-wait' : ''}`}
-                        title="Consultar status atualizado na FocusNFe"
-                      >
-                        <RefreshCw size={12} className={consultingIds[note.id] ? 'animate-spin' : ''} />
-                        <span>{consultingIds[note.id] ? 'Consultando...' : 'Atualizar'}</span>
-                      </button>
-                    </div>
-                  )}
-                  {note.status === 'autorizado' && note.nfe_url_pdf && (
+                  {/* Action Buttons: "Ver PDF" and "Enviar" */}
+                  <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between w-full">
+                    {/* Botões do lado esquerdo */}
                     <div className="flex items-center gap-2">
-                      <a 
-                        href={note.nfe_url_pdf} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-pink-600 text-white rounded-xl hover:bg-pink-700 shadow-md hover:shadow-pink-200/50 transition-all font-bold text-sm whitespace-nowrap"
-                      >
-                        Ver PDF <ExternalLink size={14} />
-                      </a>
-                      <button
-                        onClick={() => handleSendWebhook(note)}
-                        disabled={sendingIds[note.id] || sentItems[note.id]}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl shadow-md transition-all font-bold text-sm whitespace-nowrap ${
-                          sentItems[note.id] 
-                            ? 'bg-green-500 text-white shadow-green-200/50 cursor-default' 
-                            : 'bg-pink-600 text-white hover:bg-pink-700 shadow-pink-200/50'
-                        } ${sendingIds[note.id] ? 'opacity-70 cursor-wait' : ''}`}
-                      >
-                        {sendingIds[note.id] ? (
-                          <>
-                            Enviando... <RefreshCw size={14} className="animate-spin" />
-                          </>
-                        ) : sentItems[note.id] ? (
-                          <>
-                            Enviado <CheckCircle2 size={14} />
-                          </>
-                        ) : (
-                          <>
-                            Enviar <Send size={14} />
-                          </>
-                        )}
-                      </button>
+                      {isAuthorized && note.nfe_url_pdf && (
+                        <a href={note.nfe_url_pdf} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/90 text-slate-600 hover:text-slate-900 active:scale-[0.98] font-semibold text-xs transition duration-150 ease-in-out cursor-pointer">
+                          <span>Ver PDF</span>
+                          <ExternalLink size={14} />
+                        </a>
+                      )}
+                      {isError && (
+                        <button onClick={() => alert(`Erro da FocusNFe: ${JSON.stringify(note.raw_response?.erros || note.error_message)}`)} className="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200/90 text-rose-600 active:scale-[0.98] font-semibold text-xs transition cursor-pointer">
+                          <AlertCircle size={14} /> Detalhes
+                        </button>
+                      )}
                     </div>
-                  )}
-                  {note.status === 'erro_autorizacao' && (
-                    <button 
-                      onClick={() => alert(`Erro da FocusNFe: ${JSON.stringify(note.raw_response?.erros || note.error_message)}`)}
-                      className="flex items-center gap-1 text-red-500 text-[10px] font-black uppercase hover:underline"
-                    >
-                      <AlertCircle size={12} /> Ver Detalhes
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))
+
+                    {/* Botões do lado direito */}
+                    <div className="flex items-center gap-2 justify-end">
+                      {!isAuthorized && (
+                        <div className="flex items-center gap-2">
+                          <div className="scale-90 origin-right">
+                            {getStatusBadge(note.status)}
+                          </div>
+                          <button
+                            onClick={() => handleConsultNote(note)}
+                            disabled={consultingIds[note.id]}
+                            className={`inline-flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/90 text-slate-600 hover:text-slate-900 active:scale-[0.98] font-semibold text-xs transition duration-150 ease-in-out cursor-pointer ${consultingIds[note.id] ? 'opacity-50 cursor-wait' : ''}`}
+                            title="Consultar status atualizado na FocusNFe"
+                          >
+                            <RefreshCw size={12} className={consultingIds[note.id] ? 'animate-spin' : ''} />
+                            <span>{consultingIds[note.id] ? 'Atualizando...' : 'Atualizar'}</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {isAuthorized && note.nfe_url_pdf && (
+                        <button
+                          onClick={() => handleSendWebhook(note)}
+                          disabled={sendingIds[note.id]}
+                          className={`inline-flex items-center gap-1.5 py-1.5 px-3 rounded-xl border active:scale-[0.98] font-semibold text-xs transition duration-150 ease-in-out cursor-pointer ${
+                            (sentItems[note.id] || note.raw_response?.webhook_sent)
+                              ? 'bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-600' 
+                              : 'bg-slate-50 hover:bg-slate-100 border-slate-200/90 text-slate-600 hover:text-slate-900'
+                          } ${sendingIds[note.id] ? 'opacity-70 cursor-wait' : ''}`}
+                        >
+                          <span>
+                            {sendingIds[note.id] ? 'Enviando...' : (sentItems[note.id] || note.raw_response?.webhook_sent) ? 'Enviado' : 'Enviar'}
+                          </span>
+                          {(sentItems[note.id] || note.raw_response?.webhook_sent) ? <CheckCircle2 size={14} /> : <Send size={14} />}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              </section>
+            );
+          })
         )}
       </div>
 
