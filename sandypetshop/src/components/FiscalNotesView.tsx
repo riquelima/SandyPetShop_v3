@@ -485,7 +485,7 @@ const FiscalNotesView: React.FC = () => {
               <section key={note.id} className="relative group mb-3 w-full" data-purpose="featured-invoice-card">
                 {/* Left accent bar in vibrant green/red depending on status */}
                 <div 
-                  className="absolute left-0 top-3 bottom-3 w-1.5 rounded-r-full z-10 transition-colors"
+                  className="absolute left-0 top-3 bottom-3 w-1.5 rounded-r-full z-0 transition-colors"
                   style={{ backgroundColor: leftBarColor }}
                 ></div>
                 
