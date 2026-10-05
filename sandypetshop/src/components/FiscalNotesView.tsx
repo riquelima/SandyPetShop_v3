@@ -172,12 +172,12 @@ const FiscalNotesView: React.FC = () => {
       // Lógica de Hidratação para buscar nomes reais e contatos
       try {
         const [daycareRes, monthlyRes, apptRes, petMovelRes, hotelRes, banhoRes] = await Promise.all([
-          supabase.from('daycare_enrollments').select('id, pet_name, tutor_name, contact_phone, total_price'),
-          supabase.from('monthly_clients').select('id, pet_name, owner_name, whatsapp, price, extra_services'),
-          supabase.from('appointments').select('id, pet_name, owner_name, whatsapp, price'),
-          supabase.from('pet_movel_appointments').select('id, pet_name, owner_name, whatsapp, price'),
-          supabase.from('hotel_registrations').select('id, pet_name, tutor_name, tutor_phone, total_services_price'),
-          supabase.from('agendamento_banhotosa').select('id, pet_name, owner_name, whatsapp, price')
+          supabase.from('daycare_enrollments').select('id, pet_name, tutor_name, contact_phone, total_price, pet_photo_url'),
+          supabase.from('monthly_clients').select('id, pet_name, owner_name, whatsapp, price, extra_services, pet_photo_url'),
+          supabase.from('appointments').select('id, pet_name, owner_name, whatsapp, price, pet_photo_url'),
+          supabase.from('pet_movel_appointments').select('id, pet_name, owner_name, whatsapp, price, pet_photo_url'),
+          supabase.from('hotel_registrations').select('id, pet_name, tutor_name, tutor_phone, total_services_price, pet_photo_url'),
+          supabase.from('agendamento_banhotosa').select('id, pet_name, owner_name, whatsapp, price, pet_photo_url')
         ]);
         
         const calcMonthlyTotalPrice = (m: any) => {
