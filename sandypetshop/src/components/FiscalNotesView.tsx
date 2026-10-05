@@ -483,12 +483,10 @@ const FiscalNotesView: React.FC = () => {
 
             return (
               <section key={note.id} className="relative group mb-3 w-full" data-purpose="featured-invoice-card">
-                <article className="bg-white rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden relative p-4 pl-5">
-                  {/* Left accent bar in vibrant green/red depending on status */}
-                  <div 
-                    className="absolute left-0 top-0 bottom-0 w-1.5 transition-colors"
-                    style={{ backgroundColor: leftBarColor }}
-                  ></div>
+                <article 
+                  className="bg-white rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden relative p-4 pl-5"
+                  style={{ borderLeftWidth: '6px', borderLeftColor: leftBarColor }}
+                >
                   {/* Hover Delete Button */}
                   <button
                     onClick={() => setNoteToDelete(note)}
