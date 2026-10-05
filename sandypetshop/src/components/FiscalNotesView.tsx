@@ -197,13 +197,13 @@ const FiscalNotesView: React.FC = () => {
           return base + extras;
         };
 
-        const allRecords: { id: string, pet: string, tutor: string, phone: string, price: number }[] = [
-          ...(daycareRes.data?.map(d => ({ id: d.id, pet: d.pet_name, tutor: d.tutor_name, phone: d.contact_phone, price: Number(d.total_price || 0) })) || []),
-          ...(monthlyRes.data?.map(m => ({ id: m.id, pet: m.pet_name, tutor: m.owner_name, phone: m.whatsapp, price: calcMonthlyTotalPrice(m) })) || []),
-          ...(apptRes.data?.map(a => ({ id: a.id, pet: a.pet_name, tutor: a.owner_name, phone: a.whatsapp, price: Number(a.price || 0) })) || []),
-          ...(petMovelRes.data?.map(p => ({ id: p.id, pet: p.pet_name, tutor: p.owner_name, phone: p.whatsapp, price: Number(p.price || 0) })) || []),
-          ...(hotelRes.data?.map(h => ({ id: h.id, pet: h.pet_name, tutor: h.tutor_name, phone: h.tutor_phone, price: Number(h.total_services_price || 0) })) || []),
-          ...(banhoRes.data?.map(b => ({ id: b.id, pet: b.pet_name, tutor: b.owner_name, phone: b.whatsapp, price: Number(b.price || 0) })) || [])
+        const allRecords: { id: string, pet: string, tutor: string, phone: string, price: number, pet_photo_url?: string }[] = [
+          ...(daycareRes.data?.map(d => ({ id: d.id, pet: d.pet_name, tutor: d.tutor_name, phone: d.contact_phone, price: Number(d.total_price || 0), pet_photo_url: d.pet_photo_url })) || []),
+          ...(monthlyRes.data?.map(m => ({ id: m.id, pet: m.pet_name, tutor: m.owner_name, phone: m.whatsapp, price: calcMonthlyTotalPrice(m), pet_photo_url: m.pet_photo_url })) || []),
+          ...(apptRes.data?.map(a => ({ id: a.id, pet: a.pet_name, tutor: a.owner_name, phone: a.whatsapp, price: Number(a.price || 0), pet_photo_url: a.pet_photo_url })) || []),
+          ...(petMovelRes.data?.map(p => ({ id: p.id, pet: p.pet_name, tutor: p.owner_name, phone: p.whatsapp, price: Number(p.price || 0), pet_photo_url: p.pet_photo_url })) || []),
+          ...(hotelRes.data?.map(h => ({ id: h.id, pet: h.pet_name, tutor: h.tutor_name, phone: h.tutor_phone, price: Number(h.total_services_price || 0), pet_photo_url: h.pet_photo_url })) || []),
+          ...(banhoRes.data?.map(b => ({ id: b.id, pet: b.pet_name, tutor: b.owner_name, phone: b.whatsapp, price: Number(b.price || 0), pet_photo_url: b.pet_photo_url })) || [])
         ];
         
         const hydrated = rawNotes.map(note => {
