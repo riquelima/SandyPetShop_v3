@@ -33,8 +33,15 @@ interface FiscalNote {
 }
 
 const FiscalNotesView: React.FC = () => {
-  const [notes, setNotes] = useState<FiscalNote[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [notes, setNotes] = useState<FiscalNote[]>(() => {
+    try {
+      const cached = localStorage.getItem('cached_fiscal_notes');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState<boolean>(() => !localStorage.getItem('cached_fiscal_notes'));
   const [filter, setFilter] = useState<'all' | 'authorized' | 'error'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -60,7 +67,11 @@ const FiscalNotesView: React.FC = () => {
         .delete()
         .eq('id', noteToDelete.id);
       if (error) throw error;
-      setNotes(prev => prev.filter(n => n.id !== noteToDelete.id));
+      setNotes(prev => {
+        const next = prev.filter(n => n.id !== noteToDelete.id);
+        try { localStorage.setItem('cached_fiscal_notes', JSON.stringify(next)); } catch {}
+        return next;
+      });
       setNoteToDelete(null);
     } catch (err: any) {
       console.error('Erro ao excluir nota:', err);
@@ -95,12 +106,16 @@ const FiscalNotesView: React.FC = () => {
               const newPdfUrl = data.pdf_url;
               
               // Atualizar a lista local de notas
-              setNotes(prev => prev.map(n => n.id === note.id ? { 
-                  ...n, 
-                  status: newStatus || n.status,
-                  nfe_url_pdf: newPdfUrl || n.nfe_url_pdf,
-                  raw_response: data.data || n.raw_response
-              } : n));
+              setNotes(prev => {
+                const next = prev.map(n => n.id === note.id ? { 
+                    ...n, 
+                    status: newStatus || n.status,
+                    nfe_url_pdf: newPdfUrl || n.nfe_url_pdf,
+                    raw_response: data.data || n.raw_response
+                } : n);
+                try { localStorage.setItem('cached_fiscal_notes', JSON.stringify(next)); } catch {}
+                return next;
+              });
 
               if (newStatus === 'autorizado') {
                   setFiscalFeedback({
@@ -158,7 +173,9 @@ const FiscalNotesView: React.FC = () => {
   };
 
   const fetchNotes = async () => {
-    setLoading(true);
+    if (!localStorage.getItem('cached_fiscal_notes')) {
+      setLoading(true);
+    }
     try {
       const { data: notesData, error } = await supabase
         .from('fiscal_notes')
@@ -168,8 +185,23 @@ const FiscalNotesView: React.FC = () => {
       if (error) throw error;
       
       const rawNotes = notesData || [];
+      if (rawNotes.length === 0) {
+        setNotes([]);
+        setLoading(false);
+        try { localStorage.setItem('cached_fiscal_notes', '[]'); } catch {}
+        return;
+      }
+
+      // Renderiza as notas imediatamente para o usuário sem esperar outras consultas
+      setNotes(prev => {
+        return rawNotes.map(rn => {
+          const existing = prev.find(p => p.id === rn.id);
+          return existing ? { ...rn, ...existing } : rn;
+        });
+      });
+      setLoading(false);
       
-      // Lógica de Hidratação para buscar nomes reais e contatos
+      // Lógica de Hidratação assíncrona em segundo plano
       try {
         const [daycareRes, monthlyRes, apptRes, petMovelRes, hotelRes, banhoRes] = await Promise.all([
           supabase.from('daycare_enrollments').select('id, pet_name, tutor_name, contact_phone, total_price, pet_photo_url'),
@@ -217,7 +249,7 @@ const FiscalNotesView: React.FC = () => {
             (cleanId.length > 5 && r.id.startsWith(cleanId)) ||
             (r.id.length > 5 && cleanId.startsWith(r.id))
           );
- 
+
           if (match) {
             return {
               ...note,
@@ -232,9 +264,9 @@ const FiscalNotesView: React.FC = () => {
         });
         
         setNotes(hydrated);
+        try { localStorage.setItem('cached_fiscal_notes', JSON.stringify(hydrated)); } catch {}
       } catch (hydrationErr) {
         console.error('Erro na hidratação:', hydrationErr);
-        setNotes(rawNotes);
       }
     } catch (err) {
       console.error('Erro ao buscar notas fiscais:', err);

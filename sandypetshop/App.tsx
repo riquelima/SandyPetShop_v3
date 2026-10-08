@@ -14987,11 +14987,41 @@ const DaycareCardForHotelView: React.FC<{
     );
 };
 
+const HOTEL_SELECT_COLUMNS = [
+    'id', 'created_at', 'updated_at', 'pet_name', 'pet_sex', 'pet_breed', 'is_neutered', 'pet_age',
+    'tutor_name', 'tutor_rg', 'tutor_address', 'tutor_phone', 'tutor_email', 'tutor_social_media',
+    'vet_phone', 'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relation',
+    'has_rg_document', 'has_residence_proof', 'has_vaccination_card', 'has_vet_certificate',
+    'has_flea_tick_remedy', 'flea_tick_remedy_date', 'photo_authorization', 'retrieve_at_checkout',
+    'preexisting_disease', 'allergies', 'behavior', 'fears_traumas', 'wounds_marks', 'food_brand',
+    'food_quantity', 'feeding_frequency', 'accepts_treats', 'special_food_care', 'check_in_date',
+    'check_in_time', 'check_out_date', 'check_out_time', 'service_bath', 'service_transport',
+    'service_daily_rate', 'service_extra_hour', 'service_vet', 'service_training', 'total_services_price',
+    'additional_info', 'professional_name', 'registration_date', 'declaration_accepted',
+    'status', 'checked_in_at', 'checked_out_at', 'check_in_status', 'extra_services', 'food_observations',
+    'veterinarian', 'approval_status', 'approval_observation', 'pet_weight',
+    'contract_accepted', 'last_vaccination_date', 'pet_photo_url', 'payment_status', 'checklist_url', 'owner_cpf'
+].join(',');
+
 // Hotel View Component for managing hotel registrations
 const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show: boolean) => void }> = ({ refreshKey, setShowHotelStatistics }) => {
-    const [registrations, setRegistrations] = useState<HotelRegistration[]>([]);
-    const [daycareEnrollmentsForHotel, setDaycareEnrollmentsForHotel] = useState<DaycareRegistration[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [registrations, setRegistrations] = useState<HotelRegistration[]>(() => {
+        try {
+            const cached = localStorage.getItem('cached_hotel_registrations');
+            return cached ? JSON.parse(cached) : [];
+        } catch {
+            return [];
+        }
+    });
+    const [daycareEnrollmentsForHotel, setDaycareEnrollmentsForHotel] = useState<DaycareRegistration[]>(() => {
+        try {
+            const cached = localStorage.getItem('cached_daycare_enrollments_hotel');
+            return cached ? JSON.parse(cached) : [];
+        } catch {
+            return [];
+        }
+    });
+    const [loading, setLoading] = useState<boolean>(() => !localStorage.getItem('cached_hotel_registrations'));
     const [selectedRegistration, setSelectedRegistration] = useState<HotelRegistration | null>(null);
     const [isAddFormOpen, setIsAddFormOpen] = useState(false);
     const [registrationToDelete, setRegistrationToDelete] = useState<HotelRegistration | null>(null);
@@ -15200,21 +15230,27 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
     };
 
     const fetchRegistrations = useCallback(async () => {
-        setLoading(true);
+        if (!localStorage.getItem('cached_hotel_registrations')) {
+            setLoading(true);
+        }
         try {
-            const { data, error } = await supabase.from('hotel_registrations').select('*').order('created_at', { ascending: false });
-            if (error) {
-                const cached = localStorage.getItem('cached_hotel_registrations');
-                if (cached) setRegistrations(JSON.parse(cached));
-            } else {
-                const normalized = (data as HotelRegistration[]).map(r => ({ ...r, id: r.id !== undefined && r.id !== null ? String(r.id) : r.id }));
+            const [hotelRes, daycareRes] = await Promise.all([
+                supabase.from('hotel_registrations').select(HOTEL_SELECT_COLUMNS).order('created_at', { ascending: false }),
+                supabase.from('daycare_enrollments').select('id, pet_name, tutor_name, contact_phone, extra_services, created_at, status, pet_photo_url').order('created_at', { ascending: false })
+            ]);
+
+            if (hotelRes.data) {
+                const normalized = (hotelRes.data as HotelRegistration[]).map(r => ({ ...r, id: r.id !== undefined && r.id !== null ? String(r.id) : r.id }));
                 setRegistrations(normalized);
                 try { localStorage.setItem('cached_hotel_registrations', JSON.stringify(normalized || [])); } catch { }
+            } else if (hotelRes.error && !localStorage.getItem('cached_hotel_registrations')) {
+                const cached = localStorage.getItem('cached_hotel_registrations');
+                if (cached) setRegistrations(JSON.parse(cached));
             }
 
-            const { data: daycareData, error: daycareError } = await supabase.from('daycare_enrollments').select('*').order('created_at', { ascending: false });
-            if (!daycareError) {
-                setDaycareEnrollmentsForHotel(daycareData as DaycareRegistration[]);
+            if (daycareRes.data) {
+                setDaycareEnrollmentsForHotel(daycareRes.data as DaycareRegistration[]);
+                try { localStorage.setItem('cached_daycare_enrollments_hotel', JSON.stringify(daycareRes.data || [])); } catch { }
             }
         } catch (_) {
             const cached = localStorage.getItem('cached_hotel_registrations');
@@ -15258,6 +15294,18 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
             supabase.removeChannel(channel);
         };
     }, [fetchRegistrations, refreshKey]);
+
+    useEffect(() => {
+        if (registrations.length > 0) {
+            try { localStorage.setItem('cached_hotel_registrations', JSON.stringify(registrations)); } catch {}
+        }
+    }, [registrations]);
+
+    useEffect(() => {
+        if (daycareEnrollmentsForHotel.length > 0) {
+            try { localStorage.setItem('cached_daycare_enrollments_hotel', JSON.stringify(daycareEnrollmentsForHotel)); } catch {}
+        }
+    }, [daycareEnrollmentsForHotel]);
 
     const handleArchiveDaycareExtra = async (enrollment: DaycareRegistration, type: 'diaria' | 'pernoite') => {
         try {
@@ -21698,6 +21746,7 @@ const ObservationModal: React.FC<{
 const VisitAppointmentForm: React.FC<{ serviceLabel: string; onBack: () => void; onDone: () => void }> = ({ serviceLabel, onBack, onDone }) => {
     const [petName, setPetName] = useState('');
     const [petBreed, setPetBreed] = useState('');
+    const [isOtherBreed, setIsOtherBreed] = useState(false);
     const [ownerName, setOwnerName] = useState('');
     const [whatsapp, setWhatsapp] = useState('');
     const [ownerAddress, setOwnerAddress] = useState('');
@@ -21726,7 +21775,7 @@ const VisitAppointmentForm: React.FC<{ serviceLabel: string; onBack: () => void;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!date || time === '' || !petName || !ownerName || !whatsapp) return;
+        if (!date || time === '' || !petName || !petBreed || !ownerName || !whatsapp) return;
 
         const [year, month, day] = date.split('-').map(Number);
         const checkDate = new Date(year, month - 1, day);
@@ -21898,11 +21947,49 @@ const VisitAppointmentForm: React.FC<{ serviceLabel: string; onBack: () => void;
                                         <div>
                                             <label htmlFor="petBreed" className="block text-sm font-bold text-pink-900 uppercase tracking-widest mb-3">Raça</label>
                                             <div className="relative">
-                                                <span className="absolute inset-y-0 left-0 flex items-center pl-4">
-                                                    <SafeImage alt="Breed Icon" className="h-7 w-7 opacity-60" src="https://cdn-icons-png.flaticon.com/512/616/616408.png" />
+                                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                                                    <BreedIcon />
                                                 </span>
-                                                <input id="petBreed" value={petBreed} onChange={e => setPetBreed(e.target.value)} className="block w-full pl-12 pr-5 py-4 bg-pink-50/50 border-2 border-pink-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-200 focus:border-pink-400 text-pink-950 font-medium transition-all" type="text" placeholder="Raça do seu pet (ex: Poodle)" />
+                                                <select
+                                                    id="petBreedSelect"
+                                                    value={isOtherBreed ? "Outra" : petBreed}
+                                                    onChange={(e) => {
+                                                        if (e.target.value === "Outra") {
+                                                            setIsOtherBreed(true);
+                                                            setPetBreed('');
+                                                        } else {
+                                                            setIsOtherBreed(false);
+                                                            setPetBreed(e.target.value);
+                                                        }
+                                                    }}
+                                                    required
+                                                    className="block w-full pl-12 pr-10 py-4 bg-pink-50/50 border-2 border-pink-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-200 focus:border-pink-400 text-pink-950 font-medium transition-all appearance-none cursor-pointer"
+                                                >
+                                                    <option value="">Selecione a Raça</option>
+                                                    {POPULAR_BREEDS.map(breed => (
+                                                        <option key={breed} value={breed}>{breed}</option>
+                                                    ))}
+                                                    <option value="Outra">Outra raça...</option>
+                                                </select>
+                                                <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-pink-400">
+                                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                </div>
                                             </div>
+                                            {isOtherBreed && (
+                                                <div className="relative mt-3 animate-fadeIn">
+                                                    <input
+                                                        type="text"
+                                                        id="petBreed"
+                                                        placeholder="Digite a raça do seu pet"
+                                                        value={petBreed}
+                                                        onChange={e => setPetBreed(e.target.value)}
+                                                        required
+                                                        className="block w-full px-5 py-3 bg-white border-2 border-pink-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-pink-200 text-pink-950 font-medium transition-all"
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                         
                                         <div className="md:col-span-2">
