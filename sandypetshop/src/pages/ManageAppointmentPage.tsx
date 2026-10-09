@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useRealtime } from '../hooks/useRealtime';
 import { evaluateSlotAvailability } from '../../App';
+import { getPetMovelWorkingHours } from '../../constants';
 
 const LOGO_URL = 'https://i.imgur.com/M3Gt3OA.png';
 
@@ -42,7 +43,7 @@ interface Appointment {
 }
 
 const BATH_GROOMING_HOURS = [10, 11, 12, 14, 15, 16, 17];
-const PET_MOBILE_HOURS = [9, 10, 11, 12, 14, 15, 16, 17];
+const PET_MOBILE_HOURS = [8, 9, 10, 11, 12, 14, 15, 16, 17];
 const CONDOMINIUMS = [
     { name: 'Vitta Parque', day: 'Quarta-feira', dayNumber: 3 },
     { name: 'Max Haus', day: 'Quinta-feira', dayNumber: 4 },
@@ -129,7 +130,10 @@ export const ManageAppointmentPage: React.FC = () => {
     useEffect(() => {
         if (rescheduleDate && selectedAppointment) {
             const type = selectedAppointment.table === 'agendamento_banhotosa' ? 'fixed' : 'mobile';
-            const hours = type === 'fixed' ? BATH_GROOMING_HOURS : PET_MOBILE_HOURS;
+            const dateObj = new Date(`${rescheduleDate}T12:00:00`);
+            const hours = type === 'fixed'
+                ? BATH_GROOMING_HOURS
+                : getPetMovelWorkingHours(dateObj.getDay(), selectedAppointment.condominium);
             setAvailableHours(hours);
             setBookedHours([]);
         }
@@ -251,8 +255,11 @@ export const ManageAppointmentPage: React.FC = () => {
             ...(regularRes.data || []).map((a: any) => ({ ...a, table: 'appointments' }))
         ];
         const monthlyClients = monthlyRes.data || [];
-        const hours = (type === 'fixed' ? BATH_GROOMING_HOURS : PET_MOBILE_HOURS).filter(h => {
-            const dateObj = new Date(`${date}T12:00:00`);
+        const dateObj = new Date(`${date}T12:00:00`);
+        const baseHours = type === 'fixed'
+            ? BATH_GROOMING_HOURS
+            : getPetMovelWorkingHours(dateObj.getDay(), selectedAppointment.condominium);
+        const hours = baseHours.filter(h => {
             const check = evaluateSlotAvailability({
                 date: dateObj,
                 hour: h,

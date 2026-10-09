@@ -116,3 +116,18 @@ export const BATH_GROOMING_HOURS: number[] = [10, 11, 12, 14, 15, 16, 17]; // Ba
 export const VISIT_WORKING_HOURS: number[] = [9, 10, 11, 12, 14, 15, 16, 17, 18, 19];
 export const LUNCH_HOUR = 13;
 export const MAX_CAPACITY_PER_SLOT = 1; // Single groomer/slot
+
+// Horários específicos do Pet Móvel:
+// - Quarta (Vitta Parque) e Sexta (Paseo): 08h às 17h (sem 13h)
+// - Quinta (Max Haus): 08h às 16h (sem 13h)
+export const PET_MOBILE_WEDNESDAY_HOURS: number[] = [8, 9, 10, 11, 12, 14, 15, 16, 17];
+export const PET_MOBILE_THURSDAY_HOURS: number[] = [8, 9, 10, 11, 12, 14, 15, 16];
+export const PET_MOBILE_FRIDAY_HOURS: number[] = [8, 9, 10, 11, 12, 14, 15, 16, 17];
+export const PET_MOBILE_DEFAULT_HOURS: number[] = [8, 9, 10, 11, 12, 14, 15, 16, 17];
+
+export function getPetMovelWorkingHours(dayOfWeek?: number | null, condo?: string | null): number[] {
+  if (dayOfWeek === 4 || (condo && condo.toLowerCase().includes('max haus'))) {
+    return PET_MOBILE_THURSDAY_HOURS; // Quinta: 08h às 16h
+  }
+  return PET_MOBILE_DEFAULT_HOURS; // Quarta, Sexta ou padrão: 08h às 17h
+}

@@ -55,7 +55,7 @@ import { toBlob } from 'html-to-image';
 import { CheckCircleIcon as CheckCircleOutlineIcon, XCircleIcon as XCircleOutlineIcon, EyeIcon as EyeOutlineIcon, PencilSquareIcon as PencilOutlineIcon, PlusIcon as PlusOutlineIcon, TrashIcon as TrashOutlineIcon, LockClosedIcon as LockClosedOutlineIcon, XMarkIcon, PhoneIcon, SparklesIcon, ChartPieIcon, ChevronUpIcon, ChevronDownIcon as HeroChevronDownIcon, ArrowTrendingUpIcon, PhotoIcon, Cog6ToothIcon, ArrowUpTrayIcon, UserPlusIcon, Squares2X2Icon, ChevronLeftIcon, ChevronRightIcon, GiftIcon, DocumentTextIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 // FIX: Moved AddonService from constants import to types import, as it's a type defined in types.ts.
 import { Appointment, ServiceType, PetWeight, AdminAppointment, Client, MonthlyClient, DaycareRegistration, PetMovelAppointment, AddonService, HotelRegistration } from './types';
-import { SERVICES, WORKING_HOURS, BATH_GROOMING_HOURS, MAX_CAPACITY_PER_SLOT, LUNCH_HOUR, PET_WEIGHT_OPTIONS, SERVICE_PRICES as FALLBACK_PRICES, ADDON_SERVICES, VISIT_WORKING_HOURS, DAYCARE_PLAN_PRICES, DAYCARE_EXTRA_SERVICES_PRICES, HOTEL_BASE_PRICE, HOTEL_EXTRA_SERVICES_PRICES } from './constants';
+import { SERVICES, WORKING_HOURS, BATH_GROOMING_HOURS, MAX_CAPACITY_PER_SLOT, LUNCH_HOUR, PET_WEIGHT_OPTIONS, SERVICE_PRICES as FALLBACK_PRICES, ADDON_SERVICES, VISIT_WORKING_HOURS, DAYCARE_PLAN_PRICES, DAYCARE_EXTRA_SERVICES_PRICES, HOTEL_BASE_PRICE, HOTEL_EXTRA_SERVICES_PRICES, getPetMovelWorkingHours } from './constants';
 import { useServicePrices } from './src/hooks/useServicePrices';
 import { supabase } from './supabaseClient';
 import NotificationBell from './NotificationBell';
@@ -372,17 +372,23 @@ export function evaluateSlotAvailability(args: {
 
     const occupied = occupiedFromTables + occupiedFromMonthly;
 
-    // Capacidade:
-    // Paseo às sextas (5) e Vitta Parque às quartas (3) possuem 2 vagas por slot no Pet Móvel.
-    // Demais casos Pet Móvel = 1 (ou 2 se condomínio não especificado). Fixo = 1.
+    // Capacidade dos slots do Pet Móvel:
+    // - Quarta (3) 08 às 16: horário duplo (capacidade 2); às 17: um só horário (capacidade 1)
+    // - Quinta (4) 08 às 16: sem horário duplo (capacidade 1)
+    // - Sexta (5) 08 às 16: duplo (capacidade 2); às 17: um só horário (capacidade 1)
     const [y, m, d] = ymd.split('-').map(Number);
     const dayOfWeek = new Date(y, m - 1, d).getDay(); // 0=Dom..6=Sáb
-    const isDuplicatedMobile = args.type === 'mobile' && (
-        (matchesCondo(args.condo, 'Paseo') && dayOfWeek === 5) ||
-        (matchesCondo(args.condo, 'Vitta Parque') && dayOfWeek === 3) ||
-        (!args.condo)
-    );
-    const capacity = isDuplicatedMobile ? 2 : (args.type === 'mobile' ? 1 : 1);
+    let mobileCapacity = 1;
+    if (args.type === 'mobile') {
+        const isWednesday = dayOfWeek === 3 || (args.condo && matchesCondo(args.condo, 'Vitta Parque'));
+        const isFriday = dayOfWeek === 5 || (args.condo && matchesCondo(args.condo, 'Paseo'));
+        if ((isWednesday || isFriday) && args.hour >= 8 && args.hour <= 16) {
+            mobileCapacity = 2;
+        } else {
+            mobileCapacity = 1;
+        }
+    }
+    const capacity = args.type === 'mobile' ? mobileCapacity : 1;
 
     if (occupied >= capacity) {
         return {
@@ -5467,7 +5473,7 @@ const AdminAddAppointmentModal: React.FC<{
                                             appointments={appointments}
                                             onTimeSelect={setSelectedTime}
                                             selectedTime={selectedTime}
-                                            workingHours={isVisitService ? VISIT_WORKING_HOURS : (serviceStepView === 'bath_groom' ? BATH_GROOMING_HOURS : WORKING_HOURS)}
+                                            workingHours={isVisitService ? VISIT_WORKING_HOURS : (serviceStepView === 'bath_groom' ? BATH_GROOMING_HOURS : (isPetMovel ? getPetMovelWorkingHours(selectedDate?.getDay(), selectedCondo) : WORKING_HOURS))}
                                             isPetMovel={isPetMovel}
                                             allowedDays={allowedDays}
                                             selectedCondo={selectedCondo}
@@ -6699,7 +6705,7 @@ const EditPetMovelAppointmentModal: React.FC<{
                         <div>
                             <label className="font-semibold text-gray-600">Hora</label>
                             <select value={timePart} onChange={e => setTimePart(Number(e.target.value))} className="w-full mt-1 px-5 py-4 border rounded-lg bg-white">
-                                {WORKING_HOURS.map(h => <option key={h} value={h}>{`${h}:00`}</option>)}
+                                {getPetMovelWorkingHours(datePart?.getDay(), formData.condominium).map(h => <option key={h} value={h}>{`${h}:00`}</option>)}
                             </select>
                         </div>
                     </div>
@@ -12776,16 +12782,35 @@ export const TimeSlotPicker: React.FC<{
     const isSameDaySP = (d1: Date, d2: Date) => isSameSaoPauloDay(d1, d2);
 
     // Duplicação de slots para Pet Móvel nos condomínios/dias específicos:
-    // - Vitta Parque: quartas-feiras (3)
-    // - Paseo: sextas-feiras (5)
-    // Cada horário gera DOIS botões: hora cheia e meia-hora (ex: 9:00 e 9:30).
-    const condoWeekday = selectedDate?.getDay();
-    const isDuplicatedPetMovelSlot = !!(
-        isPetMovel &&
-        selectedCondo &&
-        ((selectedCondo === 'Vitta Parque' && condoWeekday === 3) ||
-         (selectedCondo === 'Paseo' && condoWeekday === 5))
-    );
+    // - Quarta (3) 08 às 16: horário duplo (2 slots). 17h: um só horário (1 slot).
+    // - Quinta (4) 08 às 16: sem horário duplo (1 slot para cada horário).
+    // - Sexta (5) 08 às 16: duplo (2 slots). 17h: um só horário (1 slot).
+    const condoWeekday = selectedDate ? (getSaoPauloTimeParts(selectedDate).weekday ?? selectedDate.getDay()) : null;
+
+    const isHourDuplicatedForPetMovel = (hour: number) => {
+        if (!isPetMovel) return false;
+        const isWednesday = condoWeekday === 3 || (selectedCondo && matchesCondo(selectedCondo, 'Vitta Parque'));
+        const isFriday = condoWeekday === 5 || (selectedCondo && matchesCondo(selectedCondo, 'Paseo'));
+        if ((isWednesday || isFriday) && hour >= 8 && hour <= 16) {
+            return true;
+        }
+        return false;
+    };
+
+    const hoursToRender = React.useMemo(() => {
+        if (!isPetMovel) return workingHours;
+        const isThursday = condoWeekday === 4 || (selectedCondo && matchesCondo(selectedCondo, 'Max Haus'));
+        // Preserva workingHours de teste caso contenha horários específicos que não estejam nos padrões
+        if (workingHours && workingHours.length <= 2 && workingHours.some(h => !WORKING_HOURS.includes(h) && h !== 8)) {
+            return workingHours;
+        }
+        if (isThursday) {
+            // Quinta: 08 às 16 (sem 13h)
+            return [8, 9, 10, 11, 12, 14, 15, 16];
+        }
+        // Quarta, Sexta ou Pet Móvel geral: 08 às 17 (sem 13h)
+        return [8, 9, 10, 11, 12, 14, 15, 16, 17];
+    }, [isPetMovel, condoWeekday, selectedCondo, workingHours]);
 
     // Separate calendars logic
 
@@ -12856,13 +12881,15 @@ export const TimeSlotPicker: React.FC<{
         // 2. Capacity Check — cada slot duplicado representa uma vaga separada
         let load = getAppointmentsAtHour(hour);
 
+        const isDuplicated = isHourDuplicatedForPetMovel(hour);
+
         // Quando duplicado, capacidade = 2. slotIdx 0 ocupado se load>=1,
         // slotIdx 1 ocupado se load>=2.
-        if (isDuplicatedPetMovelSlot) {
+        if (isDuplicated) {
             return load <= slotIdx;
         }
 
-        // Capacidade padrão = 1
+        // Capacidade padrão = 1 (quinta-feira, 17h, ou qualquer horário simples)
         if (load >= 1) return false;
 
         return true;
@@ -12870,9 +12897,9 @@ export const TimeSlotPicker: React.FC<{
 
     return (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-            {workingHours.flatMap((hour, hourIdx) => {
-                // Duplicação: dois botões idênticos por horário (mesma hora cheia)
-                const slots = isDuplicatedPetMovelSlot
+            {hoursToRender.flatMap((hour) => {
+                const isDuplicated = isHourDuplicatedForPetMovel(hour);
+                const slots = isDuplicated
                     ? [
                         { hour, label: `${hour}:00`, slotIdx: 0 },
                         { hour, label: `${hour}:00`, slotIdx: 1 },
@@ -12883,7 +12910,7 @@ export const TimeSlotPicker: React.FC<{
                     const available = isHourAvailable(slot.hour, slot.slotIdx);
                     // Para slots duplicados, exigir match exato de slotIdx
                     // para que cada botão mantenha seu próprio estado de seleção.
-                    const isSelected = isDuplicatedPetMovelSlot
+                    const isSelected = isDuplicated
                         ? (selectedTime === slot.hour && selectedSlotIdx === slot.slotIdx)
                         : (selectedTime === slot.hour && slot.slotIdx === 0);
 
@@ -14627,7 +14654,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                                             appointments={appointments}
                                             onTimeSelect={setSelectedTime}
                                             selectedTime={selectedTime}
-                                            workingHours={isVisitService ? VISIT_WORKING_HOURS : (serviceStepView === 'bath_groom' || (selectedService && [ServiceType.BATH, ServiceType.GROOMING_ONLY, ServiceType.BATH_AND_GROOMING].includes(selectedService)) ? BATH_GROOMING_HOURS : WORKING_HOURS)}
+                                            workingHours={isVisitService ? VISIT_WORKING_HOURS : (serviceStepView === 'bath_groom' || (selectedService && [ServiceType.BATH, ServiceType.GROOMING_ONLY, ServiceType.BATH_AND_GROOMING].includes(selectedService)) ? BATH_GROOMING_HOURS : (selectedCondo ? getPetMovelWorkingHours(selectedDate?.getDay(), selectedCondo) : WORKING_HOURS))}
                                             isPetMovel={!!selectedCondo}
                                             allowedDays={(() => {
                                                 if ([ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_BATH_AND_GROOMING, ServiceType.PET_MOBILE_GROOMING_ONLY].includes(selectedService)) {

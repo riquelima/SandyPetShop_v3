@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { evaluateSlotAvailability, getSaoPauloYMD } from '../../App';
+import { getPetMovelWorkingHours } from '../../constants';
 import { 
     Clock, 
     Scissors, 
@@ -18,7 +19,7 @@ import {
 const LOGO_URL = 'https://i.imgur.com/M3Gt3OA.png';
 
 const BATH_GROOMING_HOURS = [10, 11, 12, 14, 15, 16, 17];
-const PET_MOBILE_HOURS = [9, 10, 11, 12, 14, 15, 16, 17];
+const PET_MOBILE_HOURS = [8, 9, 10, 11, 12, 14, 15, 16, 17];
 
 const CONDOMINIUMS = [
     { name: 'Vitta Parque', day: 'Quarta-feira', dayNumber: 3 },
@@ -118,7 +119,7 @@ export const AvailableTimesPage: React.FC = () => {
     };
 
     const getAvailableHours = (type: 'fixed' | 'mobile', condo?: string) => {
-        const allHours = type === 'fixed' ? BATH_GROOMING_HOURS : PET_MOBILE_HOURS;
+        const allHours = type === 'fixed' ? BATH_GROOMING_HOURS : (condo ? getPetMovelWorkingHours(null, condo) : PET_MOBILE_HOURS);
         return allHours.filter(hour => isAvailable(hour, type, condo));
     };
 
@@ -285,9 +286,11 @@ export const AvailableTimesPage: React.FC = () => {
                                             <div className="p-4">
                                                 {isDayAvailable ? (
                                                     <>
-                                                        <p className="text-sm text-gray-500 mb-4">Horário de funcionamento: 9h às 17h</p>
+                                                        <p className="text-sm text-gray-500 mb-4">
+                                                            Horário de funcionamento: {condo.dayNumber === 4 ? '8h às 16h' : '8h às 17h'}
+                                                        </p>
                                                         <div className="grid grid-cols-4 gap-3">
-                                                            {PET_MOBILE_HOURS.map((hour) => {
+                                                            {getPetMovelWorkingHours(condo.dayNumber, condo.name).map((hour) => {
                                                                 const available = isAvailable(hour, 'mobile', condo.name);
                                                                 return (
                                                                     <button
