@@ -13,9 +13,9 @@ const aiFunction = `
     const handleGenerateAI = async () => {
         setIsGenerating(true);
         try {
-            const apiKey = import.meta.env.VITE_MINIMAX_API_KEY;
+            const apiKey = import.meta.env.MINIMAX_API_KEY || import.meta.env.VITE_MINIMAX_API_KEY;
             if (!apiKey) {
-                alert('Chave da API do Minimax (VITE_MINIMAX_API_KEY) não configurada no .env');
+                alert('Chave da API do Minimax (MINIMAX_API_KEY) não configurada no ambiente.');
                 setIsGenerating(false);
                 return;
             }
