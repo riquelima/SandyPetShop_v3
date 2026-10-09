@@ -20873,14 +20873,70 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
         try { const p = new URLSearchParams(window.location.search); return p.get('date') || new Date().toISOString().slice(0, 10); } catch { return new Date().toISOString().slice(0, 10); }
     });
 
-    // DiaryRouteWrapper: splash aparece IMEDIATAMENTE, dados carregam em paralelo
+    // DiaryRouteWrapper: splash aparece IMEDIATAMENTE com a foto já visível, dados carregam em paralelo
     const DiaryRouteWrapper: React.FC<{ id: string }> = React.useMemo(() => {
         return function DiaryRouteWrapperInner({ id }: { id: string }) {
             const [enrollment, setEnrollment] = React.useState<any>(null);
             const [splashDone, setSplashDone] = React.useState(false);
-            const [petPhoto, setPetPhoto] = React.useState<string | undefined>(undefined);
-            const [petName, setPetName] = React.useState<string>('');
             const [notFound, setNotFound] = React.useState(false);
+
+            // Instantânea e síncrona: obtém foto e nome antes do primeiro render (0ms)
+            const initialPet = React.useMemo(() => {
+                let photo: string | undefined = undefined;
+                let name = '';
+                try {
+                    // 1. window.__DIARY_FAST_DATA__ populado no <head> do index.html
+                    const fast = (window as any).__DIARY_FAST_DATA__;
+                    if (fast?.photo) photo = fast.photo;
+                    if (fast?.pet) name = fast.pet;
+
+                    // 2. Parâmetros de consulta da URL (?photo=...&pet=...)
+                    if (!photo || !name) {
+                        const p = new URLSearchParams(window.location.search);
+                        const qPhoto = p.get('photo');
+                        const qPet = p.get('pet');
+                        if (qPhoto) photo = decodeURIComponent(qPhoto);
+                        if (qPet) name = decodeURIComponent(qPet);
+                    }
+
+                    // 3. Cache local específico do pet (diary_pet_<id>)
+                    if (!photo || !name) {
+                        const cached = localStorage.getItem('diary_pet_' + id);
+                        if (cached) {
+                            const parsed = JSON.parse(cached);
+                            if (!photo) photo = parsed.photo || parsed.pet_photo_url;
+                            if (!name) name = parsed.name || parsed.pet_name;
+                        }
+                    }
+
+                    // 4. Cache global de daycare_enrollments caso exista no navegador
+                    if (!photo || !name) {
+                        const enrollmentsCache = localStorage.getItem('cached_daycare_enrollments');
+                        if (enrollmentsCache) {
+                            const list = JSON.parse(enrollmentsCache);
+                            if (Array.isArray(list)) {
+                                const found = list.find((e: any) => String(e.id) === String(id));
+                                if (found) {
+                                    if (!photo) photo = found.pet_photo_url;
+                                    if (!name) name = found.pet_name;
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {}
+                return { photo, name };
+            }, [id]);
+
+            const [petPhoto, setPetPhoto] = React.useState<string | undefined>(initialPet.photo);
+            const [petName, setPetName] = React.useState<string>(initialPet.name);
+
+            // Preload imediato caso a foto já esteja disponível
+            React.useEffect(() => {
+                if (petPhoto) {
+                    const img = new Image();
+                    img.src = petPhoto;
+                }
+            }, [petPhoto]);
 
             React.useEffect(() => {
                 let cancelled = false;
@@ -20889,8 +20945,18 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
                         if (cancelled) return;
                         if (data) {
                             setEnrollment(data);
-                            setPetName(data.pet_name || '');
-                            setPetPhoto(data.pet_photo_url || undefined);
+                            if (data.pet_name) setPetName(data.pet_name);
+                            if (data.pet_photo_url) {
+                                setPetPhoto(data.pet_photo_url);
+                                const img = new Image();
+                                img.src = data.pet_photo_url;
+                            }
+                            try {
+                                localStorage.setItem('diary_pet_' + id, JSON.stringify({
+                                    name: data.pet_name,
+                                    photo: data.pet_photo_url
+                                }));
+                            } catch (e) {}
                         } else {
                             setNotFound(true);
                         }

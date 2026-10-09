@@ -185,13 +185,21 @@ const DaycareDiaryPage: React.FC<Props> = ({ enrollment, date, onDateChange, onB
             setMedia([]); // clear uploaded queue since they are now in existingMediaUrls
             setExistingMediaUrls(allMediaUrls);
             
+            // Gera link completo do diário com date, pet e photo para carregamento instantâneo da foto no splashscreen
+            const diaryParams = new URLSearchParams();
+            diaryParams.set('date', date);
+            if (enrollment.pet_name) diaryParams.set('pet', enrollment.pet_name);
+            if (enrollment.pet_photo_url) diaryParams.set('photo', enrollment.pet_photo_url);
+
+            const diaryLinkUrl = \`\${window.location.origin}/diario/\${enrollment.id}?\${diaryParams.toString()}\`;
+
             // Tenta enviar o Webhook no fundo
             fetch('https://n8n.intelektus.tech/webhook/diarioCrechePet', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     type: 'daycare_diary_shared',
-                    diary_link: \`\${window.location.origin}/diario/\${enrollment.id}?date=\${date}\`,
+                    diary_link: diaryLinkUrl,
                     enrollment,
                     diary: payload
                 })

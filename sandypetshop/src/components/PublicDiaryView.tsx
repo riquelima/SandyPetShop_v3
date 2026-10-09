@@ -233,6 +233,13 @@ const SplashScreen: React.FC<{ petName: string; petPhoto?: string; onDone: () =>
     const [phase, setPhase] = useState<'enter' | 'hold' | 'exit'>('enter');
 
     useEffect(() => {
+        if (petPhoto) {
+            const preImg = new Image();
+            preImg.src = petPhoto;
+        }
+    }, [petPhoto]);
+
+    useEffect(() => {
         // Exatamente 5 segundos totais de carregamento cinematográfico
         const t1 = setTimeout(() => setPhase('hold'), 100);
         const t2 = setTimeout(() => setPhase('exit'), 4400); // fade out a partir de 4.4s
@@ -401,8 +408,11 @@ const SplashScreen: React.FC<{ petName: string; petPhoto?: string; onDone: () =>
                         {petPhoto ? (
                             <img
                                 src={petPhoto}
-                                alt={petName}
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                alt={petName || 'Pet'}
+                                loading="eager"
+                                decoding="sync"
+                                {...({ fetchPriority: 'high', fetchpriority: 'high' } as any)}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                             />
                         ) : (
                             <div style={{
@@ -433,7 +443,7 @@ const SplashScreen: React.FC<{ petName: string; petPhoto?: string; onDone: () =>
                         letterSpacing: '-0.02em',
                         textShadow: '0 4px 18px rgba(164, 48, 115, 0.15)'
                     }}>
-                        {petName} 🐾
+                        {(petName || 'Pet')} 🐾
                     </h1>
                 </div>
 

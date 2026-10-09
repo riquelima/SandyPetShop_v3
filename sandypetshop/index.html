@@ -29,6 +29,64 @@
     <meta name="twitter:description" content="Agende de forma rápida e prática o banho e tosa do seu pet na Sandy's Pet Shop!" />
     <meta name="twitter:image" content="https://sandyspetshop.vercel.app/bemvindo.jpeg" />
 
+    <!-- Preload Instantâneo para Splashscreen do Diário do Pet -->
+    <script>
+      (function() {
+        try {
+          var p = window.location.pathname;
+          if (p.indexOf('/diario/') !== -1) {
+            var parts = p.split('/diario/')[1];
+            var id = parts ? parts.split('?')[0].split('/')[0] : '';
+            var params = new URLSearchParams(window.location.search);
+            var photo = params.get('photo');
+            var pet = params.get('pet');
+
+            if (!photo && id) {
+              var cached = localStorage.getItem('diary_pet_' + id);
+              if (cached) {
+                try {
+                  var c = JSON.parse(cached);
+                  photo = c.photo || c.pet_photo_url;
+                  if (!pet) pet = c.name || c.pet_name;
+                } catch(e) {}
+              }
+            }
+
+            if (!photo && id) {
+              var enrollmentsCached = localStorage.getItem('cached_daycare_enrollments');
+              if (enrollmentsCached) {
+                try {
+                  var list = JSON.parse(enrollmentsCached);
+                  if (Array.isArray(list)) {
+                    var found = list.find(function(item) { return String(item.id) === String(id); });
+                    if (found) {
+                      photo = found.pet_photo_url;
+                      if (!pet) pet = found.pet_name;
+                    }
+                  }
+                } catch(e) {}
+              }
+            }
+
+            if (photo) {
+              var link = document.createElement('link');
+              link.rel = 'preload';
+              link.as = 'image';
+              link.href = photo;
+              link.setAttribute('fetchpriority', 'high');
+              document.head.appendChild(link);
+
+              var img = new Image();
+              img.decoding = 'sync';
+              img.src = photo;
+
+              window.__DIARY_FAST_DATA__ = { photo: photo, pet: pet };
+            }
+          }
+        } catch(e) {}
+      })();
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
