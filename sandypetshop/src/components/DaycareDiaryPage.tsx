@@ -335,11 +335,20 @@ Seja natural, use alguns emojis e demonstre carinho. Finalize assinando como "Ti
             });
 
             const resData = await response.json();
-            if (resData.choices && resData.choices.length > 0) {
+            if (resData.choices && resData.choices.length > 0 && resData.choices[0]?.message?.content) {
                 setObs(resData.choices[0].message.content);
             } else {
-                console.error(resData);
-                alert('Erro ao gerar recadinho com IA.');
+                console.error('MiniMax API Error:', resData);
+                const statusCode = resData.base_resp?.status_code;
+                const statusMsg = resData.base_resp?.status_msg;
+
+                if (statusCode === 2067) {
+                    alert('Limite de plano/tokens atingido no MiniMax (Erro 2067: Token Plan limit reached).\n\nPara continuar usando, adicione créditos ou ative o "auto consumption" na sua conta em platform.minimaxi.com.');
+                } else if (statusMsg) {
+                    alert(`Erro na API do MiniMax (${statusCode || 'Erro'}): ${statusMsg}`);
+                } else {
+                    alert('Erro ao gerar recadinho com IA: resposta sem dados gerados.');
+                }
             }
         } catch (err) {
             console.error(err);
