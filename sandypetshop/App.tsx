@@ -21317,8 +21317,12 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
                 const { data: { session } } = await supabase.auth.getSession();
                 if (isMounted) {
                     setIsAuthenticated(!!session);
-                    if (!!session) {
-                        setViewWithLog('admin');
+                    if (!!session && view !== 'store') {
+                        const currentP = typeof window !== 'undefined' ? window.location.pathname.toLowerCase().replace(/\/+$/, '') : '';
+                        const isStoreRoute = currentP === '/loja' || currentP === '/carrinho' || currentP === '/store' || currentP === '/produtos';
+                        if (!isStoreRoute) {
+                            setViewWithLog('admin');
+                        }
                     }
                 }
             } catch (error) {
@@ -21342,8 +21346,12 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
                 const { data } = supabase.auth.onAuthStateChange((_event, session) => {
                     if (isMounted) {
                         setIsAuthenticated(!!session);
-                        if (!session) {
-                            setViewWithLog('scheduler');
+                        if (!session && view !== 'store') {
+                            const currentP = typeof window !== 'undefined' ? window.location.pathname.toLowerCase().replace(/\/+$/, '') : '';
+                            const isStoreRoute = currentP === '/loja' || currentP === '/carrinho' || currentP === '/store' || currentP === '/produtos';
+                            if (!isStoreRoute) {
+                                setViewWithLog('scheduler');
+                            }
                         }
                     }
                 });
@@ -21740,6 +21748,15 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
 
     if (view === 'splash') {
         return <SplashScreen onComplete={() => setViewWithLog('admin')} />;
+    }
+
+    if (view === 'store') {
+        return (
+            <SandysStore 
+                initialTab={storeInitialTab} 
+                onBack={() => setViewWithLog('scheduler')} 
+            />
+        );
     }
 
     if (isAuthenticated) {

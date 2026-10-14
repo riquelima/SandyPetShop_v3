@@ -71,35 +71,56 @@ export const SandysStore: React.FC<SandysStoreProps> = ({ onBack, initialTab = '
     closeProductModalAnimated();
   };
 
+  // Referência para o container de scroll interno
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
   // Referência para saber se o gesture atual deve ser tratado como drag
-  const dragCandidate = React.useRef<{ startY: number; startX: number; pointerId: number; active: boolean } | null>(null);
+  const dragCandidate = React.useRef<{ startY: number; startX: number; pointerId: number; active: boolean; targetEl: HTMLElement } | null>(null);
 
   const handlePanelPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    // Se clicou em algo interativo (botão, link, input), não captura para drag
+    // Se clicou em algo interativo específico (botão, link, input), não captura para drag
     const target = e.target as HTMLElement;
     if (target.closest('button, a, input, textarea, select, [role="button"]')) return;
-    dragCandidate.current = { startY: e.clientY, startX: e.clientX, pointerId: e.pointerId, active: false };
+    
+    dragCandidate.current = {
+      startY: e.clientY,
+      startX: e.clientX,
+      pointerId: e.pointerId,
+      active: false,
+      targetEl: e.currentTarget as HTMLElement
+    };
   };
+
   const handlePanelPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragCandidate.current || dragCandidate.current.pointerId !== e.pointerId) return;
+    
+    // Se o usuário está scrollando o conteúdo interno e não está no topo, permite scroll nativo para cima/baixo
+    const scrollEl = scrollContainerRef.current;
+    const isAtTop = !scrollEl || scrollEl.scrollTop <= 0;
+
     const deltaY = e.clientY - dragCandidate.current.startY;
     const deltaX = e.clientX - dragCandidate.current.startX;
-    // Só ativa o drag se moveu mais de 8px verticalmente E o movimento é predominantemente vertical
-    if (!dragCandidate.current.active && deltaY > 8 && Math.abs(deltaY) > Math.abs(deltaX)) {
+
+    // Só inicia o drag para baixo se o scroll estiver no topo e for puxado para baixo (> 8px)
+    if (!dragCandidate.current.active && isAtTop && deltaY > 8 && Math.abs(deltaY) > Math.abs(deltaX)) {
       dragCandidate.current.active = true;
       dragStartY.current = dragCandidate.current.startY;
       setIsDragging(true);
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      try {
+        dragCandidate.current.targetEl.setPointerCapture(e.pointerId);
+      } catch {}
     }
+
     if (dragCandidate.current.active && deltaY > 0) {
       setDragOffset(deltaY);
     }
   };
+
   const handlePanelPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragCandidate.current) return;
     if (dragCandidate.current.active) {
-      // Encerrou um drag
-      if (dragOffset > 120) {
+      // Se arrastou mais de 100px para baixo, fecha suavemente com a animação
+      if (dragOffset > 100) {
         closeProductModalAnimated();
       } else {
         setDragOffset(0);
@@ -109,6 +130,7 @@ export const SandysStore: React.FC<SandysStoreProps> = ({ onBack, initialTab = '
     dragStartY.current = null;
     setIsDragging(false);
   };
+
   const handlePanelPointerCancel = () => {
     if (dragCandidate.current?.active) {
       setDragOffset(0);
@@ -827,7 +849,10 @@ export const SandysStore: React.FC<SandysStoreProps> = ({ onBack, initialTab = '
             </div>
 
             {/* Conteúdo scrollável */}
-            <div className="overflow-y-auto px-5 pb-6 pt-1 flex flex-col gap-4 no-scrollbar">
+            <div
+              ref={scrollContainerRef}
+              className="overflow-y-auto px-5 pb-6 pt-1 flex flex-col gap-4 no-scrollbar touch-pan-y"
+            >
               {/* Imagem Hero */}
               <div className="relative w-full aspect-square rounded-2xl bg-[#FFF0F5] overflow-hidden border border-[#ffd9e0]/60 shadow-inner">
                 <img
