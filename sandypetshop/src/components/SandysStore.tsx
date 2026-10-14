@@ -34,7 +34,6 @@ export const SandysStore: React.FC<SandysStoreProps> = ({ onBack, initialTab = '
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('todos');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [showWhatsAppModal, setShowWhatsAppModal] = useState<boolean>(false);
   const [addedItemAnim, setAddedItemAnim] = useState<string | null>(null);
   const [hasAddedItemThisSession, setHasAddedItemThisSession] = useState<boolean>(false);
 
@@ -199,15 +198,11 @@ export const SandysStore: React.FC<SandysStoreProps> = ({ onBack, initialTab = '
     return lines.join('\n');
   };
 
-  const handleCheckoutWhatsApp = () => {
+  const confirmWhatsAppSend = async () => {
     if (cart.length === 0) {
       alert('Seu carrinho está vazio! Adicione alguns mimos antes de finalizar.');
       return;
     }
-    setShowWhatsAppModal(true);
-  };
-
-  const confirmWhatsAppSend = async () => {
     const phone = '5511994580316';
     const text = encodeURIComponent(generateWhatsAppMessage());
     const url = `https://wa.me/${phone}?text=${text}`;
@@ -231,7 +226,6 @@ export const SandysStore: React.FC<SandysStoreProps> = ({ onBack, initialTab = '
     }
 
     window.open(url, '_blank');
-    setShowWhatsAppModal(false);
   };
 
   return (
@@ -372,14 +366,6 @@ export const SandysStore: React.FC<SandysStoreProps> = ({ onBack, initialTab = '
                         </div>
 
                         <div className="flex flex-col gap-1 min-w-0">
-                          <div className="flex items-center gap-1 text-[#805062]">
-                            <span className="material-symbols-outlined text-[14px] text-[#FB7185]" style={{ fontVariationSettings: '"FILL" 1' }}>
-                              star
-                            </span>
-                            <span className="text-[11px] font-bold text-[#3f0019]">{product.rating.toFixed(1)}</span>
-                            <span className="text-[10px] text-[#8A5868]">({product.reviews})</span>
-                          </div>
-
                           <h3 className="text-xs sm:text-sm font-bold text-[#3f0019] leading-snug break-words">
                             {product.name}
                           </h3>
@@ -607,7 +593,7 @@ export const SandysStore: React.FC<SandysStoreProps> = ({ onBack, initialTab = '
                 {/* BOTÃO PRINCIPAL DE DESTAQUE: FINALIZAÇÃO PELO WHATSAPP */}
                 <section className="flex flex-col items-center gap-2 pt-1">
                   <button 
-                    onClick={handleCheckoutWhatsApp}
+                    onClick={confirmWhatsAppSend}
                     className="w-full relative overflow-hidden bg-[#25D366] hover:bg-[#1EBE5D] text-white rounded-3xl p-4 shadow-[0_12px_28px_-6px_rgba(37,211,102,0.45)] active:scale-[0.98] transition-all flex items-center justify-between group"
                   >
                     <div className="absolute -right-8 -top-8 w-24 h-24 bg-white/20 rounded-full blur-xl pointer-events-none"></div>
@@ -705,52 +691,6 @@ export const SandysStore: React.FC<SandysStoreProps> = ({ onBack, initialTab = '
         </div>
       </nav>
 
-      {/* ═══ MODAL / BOTTOM SHEET DE CONFIRMAÇÃO DO WHATSAPP ═══ */}
-      {showWhatsAppModal && (
-        <div 
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-end justify-center transition-opacity animate-fadeIn p-0 sm:p-4"
-          onClick={() => setShowWhatsAppModal(false)}
-        >
-          <div 
-            className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl flex flex-col gap-4 animate-slideUp border border-[#ffd9e0]/60 max-h-[90vh] overflow-y-auto"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="w-12 h-1 bg-[#e1bec4] rounded-full mx-auto"></div>
-            
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full bg-[#25D366]/20 flex items-center justify-center text-[#25D366] flex-shrink-0">
-                <span className="material-symbols-outlined text-[26px]">chat</span>
-              </div>
-              <div>
-                <h3 className="font-extrabold text-base text-[#3f0019]">Confirmar Pedido no WhatsApp</h3>
-                <p className="text-xs text-[#8A5868]">Mensagem personalizada e formatada com seus {totalCartCount} itens:</p>
-              </div>
-            </div>
-
-            {/* Prévia da Mensagem */}
-            <div className="bg-[#FFF0F5] rounded-2xl p-4 text-xs text-[#594045] flex flex-col gap-1.5 border-l-4 border-[#25D366] whitespace-pre-line font-sans">
-              {generateWhatsAppMessage()}
-            </div>
-
-            <div className="flex flex-col gap-2 mt-1">
-              <button 
-                onClick={confirmWhatsAppSend}
-                className="w-full bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-sm py-3.5 rounded-full text-center shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined text-[20px]">send</span>
-                <span>Enviar para 55 (11) 99458-0316</span>
-              </button>
-
-              <button 
-                onClick={() => setShowWhatsAppModal(false)}
-                className="w-full bg-[#fff0f2] text-[#3f0019] font-bold text-xs py-3 rounded-full hover:bg-[#ffd9e0] transition-colors"
-              >
-                Revisar Itens no Carrinho
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

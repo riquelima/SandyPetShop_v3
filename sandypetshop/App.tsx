@@ -13970,9 +13970,9 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                             <span className="text-base sm:text-xl">🏠</span>
                             <span className="uppercase tracking-wider text-[8px] xs:text-[9px] sm:text-xs font-black">Adote</span>
                         </button>
-                        <button onClick={() => setView('store')} className="group flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 w-full py-2.5 sm:py-3 bg-gradient-to-r from-pink-500/15 via-rose-500/20 to-pink-500/15 backdrop-blur-xl text-pink-900 font-bold rounded-2xl sm:rounded-full shadow-lg shadow-pink-200/40 border border-pink-300 hover:bg-white hover:shadow-xl hover:shadow-pink-400/40 hover:-translate-y-0.5 transition-all duration-300">
+                        <button onClick={() => setView('store')} className="group flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 w-full py-2.5 sm:py-3 bg-white/60 backdrop-blur-xl text-pink-800 font-bold rounded-2xl sm:rounded-full shadow-lg shadow-pink-200/30 border border-pink-100/80 hover:bg-white hover:shadow-xl hover:shadow-pink-300/40 hover:-translate-y-0.5 transition-all duration-300">
                             <SafeImage src="https://cdn-icons-png.flaticon.com/512/1557/1557110.png" alt="Loja" className="w-5 h-5 sm:w-6 sm:h-6 object-contain group-hover:scale-110 transition-transform duration-300" loading="eager" />
-                            <span className="uppercase tracking-wider text-[8px] xs:text-[9px] sm:text-xs font-black text-pink-700">Loja</span>
+                            <span className="uppercase tracking-wider text-[8px] xs:text-[9px] sm:text-xs font-black">Loja</span>
                         </button>
                     </div>
                 </header>
