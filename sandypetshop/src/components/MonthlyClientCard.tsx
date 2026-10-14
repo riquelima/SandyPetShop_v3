@@ -194,6 +194,79 @@ const isAppointmentCompleted = (dateStr: string) => {
     return appDate < now;
 };
 
+// --- Componente: Card de Serviço Extra (Editável Inline) ---
+const ExtraCard: React.FC<{
+    label: string;
+    icon: React.ReactNode;
+    enabled: boolean;
+    value: string | number;
+    quantity?: number;
+    onToggle: () => void;
+    onValueChange: (val: string) => void;
+    onQuantityChange?: (qty: string) => void;
+}> = ({ label, icon, enabled, value, quantity, onToggle, onValueChange, onQuantityChange }) => {
+    return (
+        <div
+            className={`
+                relative p-3 rounded-xl border-2 transition-all duration-200 group
+                ${enabled
+                    ? 'border-purple-500 bg-purple-50/50 shadow-sm'
+                    : 'border-slate-100 bg-white hover:border-purple-200 hover:bg-slate-50'}
+            `}
+        >
+            <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className={`p-1.5 rounded-lg shrink-0 ${enabled ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-400 group-hover:bg-purple-50 group-hover:text-purple-400'} transition-colors`}>
+                        {icon}
+                    </div>
+                    <h4 className={`font-bold text-xs truncate ${enabled ? 'text-slate-900' : 'text-slate-500'}`}>
+                        {label}
+                    </h4>
+                </div>
+                <button
+                    type="button"
+                    onClick={onToggle}
+                    className={`w-9 h-5 flex items-center rounded-full p-0.5 duration-300 ease-in-out shrink-0 ${enabled ? 'bg-purple-500' : 'bg-slate-300'}`}
+                    aria-label={`Ativar ${label}`}
+                >
+                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${enabled ? 'translate-x-4' : ''}`} />
+                </button>
+            </div>
+
+            <div
+                className={`overflow-hidden transition-all duration-300 ${enabled ? 'max-h-20 opacity-100 mt-1.5' : 'max-h-0 opacity-0'}`}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="flex items-center gap-2">
+                    {quantity !== undefined && onQuantityChange && (
+                        <div className="flex items-center bg-white border border-purple-200 rounded-lg px-2 py-1 shadow-sm">
+                            <span className="text-[9px] text-slate-400 font-bold mr-1">QTD</span>
+                            <input
+                                type="number"
+                                min="1"
+                                value={quantity}
+                                onChange={(e) => onQuantityChange(e.target.value)}
+                                className="w-8 text-xs font-semibold text-slate-700 focus:outline-none text-center bg-transparent"
+                            />
+                        </div>
+                    )}
+                    <div className="flex items-center flex-1 bg-white border border-purple-200 rounded-lg px-2 py-1 shadow-sm">
+                        <span className="text-[10px] text-slate-400 mr-1 font-bold">R$</span>
+                        <input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0,00"
+                            value={value || ''}
+                            onChange={(e) => onValueChange(e.target.value)}
+                            className="w-full text-xs font-semibold text-slate-700 focus:outline-none bg-transparent"
+                        />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // --- Component ---
 
 const MonthlyClientCard: React.FC<{
@@ -421,6 +494,223 @@ const MonthlyClientCard: React.FC<{
         return () => { isMounted = false; };
     }, [client.id, selectedDate]);
 
+    // Estado do flip card (edição inline)
+    const [isFlipped, setIsFlipped] = useState<boolean>(false);
+    const [inlineMode, setInlineMode] = useState<'edit' | 'extras'>('edit');
+    const [inlineForm, setInlineForm] = useState<MonthlyClient>(() => client);
+    const [inlineSaving, setInlineSaving] = useState<boolean>(false);
+    const [inlinePhotoFile, setInlinePhotoFile] = useState<File | null>(null);
+    const [inlinePhotoPreview, setInlinePhotoPreview] = useState<string | null>(client.pet_photo_url || null);
+    const inlinePhotoInputRef = React.useRef<HTMLInputElement>(null);
+
+    // Estado dos serviços extras (espelha os campos do type MonthlyClient.extra_services + modal de extras)
+    const [extras, setExtras] = useState(() => {
+        const es: any = client.extra_services || {};
+        return {
+            // Gerais
+            so_tosa: { enabled: !!es.so_tosa?.enabled, value: es.so_tosa?.value || '' },
+            so_banho: { enabled: !!es.so_banho?.enabled, value: es.so_banho?.value || '' },
+            hidratacao: { enabled: !!es.hidratacao?.enabled, value: es.hidratacao?.value || '' },
+            botinha: { enabled: !!es.botinha?.enabled, value: es.botinha?.value || '' },
+            contorno: { enabled: !!es.contorno?.enabled, value: es.contorno?.value || '' },
+            pintura: { enabled: !!es.pintura?.enabled, value: es.pintura?.value || '' },
+            patacure: { enabled: !!es.patacure?.enabled, value: es.patacure?.value || '' },
+            tintura: { enabled: !!es.tintura?.enabled, value: es.tintura?.value || '' },
+            penteado: { enabled: !!es.penteado?.enabled, value: es.penteado?.value || '' },
+            desembolo: { enabled: !!es.desembolo?.enabled, value: es.desembolo?.value || '' },
+            transporte: { enabled: !!es.transporte?.enabled, value: es.transporte?.value || '' },
+            // Daycare
+            adestrador: { enabled: !!es.adestrador?.enabled, value: es.adestrador?.value || '' },
+            dias_extras: { enabled: !!es.dias_extras?.enabled, value: es.dias_extras?.value || '', quantity: es.dias_extras?.quantity || 1 },
+            hora_extra: { enabled: !!es.hora_extra?.enabled, value: es.hora_extra?.value || '' },
+            medicamento: { enabled: !!es.medicamento?.enabled, value: es.medicamento?.value || '' },
+            pernoite: { enabled: !!es.pernoite?.enabled, value: es.pernoite?.value || '' },
+            racao: { enabled: !!es.racao?.enabled, value: es.racao?.value || '' },
+            veterinario: { enabled: !!es.veterinario?.enabled, value: es.veterinario?.value || '' },
+        };
+    });
+
+    useEffect(() => {
+        // Sempre que o client muda (re-fetch), reseta o form
+        setInlineForm(client);
+        setInlinePhotoPreview(client.pet_photo_url || null);
+        setInlinePhotoFile(null);
+        const es: any = client.extra_services || {};
+        setExtras({
+            so_tosa: { enabled: !!es.so_tosa?.enabled, value: es.so_tosa?.value || '' },
+            so_banho: { enabled: !!es.so_banho?.enabled, value: es.so_banho?.value || '' },
+            hidratacao: { enabled: !!es.hidratacao?.enabled, value: es.hidratacao?.value || '' },
+            botinha: { enabled: !!es.botinha?.enabled, value: es.botinha?.value || '' },
+            contorno: { enabled: !!es.contorno?.enabled, value: es.contorno?.value || '' },
+            pintura: { enabled: !!es.pintura?.enabled, value: es.pintura?.value || '' },
+            patacure: { enabled: !!es.patacure?.enabled, value: es.patacure?.value || '' },
+            tintura: { enabled: !!es.tintura?.enabled, value: es.tintura?.value || '' },
+            penteado: { enabled: !!es.penteado?.enabled, value: es.penteado?.value || '' },
+            desembolo: { enabled: !!es.desembolo?.enabled, value: es.desembolo?.value || '' },
+            transporte: { enabled: !!es.transporte?.enabled, value: es.transporte?.value || '' },
+            adestrador: { enabled: !!es.adestrador?.enabled, value: es.adestrador?.value || '' },
+            dias_extras: { enabled: !!es.dias_extras?.enabled, value: es.dias_extras?.value || '', quantity: es.dias_extras?.quantity || 1 },
+            hora_extra: { enabled: !!es.hora_extra?.enabled, value: es.hora_extra?.value || '' },
+            medicamento: { enabled: !!es.medicamento?.enabled, value: es.medicamento?.value || '' },
+            pernoite: { enabled: !!es.pernoite?.enabled, value: es.pernoite?.value || '' },
+            racao: { enabled: !!es.racao?.enabled, value: es.racao?.value || '' },
+            veterinario: { enabled: !!es.veterinario?.enabled, value: es.veterinario?.value || '' },
+        });
+    }, [client.id, client.pet_photo_url, client.pet_name, client.pet_breed, client.owner_name, client.owner_address, client.owner_cpf, client.whatsapp, client.condominium, client.service, client.weight, client.recurrence_type, client.recurrence_day, client.recurrence_time, client.observation, client.payment_status, client.payment_due_date, client.price, client.extra_services]);
+
+    const handleInlineChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setInlineForm(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleInlinePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setInlinePhotoFile(file);
+        const reader = new FileReader();
+        reader.onload = (ev) => setInlinePhotoPreview(ev.target?.result as string);
+        reader.readAsDataURL(file);
+    };
+
+    // Helpers dos serviços extras
+    const handleExtrasToggle = (key: keyof typeof extras) => {
+        setExtras(prev => ({
+            ...prev,
+            [key]: { ...(prev[key] as any), enabled: !(prev[key] as any).enabled }
+        }));
+    };
+    const handleExtrasValue = (key: keyof typeof extras, value: string) => {
+        const safe = value.replace(',', '.').replace(/[^0-9.]/g, '');
+        const parts = safe.split('.');
+        const finalVal = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : safe;
+        setExtras(prev => ({
+            ...prev,
+            [key]: { ...(prev[key] as any), value: finalVal }
+        }));
+    };
+    const handleExtrasQuantity = (key: keyof typeof extras, qty: string) => {
+        const n = Math.max(1, parseInt(qty) || 1);
+        setExtras(prev => ({
+            ...prev,
+            [key]: { ...(prev[key] as any), quantity: n }
+        }));
+    };
+    const extrasTotal = Object.values(extras).reduce((acc, item: any) => {
+        if (!item.enabled) return acc;
+        const v = parseFloat(item.value) || 0;
+        const q = item.quantity || 1;
+        return acc + v * q;
+    }, 0);
+
+    const handleInlineSave = async () => {
+        setInlineSaving(true);
+        try {
+            let photoUrl = inlineForm.pet_photo_url || null;
+            if (inlinePhotoFile) {
+                const ext = inlinePhotoFile.name.split('.').pop() || 'jpg';
+                const path = `monthly_clients/${client.id}/photo-${Date.now()}.${ext}`;
+                const { error: upErr } = await supabase.storage
+                    .from('store_products')
+                    .upload(path, inlinePhotoFile, { upsert: true, contentType: inlinePhotoFile.type });
+                if (upErr) throw upErr;
+                const { data: pub } = supabase.storage.from('store_products').getPublicUrl(path);
+                photoUrl = pub.publicUrl;
+            }
+
+            const updatePayload: any = {
+                pet_name: inlineForm.pet_name,
+                pet_breed: inlineForm.pet_breed,
+                owner_name: inlineForm.owner_name,
+                owner_address: inlineForm.owner_address,
+                owner_cpf: inlineForm.owner_cpf,
+                whatsapp: inlineForm.whatsapp,
+                condominium: inlineForm.condominium,
+                service: inlineForm.service,
+                weight: inlineForm.weight,
+                recurrence_type: inlineForm.recurrence_type,
+                recurrence_day: Number(inlineForm.recurrence_day) || 1,
+                recurrence_time: Number(inlineForm.recurrence_time) || 9,
+                observation: inlineForm.observation,
+                payment_status: inlineForm.payment_status,
+                payment_due_date: inlineForm.payment_due_date,
+                price: Number(inlineForm.price) || 0,
+                pet_photo_url: photoUrl,
+            };
+
+            const { error } = await supabase.from('monthly_clients').update(updatePayload).eq('id', client.id);
+            if (error) throw error;
+
+            onStatusChanged?.();
+            setIsFlipped(false);
+        } catch (err) {
+            console.error('Erro ao salvar edição inline:', err);
+            alert('Erro ao salvar alterações. Tente novamente.');
+        } finally {
+            setInlineSaving(false);
+        }
+    };
+
+    const handleExtrasSave = async () => {
+        setInlineSaving(true);
+        try {
+            // Normaliza os extras: enabled false → mantém value, mas remove flag
+            const payload: any = {};
+            (Object.keys(extras) as (keyof typeof extras)[]).forEach(k => {
+                const item: any = (extras as any)[k];
+                payload[k] = {
+                    enabled: !!item.enabled,
+                    value: item.value || 0,
+                    ...(k === 'dias_extras' ? { quantity: item.quantity || 1 } : {})
+                };
+            });
+
+            const { error } = await supabase
+                .from('monthly_clients')
+                .update({ extra_services: payload })
+                .eq('id', client.id);
+            if (error) throw error;
+
+            onStatusChanged?.();
+            setIsFlipped(false);
+            setInlineMode('edit');
+        } catch (err) {
+            console.error('Erro ao salvar extras:', err);
+            alert('Erro ao salvar serviços extras. Tente novamente.');
+        } finally {
+            setInlineSaving(false);
+        }
+    };
+
+    const handleFlipBack = () => {
+        // Resetar o form para os valores atuais do client
+        setInlineForm(client);
+        setInlinePhotoPreview(client.pet_photo_url || null);
+        setInlinePhotoFile(null);
+        const es: any = client.extra_services || {};
+        setExtras({
+            so_tosa: { enabled: !!es.so_tosa?.enabled, value: es.so_tosa?.value || '' },
+            so_banho: { enabled: !!es.so_banho?.enabled, value: es.so_banho?.value || '' },
+            hidratacao: { enabled: !!es.hidratacao?.enabled, value: es.hidratacao?.value || '' },
+            botinha: { enabled: !!es.botinha?.enabled, value: es.botinha?.value || '' },
+            contorno: { enabled: !!es.contorno?.enabled, value: es.contorno?.value || '' },
+            pintura: { enabled: !!es.pintura?.enabled, value: es.pintura?.value || '' },
+            patacure: { enabled: !!es.patacure?.enabled, value: es.patacure?.value || '' },
+            tintura: { enabled: !!es.tintura?.enabled, value: es.tintura?.value || '' },
+            penteado: { enabled: !!es.penteado?.enabled, value: es.penteado?.value || '' },
+            desembolo: { enabled: !!es.desembolo?.enabled, value: es.desembolo?.value || '' },
+            transporte: { enabled: !!es.transporte?.enabled, value: es.transporte?.value || '' },
+            adestrador: { enabled: !!es.adestrador?.enabled, value: es.adestrador?.value || '' },
+            dias_extras: { enabled: !!es.dias_extras?.enabled, value: es.dias_extras?.value || '', quantity: es.dias_extras?.quantity || 1 },
+            hora_extra: { enabled: !!es.hora_extra?.enabled, value: es.hora_extra?.value || '' },
+            medicamento: { enabled: !!es.medicamento?.enabled, value: es.medicamento?.value || '' },
+            pernoite: { enabled: !!es.pernoite?.enabled, value: es.pernoite?.value || '' },
+            racao: { enabled: !!es.racao?.enabled, value: es.racao?.value || '' },
+            veterinario: { enabled: !!es.veterinario?.enabled, value: es.veterinario?.value || '' },
+        });
+        setInlineMode('edit');
+        setIsFlipped(false);
+    };
+
     const nextAppointmentText = isLoadingAppointments 
         ? '...' 
         : upcomingAppointments.length > 0 
@@ -544,9 +834,23 @@ const MonthlyClientCard: React.FC<{
     return (
         <>
             <div
-                className="group relative bg-white rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-pink-500/10 transition-all duration-300 transform hover:-translate-y-0.5 border border-slate-100 overflow-hidden flex flex-col font-jakarta pt-1 pb-5 px-4 sm:px-5"
-                onClick={() => onClick && onClick(client)}
+                className="relative w-full"
+                style={{ perspective: '1200px' }}
             >
+                <div
+                    className="relative w-full"
+                    style={{
+                        transformStyle: 'preserve-3d',
+                        transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                        transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                    }}
+                >
+                    {/* FRONT FACE */}
+                    <div
+                        className="group relative bg-white rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-pink-500/10 transition-all duration-300 transform hover:-translate-y-0.5 border border-slate-100 overflow-hidden flex flex-col font-jakarta pt-1 pb-5 px-4 sm:px-5"
+                        onClick={() => { if (!isFlipped && onClick) onClick(client); }}
+                        style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                    >
             {/* Top Accent Bar */}
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-fuchsia-500 via-pink-500 to-purple-600 rounded-t-[2rem]" />
 
@@ -803,11 +1107,11 @@ const MonthlyClientCard: React.FC<{
 
             {/* SECONDARY ACTIONS */}
             <section className="grid gap-1.5 mb-3 grid-cols-3">
-                <button onClick={(e) => { e.stopPropagation(); onAddExtraServices(client); }} className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-purple-50 hover:bg-purple-100 active:scale-95 text-purple-700 text-xs font-semibold rounded-xl border border-purple-100/70 transition-colors" type="button">
+                <button onClick={(e) => { e.stopPropagation(); setInlineMode('extras'); setIsFlipped(true); }} className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-purple-50 hover:bg-purple-100 active:scale-95 text-purple-700 text-xs font-semibold rounded-xl border border-purple-100/70 transition-colors" type="button">
                     <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
                     <span>Extras</span>
                 </button>
-                <button onClick={(e) => { e.stopPropagation(); onEdit(client); }} className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 text-xs font-semibold rounded-xl border border-indigo-100/70 transition-colors" type="button">
+                <button onClick={(e) => { e.stopPropagation(); setIsFlipped(true); }} className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 text-xs font-semibold rounded-xl border border-indigo-100/70 transition-colors" type="button">
                     <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                     <span>Editar</span>
                 </button>
@@ -839,7 +1143,539 @@ const MonthlyClientCard: React.FC<{
                 </button>
             </footer>
 
+                    </div>
+                    {/* END FRONT FACE */}
+
+                    {/* BACK FACE — Edição Inline */}
+                    <div
+                        className="absolute inset-0 bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-pink-500/10 flex flex-col font-jakarta pt-1 pb-5 px-4 sm:px-5 overflow-hidden"
+                        style={{
+                            backfaceVisibility: 'hidden',
+                            WebkitBackfaceVisibility: 'hidden',
+                            transform: 'rotateY(180deg)',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Top Accent Bar (verso: roxo/indigo para diferenciar) */}
+                        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-t-[2rem]" />
+
+                        {/* Header do Verso */}
+                        <header className="mt-3.5 mb-3 flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <button
+                                    type="button"
+                                    onClick={handleFlipBack}
+                                    className="w-9 h-9 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-colors shrink-0"
+                                    title="Voltar"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                                </button>
+                                <h3 className="text-base sm:text-lg font-black text-slate-800 truncate">
+                                    {inlineMode === 'edit' ? `Editar ${client.pet_name}` : `Extras — ${client.pet_name}`}
+                                </h3>
+                            </div>
+                        </header>
+
+                        {/* Tabs de modo (Dados | Extras) */}
+                        <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-xl mb-3">
+                            <button
+                                type="button"
+                                onClick={() => setInlineMode('edit')}
+                                className={`py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all ${
+                                    inlineMode === 'edit'
+                                        ? 'bg-white text-indigo-600 shadow-sm'
+                                        : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                            >
+                                <span className="flex items-center justify-center gap-1">
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                    Dados
+                                </span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setInlineMode('extras')}
+                                className={`py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all ${
+                                    inlineMode === 'extras'
+                                        ? 'bg-white text-purple-600 shadow-sm'
+                                        : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                            >
+                                <span className="flex items-center justify-center gap-1">
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                                    Extras
+                                </span>
+                            </button>
+                        </div>
+
+                        {/* MODO: EDITAR DADOS */}
+                        {inlineMode === 'edit' && (
+                            <>
+                                {/* Foto do Pet */}
+                                <section className="flex flex-col items-center gap-2 mb-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => inlinePhotoInputRef.current?.click()}
+                                        className="relative w-20 h-20 rounded-full ring-2 ring-indigo-200 hover:ring-indigo-400 transition-all overflow-hidden bg-slate-50 flex items-center justify-center"
+                                    >
+                                        {inlinePhotoPreview ? (
+                                            <img src={inlinePhotoPreview} alt="Preview" className="w-20 h-20 rounded-full object-cover" />
+                                        ) : (
+                                            <span className="text-3xl">🐶</span>
+                                        )}
+                                        <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 flex items-center justify-center text-white transition-opacity rounded-full">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                        </div>
+                                    </button>
+                                    <input
+                                        ref={inlinePhotoInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleInlinePhotoSelect}
+                                        className="hidden"
+                                    />
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Toque para alterar a foto</span>
+                                </section>
+
+                        {/* Campos — scrolláveis */}
+                        <section className="flex flex-col gap-2.5 flex-1 overflow-y-auto no-scrollbar pr-1 -mr-1">
+                            {/* IDENTIFICAÇÃO */}
+                            <div className="text-[10px] font-black uppercase tracking-wider text-indigo-600 border-b border-indigo-100 pb-1 mt-1">Identificação</div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Nome do Pet</label>
+                                <input
+                                    type="text"
+                                    name="pet_name"
+                                    value={inlineForm.pet_name}
+                                    onChange={handleInlineChange}
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Raça do Pet</label>
+                                <input
+                                    type="text"
+                                    name="pet_breed"
+                                    value={inlineForm.pet_breed || ''}
+                                    onChange={handleInlineChange}
+                                    placeholder="Ex: Shih Tzu"
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Tutor</label>
+                                <input
+                                    type="text"
+                                    name="owner_name"
+                                    value={inlineForm.owner_name}
+                                    onChange={handleInlineChange}
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">WhatsApp</label>
+                                <input
+                                    type="text"
+                                    name="whatsapp"
+                                    value={inlineForm.whatsapp || ''}
+                                    onChange={handleInlineChange}
+                                    placeholder="(00) 00000-0000"
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">CPF do Tutor</label>
+                                <input
+                                    type="text"
+                                    name="owner_cpf"
+                                    value={inlineForm.owner_cpf || ''}
+                                    onChange={handleInlineChange}
+                                    placeholder="000.000.000-00"
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Endereço do Tutor</label>
+                                <input
+                                    type="text"
+                                    name="owner_address"
+                                    value={inlineForm.owner_address || ''}
+                                    onChange={handleInlineChange}
+                                    placeholder="Endereço completo"
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Condomínio</label>
+                                <input
+                                    type="text"
+                                    name="condominium"
+                                    value={inlineForm.condominium || ''}
+                                    onChange={handleInlineChange}
+                                    placeholder="Ex: Paseo (Opcional)"
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                />
+                            </div>
+
+                            {/* SERVIÇO */}
+                            <div className="text-[10px] font-black uppercase tracking-wider text-purple-600 border-b border-purple-100 pb-1 mt-3">Serviço</div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Tipo de Serviço</label>
+                                <select
+                                    name="service"
+                                    value={inlineForm.service || ''}
+                                    onChange={handleInlineChange}
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                >
+                                    <option value="">Nenhum específico</option>
+                                    <option value="Banho">Banho</option>
+                                    <option value="Banho & Tosa">Banho & Tosa</option>
+                                    <option value="Só Tosa">Só Tosa</option>
+                                    <option value="Banho (Pet Móvel)">Banho (Pet Móvel)</option>
+                                    <option value="Banho & Tosa (Pet Móvel)">Banho & Tosa (Pet Móvel)</option>
+                                </select>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Porte / Peso</label>
+                                <select
+                                    name="weight"
+                                    value={inlineForm.weight || ''}
+                                    onChange={handleInlineChange}
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                >
+                                    <option value="">Não informado</option>
+                                    <option value="Pequeno">Pequeno (até 5kg)</option>
+                                    <option value="Médio">Médio (5-10kg)</option>
+                                    <option value="Grande">Grande (10-20kg)</option>
+                                    <option value="Gigante">Gigante (20kg+)</option>
+                                </select>
+                            </div>
+
+                            {/* REGRAS E FINANCEIRO */}
+                            <div className="text-[10px] font-black uppercase tracking-wider text-blue-600 border-b border-blue-100 pb-1 mt-3">Regras e Financeiro</div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Frequência</label>
+                                <select
+                                    name="recurrence_type"
+                                    value={inlineForm.recurrence_type || 'weekly'}
+                                    onChange={handleInlineChange}
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                >
+                                    <option value="weekly">Semanal</option>
+                                    <option value="bi-weekly">Quinzenal</option>
+                                    <option value="monthly">Mensal</option>
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Dia</label>
+                                    <select
+                                        name="recurrence_day"
+                                        value={inlineForm.recurrence_day ?? 1}
+                                        onChange={handleInlineChange}
+                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                    >
+                                        <option value={1}>Segunda</option>
+                                        <option value={2}>Terça</option>
+                                        <option value={3}>Quarta</option>
+                                        <option value={4}>Quinta</option>
+                                        <option value={5}>Sexta</option>
+                                        <option value={6}>Sábado</option>
+                                        <option value={7}>Domingo</option>
+                                    </select>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Horário</label>
+                                    <select
+                                        name="recurrence_time"
+                                        value={inlineForm.recurrence_time ?? 9}
+                                        onChange={handleInlineChange}
+                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                    >
+                                        <option value={9}>9:00</option>
+                                        <option value={10}>10:00</option>
+                                        <option value={11}>11:00</option>
+                                        <option value={12}>12:00</option>
+                                        <option value={13}>13:00</option>
+                                        <option value={14}>14:00</option>
+                                        <option value={15}>15:00</option>
+                                        <option value={16}>16:00</option>
+                                        <option value={17}>17:00</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Preço do Pacote (R$)</label>
+                                <input
+                                    type="number"
+                                    name="price"
+                                    value={inlineForm.price || ''}
+                                    onChange={handleInlineChange}
+                                    step="0.01"
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Vencimento do Pagamento</label>
+                                <input
+                                    type="date"
+                                    name="payment_due_date"
+                                    value={inlineForm.payment_due_date || ''}
+                                    onChange={handleInlineChange}
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Status do Pagamento</label>
+                                <select
+                                    name="payment_status"
+                                    value={inlineForm.payment_status || 'Pendente'}
+                                    onChange={handleInlineChange}
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                >
+                                    <option value="Pendente">Pendente</option>
+                                    <option value="Pago">Pago</option>
+                                </select>
+                            </div>
+
+                            {/* OBSERVAÇÕES */}
+                            <div className="text-[10px] font-black uppercase tracking-wider text-amber-600 border-b border-amber-100 pb-1 mt-3">Observações</div>
+                            <div className="flex flex-col gap-1">
+                                <textarea
+                                    name="observation"
+                                    value={inlineForm.observation || ''}
+                                    onChange={handleInlineChange}
+                                    rows={3}
+                                    placeholder="Alergias, comportamento, preferências..."
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all resize-none"
+                                />
+                            </div>
+                        </section>
+                            </>
+                        )}
+
+                        {/* MODO: SERVIÇOS EXTRAS */}
+                        {inlineMode === 'extras' && (
+                            <section className="flex flex-col gap-2.5 flex-1 overflow-y-auto no-scrollbar pr-1 -mr-1">
+                                <div className="text-[10px] font-black uppercase tracking-wider text-purple-600 border-b border-purple-100 pb-1 mt-1">Estética & Cuidados</div>
+
+                                {/* Só Tosa */}
+                                <ExtraCard
+                                    label="Só Tosa"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121" /></svg>}
+                                    enabled={extras.so_tosa?.enabled || false}
+                                    value={extras.so_tosa?.value || ''}
+                                    onToggle={() => handleExtrasToggle('so_tosa' as any)}
+                                    onValueChange={(v) => handleExtrasValue('so_tosa' as any, v)}
+                                />
+                                {/* Só Banho */}
+                                <ExtraCard
+                                    label="Só Banho"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12c2-4 6-4 9 0s7 4 9 0M5 17h14" /></svg>}
+                                    enabled={extras.so_banho.enabled}
+                                    value={extras.so_banho.value}
+                                    onToggle={() => handleExtrasToggle('so_banho')}
+                                    onValueChange={(v) => handleExtrasValue('so_banho', v)}
+                                />
+                                {/* Hidratação */}
+                                <ExtraCard
+                                    label="Hidratação"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3l4 6-4 4-4-4 4-6zm0 12l4 6-4 4-4-4 4-6z" /></svg>}
+                                    enabled={extras.hidratacao.enabled}
+                                    value={extras.hidratacao.value}
+                                    onToggle={() => handleExtrasToggle('hidratacao')}
+                                    onValueChange={(v) => handleExtrasValue('hidratacao', v)}
+                                />
+                                {/* Botinha */}
+                                <ExtraCard
+                                    label="Botinha"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 3l3 3 3-3 3 3 3-3v18l-3-3-3 3-3-3-3 3V3z" /></svg>}
+                                    enabled={extras.botinha?.enabled || false}
+                                    value={extras.botinha?.value || ''}
+                                    onToggle={() => handleExtrasToggle('botinha' as any)}
+                                    onValueChange={(v) => handleExtrasValue('botinha' as any, v)}
+                                />
+                                {/* Contorno */}
+                                <ExtraCard
+                                    label="Contorno"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4h16v16H4z M9 9h6v6H9z" /></svg>}
+                                    enabled={extras.contorno?.enabled || false}
+                                    value={extras.contorno?.value || ''}
+                                    onToggle={() => handleExtrasToggle('contorno' as any)}
+                                    onValueChange={(v) => handleExtrasValue('contorno' as any, v)}
+                                />
+                                {/* Pintura */}
+                                <ExtraCard
+                                    label="Pintura"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.5a1.5 1.5 0 010-3H21V8a2 2 0 00-2-2h-7l-2-2H5a2 2 0 00-2 2v11a4 4 0 004 4z" /></svg>}
+                                    enabled={extras.pintura?.enabled || false}
+                                    value={extras.pintura?.value || ''}
+                                    onToggle={() => handleExtrasToggle('pintura' as any)}
+                                    onValueChange={(v) => handleExtrasValue('pintura' as any, v)}
+                                />
+                                {/* Patacure */}
+                                <ExtraCard
+                                    label="Patacure"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 2l2 7h7l-5.5 4 2 7L12 16l-5.5 4 2-7L3 9h7z" /></svg>}
+                                    enabled={extras.patacure?.enabled || false}
+                                    value={extras.patacure?.value || ''}
+                                    onToggle={() => handleExtrasToggle('patacure' as any)}
+                                    onValueChange={(v) => handleExtrasValue('patacure' as any, v)}
+                                />
+                                {/* Tintura */}
+                                <ExtraCard
+                                    label="Tintura"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4z" /></svg>}
+                                    enabled={extras.tintura?.enabled || false}
+                                    value={extras.tintura?.value || ''}
+                                    onToggle={() => handleExtrasToggle('tintura' as any)}
+                                    onValueChange={(v) => handleExtrasValue('tintura' as any, v)}
+                                />
+                                {/* Penteado */}
+                                <ExtraCard
+                                    label="Penteado"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 3l3 3v18M19 3l-3 3v18" /></svg>}
+                                    enabled={extras.penteado?.enabled || false}
+                                    value={extras.penteado?.value || ''}
+                                    onToggle={() => handleExtrasToggle('penteado' as any)}
+                                    onValueChange={(v) => handleExtrasValue('penteado' as any, v)}
+                                />
+                                {/* Desembolo */}
+                                <ExtraCard
+                                    label="Desembolo"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12h18M3 6h18M3 18h18" /></svg>}
+                                    enabled={extras.desembolo?.enabled || false}
+                                    value={extras.desembolo?.value || ''}
+                                    onToggle={() => handleExtrasToggle('desembolo' as any)}
+                                    onValueChange={(v) => handleExtrasValue('desembolo' as any, v)}
+                                />
+                                {/* Transporte */}
+                                <ExtraCard
+                                    label="Transporte"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z M1 13h16V6a1 1 0 00-1-1H4l-3 5v3h2" /></svg>}
+                                    enabled={extras.transporte?.enabled || false}
+                                    value={extras.transporte?.value || ''}
+                                    onToggle={() => handleExtrasToggle('transporte' as any)}
+                                    onValueChange={(v) => handleExtrasValue('transporte' as any, v)}
+                                />
+
+                                <div className="text-[10px] font-black uppercase tracking-wider text-cyan-600 border-b border-cyan-100 pb-1 mt-2">Hospedagem & Creche</div>
+
+                                {/* Adestrador */}
+                                <ExtraCard
+                                    label="Adestrador"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
+                                    enabled={extras.adestrador.enabled}
+                                    value={extras.adestrador.value}
+                                    onToggle={() => handleExtrasToggle('adestrador')}
+                                    onValueChange={(v) => handleExtrasValue('adestrador', v)}
+                                />
+                                {/* Dias Extras */}
+                                <ExtraCard
+                                    label="Dias Extras"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>}
+                                    enabled={extras.dias_extras.enabled}
+                                    value={extras.dias_extras.value}
+                                    quantity={extras.dias_extras.quantity || 1}
+                                    onToggle={() => handleExtrasToggle('dias_extras')}
+                                    onValueChange={(v) => handleExtrasValue('dias_extras', v)}
+                                    onQuantityChange={(q) => handleExtrasQuantity('dias_extras', q)}
+                                />
+                                {/* Hora Extra */}
+                                <ExtraCard
+                                    label="Hora Extra"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                                    enabled={extras.hora_extra?.enabled || false}
+                                    value={extras.hora_extra?.value || ''}
+                                    onToggle={() => handleExtrasToggle('hora_extra' as any)}
+                                    onValueChange={(v) => handleExtrasValue('hora_extra' as any, v)}
+                                />
+                                {/* Medicamento */}
+                                <ExtraCard
+                                    label="Medicamento"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>}
+                                    enabled={extras.medicamento?.enabled || false}
+                                    value={extras.medicamento?.value || ''}
+                                    onToggle={() => handleExtrasToggle('medicamento' as any)}
+                                    onValueChange={(v) => handleExtrasValue('medicamento' as any, v)}
+                                />
+                                {/* Pernoite */}
+                                <ExtraCard
+                                    label="Pernoite"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>}
+                                    enabled={extras.pernoite.enabled}
+                                    value={extras.pernoite.value}
+                                    onToggle={() => handleExtrasToggle('pernoite')}
+                                    onValueChange={(v) => handleExtrasValue('pernoite', v)}
+                                />
+                                {/* Ração */}
+                                <ExtraCard
+                                    label="Ração"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>}
+                                    enabled={extras.racao?.enabled || false}
+                                    value={extras.racao?.value || ''}
+                                    onToggle={() => handleExtrasToggle('racao' as any)}
+                                    onValueChange={(v) => handleExtrasValue('racao' as any, v)}
+                                />
+                                {/* Veterinário */}
+                                <ExtraCard
+                                    label="Veterinário"
+                                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>}
+                                    enabled={extras.veterinario?.enabled || false}
+                                    value={extras.veterinario?.value || ''}
+                                    onToggle={() => handleExtrasToggle('veterinario' as any)}
+                                    onValueChange={(v) => handleExtrasValue('veterinario' as any, v)}
+                                />
+
+                                {/* Resumo */}
+                                <div className="mt-2 p-3 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 flex items-center justify-between">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-purple-700">Total dos Extras</span>
+                                    <span className="text-base font-black text-purple-700">
+                                        R$ {extrasTotal.toFixed(2).replace('.', ',')}
+                                    </span>
+                                </div>
+                            </section>
+                        )}
+
+                        {/* Footer do Verso: Salvar / Cancelar (com cor dinâmica por modo) */}
+                        <footer className="mt-3 grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={handleFlipBack}
+                                disabled={inlineSaving}
+                                className="py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors active:scale-95 disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={inlineMode === 'edit' ? handleInlineSave : handleExtrasSave}
+                                disabled={inlineSaving}
+                                className={`py-2.5 rounded-xl text-white text-xs font-bold transition-all active:scale-95 shadow-md disabled:opacity-60 flex items-center justify-center gap-1.5 ${
+                                    inlineMode === 'edit'
+                                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-indigo-500/30'
+                                        : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-purple-500/30'
+                                }`}
+                            >
+                                {inlineSaving ? (
+                                    <>
+                                        <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                                        Salvando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                        Salvar
+                                    </>
+                                )}
+                            </button>
+                        </footer>
+                    </div>
+                    {/* END BACK FACE */}
+                </div>
+                {/* END Inner flip wrapper */}
             </div>
+            {/* END Outer perspective wrapper */}
         {/* Modal de Confirmação da Pausa */}
         {showPauseConfirm && createPortal(
             <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-gray-950/60 backdrop-blur-sm animate-fadeIn" onClick={(e) => e.stopPropagation()}>
