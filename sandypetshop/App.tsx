@@ -14188,7 +14188,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                             <button 
                                 type="button" 
                                 onClick={() => { setView('store'); }} 
-                                className="group relative col-span-1 md:col-span-2 overflow-hidden rounded-2xl md:rounded-[2rem] bg-gradient-to-br from-pink-50/90 via-white/80 to-rose-50/90 backdrop-blur-md p-5 md:p-8 text-center transition-all duration-500 hover:shadow-[0_20px_60px_-15px_rgba(236,72,153,0.35)] border-2 border-pink-200/80 flex flex-col items-center justify-center min-h-[140px] md:min-h-[170px] hover:-translate-y-2 active:scale-[0.97]"
+                                className="group relative col-span-1 md:col-span-2 overflow-hidden rounded-2xl md:rounded-[2rem] bg-white/70 backdrop-blur-md p-5 md:p-8 text-center transition-all duration-500 hover:shadow-[0_20px_60px_-15px_rgba(236,72,153,0.3)] border border-pink-100/60 flex flex-col items-center justify-center min-h-[140px] md:min-h-[170px] hover:-translate-y-2 active:scale-[0.97]"
                             >
                                 <div className="absolute top-0 right-0 w-32 md:w-48 h-32 md:h-48 bg-gradient-to-bl from-pink-300/40 via-rose-200/20 to-transparent rounded-full blur-2xl -translate-y-1/3 translate-x-1/4"></div>
                                 <div className="relative z-10 mb-2 md:mb-3">

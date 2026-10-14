@@ -36,6 +36,83 @@ export const SandysStore: React.FC<SandysStoreProps> = ({ onBack, initialTab = '
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [addedItemAnim, setAddedItemAnim] = useState<string | null>(null);
   const [hasAddedItemThisSession, setHasAddedItemThisSession] = useState<boolean>(false);
+  const [modalProduct, setModalProduct] = useState<ProductItem | null>(null);
+  const [modalQty, setModalQty] = useState<number>(1);
+  const [modalAdded, setModalAdded] = useState<boolean>(false);
+  const [modalOpen, setModalOpen] = useState<boolean>(false);
+
+  // Drag para fechar o bottom sheet
+  const dragStartY = React.useRef<number | null>(null);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [dragOffset, setDragOffset] = useState<number>(0);
+
+  // Fechar com animação de saída
+  const closeProductModalAnimated = () => {
+    setModalOpen(false);
+    setDragOffset(0);
+    setIsDragging(false);
+    // Após a animação, desmonta o modal
+    setTimeout(() => {
+      setModalProduct(null);
+      setModalQty(1);
+    }, 320);
+  };
+
+  const openProductModal = (product: ProductItem) => {
+    setModalProduct(product);
+    setModalQty(1);
+    setModalAdded(false);
+    setDragOffset(0);
+    setIsDragging(false);
+    // Dispara a animação de entrada no próximo tick
+    requestAnimationFrame(() => requestAnimationFrame(() => setModalOpen(true)));
+  };
+  const closeProductModal = () => {
+    closeProductModalAnimated();
+  };
+
+  const handleDragStart = (clientY: number) => {
+    dragStartY.current = clientY;
+    setIsDragging(true);
+  };
+  const handleDragMove = (clientY: number) => {
+    if (dragStartY.current === null) return;
+    const delta = clientY - dragStartY.current;
+    if (delta > 0) {
+      setDragOffset(delta);
+    }
+  };
+  const handleDragEnd = () => {
+    if (dragStartY.current === null) return;
+    if (dragOffset > 120) {
+      closeProductModalAnimated();
+    } else {
+      setDragOffset(0);
+    }
+    dragStartY.current = null;
+    setIsDragging(false);
+  };
+
+  // Translação do painel:
+  //   - ainda não abriu (entrada) -> 100% (abaixo da tela)
+  //   - aberto, sem drag -> 0
+  //   - aberto + arrastando -> dragOffset px
+  //   - fechando -> 100% (abaixo da tela, animado)
+  const panelTranslateY: string =
+    !modalOpen
+      ? '100%'
+      : isDragging
+        ? `${dragOffset}px`
+        : '0px';
+  const panelTransition = isDragging
+    ? 'none'
+    : 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)';
+
+  // Opacidade do backdrop: 0.4 quando aberto, 0 quando fechando
+  const backdropOpacity = modalOpen ? 0.4 : 0;
+  const backdropTransition = isDragging
+    ? 'none'
+    : 'opacity 0.32s cubic-bezier(0.32, 0.72, 0, 1)';
 
   // Carregar produtos do Supabase (store_products)
   useEffect(() => {
@@ -356,11 +433,17 @@ export const SandysStore: React.FC<SandysStoreProps> = ({ onBack, initialTab = '
                         key={product.id}
                         className="flex flex-col justify-between bg-white rounded-3xl p-3 shadow-[0_4px_16px_-2px_rgba(80,7,36,0.06)] border border-[#e1bec4]/30 hover:border-[#b50a53]/40 transition-all hover:shadow-md group"
                       >
-                        <div className="relative w-full aspect-square rounded-2xl bg-[#FFF0F5] overflow-hidden mb-2.5">
-                          <img 
-                            src={product.image} 
+                        <div
+                          className="relative w-full aspect-square rounded-2xl bg-[#FFF0F5] overflow-hidden mb-2.5 cursor-pointer"
+                          onClick={() => openProductModal(product)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openProductModal(product); } }}
+                        >
+                          <img
+                            src={product.image}
                             alt={product.alt}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             loading="lazy"
                           />
                         </div>
@@ -690,6 +773,156 @@ export const SandysStore: React.FC<SandysStoreProps> = ({ onBack, initialTab = '
           </button>
         </div>
       </nav>
+
+      {/* ═══ MODAL BOTTOM SHEET DE DETALHES DO PRODUTO ═══ */}
+      {modalProduct && (
+        <>
+          {/* Backdrop separado (irmão do painel) — opacity não afeta o painel */}
+          <div
+            className="fixed inset-0 z-[60] bg-black"
+            style={{ opacity: backdropOpacity, transition: backdropTransition }}
+            onClick={closeProductModal}
+          />
+          {/* Painel branco opaco */}
+          <div
+            className="fixed inset-x-0 bottom-0 z-[61] max-w-2xl mx-auto bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(80,7,36,0.18)] border-t border-[#ffd9e0] flex flex-col max-h-[90vh] overflow-hidden will-change-transform"
+            style={{
+              transform: `translateY(${panelTranslateY})`,
+              transition: panelTransition
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Puxador / Drag Handle */}
+            <div
+              className="w-full pt-3 pb-2 flex justify-center items-center cursor-grab active:cursor-grabbing touch-none select-none"
+              onPointerDown={(e) => { (e.target as HTMLElement).setPointerCapture(e.pointerId); handleDragStart(e.clientY); }}
+              onPointerMove={(e) => handleDragMove(e.clientY)}
+              onPointerUp={handleDragEnd}
+              onPointerCancel={handleDragEnd}
+            >
+              <div className="w-12 h-1.5 rounded-full bg-[#e1bec4]"></div>
+            </div>
+
+            {/* Conteúdo scrollável */}
+            <div className="overflow-y-auto px-5 pb-6 pt-1 flex flex-col gap-4 no-scrollbar">
+              {/* Imagem Hero */}
+              <div className="relative w-full aspect-square rounded-2xl bg-[#FFF0F5] overflow-hidden border border-[#ffd9e0]/60 shadow-inner">
+                <img
+                  src={modalProduct.image}
+                  alt={modalProduct.alt}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                {modalProduct.badge && (
+                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-[#b50a53] text-[11px] font-bold uppercase tracking-wider shadow-sm border border-[#ffd9e0] flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">favorite</span>
+                    <span>{modalProduct.badge}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Categoria + Avaliação */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#b50a53]">
+                    {modalProduct.category}
+                  </span>
+                </div>
+                <h2 className="text-xl font-extrabold text-[#3f0019] leading-tight">
+                  {modalProduct.name}
+                </h2>
+                <div className="flex items-baseline gap-2 mt-0.5">
+                  <span className="text-xs text-[#b50a53] font-bold">R$</span>
+                  <span className="text-3xl text-[#b50a53] font-black tracking-tight leading-none">
+                    {modalProduct.price.toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Descrição carinhosa */}
+              {modalProduct.description && (
+                <div className="p-3.5 rounded-2xl bg-[#fff0f2] border border-[#ffd9e0] flex flex-col gap-1.5">
+                  <div className="flex items-center gap-1.5 text-[#b50a53]">
+                    <span className="material-symbols-outlined text-[18px]">pets</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Descrição carinhosa do mimo</span>
+                  </div>
+                  <p className="text-xs text-[#3f0019] leading-relaxed">
+                    {modalProduct.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Destaques / Specs */}
+              {modalProduct.weightOrUnit && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-[10px] font-bold text-[#8A5868] uppercase">Destaques do produto</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="px-3 py-1 rounded-full bg-[#FCE4EC]/60 text-[#b50a53] text-[11px] font-bold">
+                      {modalProduct.weightOrUnit}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Quantidade + Adicionar */}
+              <div className="flex items-center gap-3 pt-2">
+                <div className="flex items-center justify-between h-12 w-28 px-1.5 rounded-full bg-[#FFF0F5] border border-[#ffd9e0]">
+                  <button
+                    type="button"
+                    onClick={() => setModalQty(q => Math.max(1, q - 1))}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-[#b50a53] font-bold hover:bg-[#FCE4EC] active:scale-90 transition-transform"
+                    aria-label="Diminuir quantidade"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">remove</span>
+                  </button>
+                  <span className="text-sm font-bold text-[#3f0019]">{modalQty}</span>
+                  <button
+                    type="button"
+                    onClick={() => setModalQty(q => q + 1)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-[#b50a53] font-bold hover:bg-[#FCE4EC] active:scale-90 transition-transform"
+                    aria-label="Aumentar quantidade"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">add</span>
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    for (let i = 0; i < modalQty; i++) {
+                      addToCart(modalProduct);
+                    }
+                    setModalAdded(true);
+                    setTimeout(() => {
+                      closeProductModal();
+                    }, 900);
+                  }}
+                  className={`flex-1 h-12 rounded-full font-bold text-sm flex items-center justify-center gap-2 active:scale-95 shadow-lg transition-all ${
+                    modalAdded
+                      ? 'bg-[#1EBE5D] text-white shadow-[#1EBE5D]/30'
+                      : 'bg-[#b50a53] text-white shadow-[#b50a53]/30 hover:brightness-105'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    {modalAdded ? 'check_circle' : 'add_shopping_cart'}
+                  </span>
+                  <span>{modalAdded ? 'Adicionado!' : 'Adicionar ao Carrinho'}</span>
+                </button>
+              </div>
+
+              {/* Botão WhatsApp secundário */}
+              <a
+                href={`https://wa.me/5511994580316?text=${encodeURIComponent(`Olá! Gostaria de tirar uma dúvida sobre: ${modalProduct.name}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full h-11 rounded-full bg-[#FCE4EC]/80 text-[#b50a53] font-bold text-xs flex items-center justify-center gap-2 hover:bg-[#FCE4EC] active:scale-95 transition-all"
+              >
+                <span className="material-symbols-outlined text-[18px] text-[#1EBE5D]">chat</span>
+                <span>Dúvidas no WhatsApp 💬</span>
+              </a>
+            </div>
+          </div>
+        </>
+      )}
 
     </div>
   );
