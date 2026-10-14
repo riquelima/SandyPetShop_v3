@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import IntroSplash from './src/components/IntroSplash';
+import SandysStore from './src/components/SandysStore';
 
 // Declaracao global do lottie-web (bodymovin) carregado via CDN
 declare global {
@@ -92,6 +93,7 @@ import { AdoptionAdminView } from './src/components/AdoptionAdminView';
 import TestimonialsCarousel from './src/components/TestimonialsCarousel';
 import FinancialDashboardView from './src/components/FinancialDashboardView';
 import FinancialDashboardProtected from './src/components/FinancialDashboardProtected';
+import { StoreAdminView } from './src/components/StoreAdminView';
 import { PWAInstallBanner } from './src/components/PWAInstallBanner';
 import { ClientLoginView } from './src/components/ClientLoginView';
 import { ClientAreaView } from './src/components/ClientAreaView';
@@ -13097,7 +13099,7 @@ const POPULAR_BREEDS = [
 
 // --- MAIN APP COMPONENT ---
 interface SchedulerProps {
-  setView: (view: 'scheduler' | 'login' | 'daycareRegistration' | 'hotelRegistration') => void;
+  setView: (view: 'scheduler' | 'login' | 'daycareRegistration' | 'hotelRegistration' | 'store') => void;
   prefillService?: string | null;
   prefillDate?: string | null;
   prefillTime?: string | null;
@@ -13911,16 +13913,31 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
     return (
         <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 bg-[#fff0f5] font-sans selection:bg-pink-200">
             {!showPublicAlbum && !isWeeklyScheduleOpen && !isAdoptionOpen && serviceStepView === 'main' && (
-                <button
-                    onClick={() => setView('clientLogin')}
-                    aria-label="Área do cliente"
-                    title="Área do cliente"
-                    className="absolute top-3 right-3 sm:top-5 sm:right-5 p-2 rounded-full hover:bg-pink-50/40 transition-all group z-50"
-                >
-                    <svg className="w-5 h-5 text-pink-400 group-hover:text-pink-600 group-hover:scale-110 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                    </svg>
-                </button>
+                <>
+                    {/* Botão Carrinho / Loja no canto superior esquerdo */}
+                    <button
+                        onClick={() => setView('store')}
+                        aria-label="Sandy's Store e Carrinho"
+                        title="Sandy's Store / Carrinho"
+                        className="absolute top-3 left-3 sm:top-5 sm:left-5 p-2 rounded-full hover:bg-pink-50/40 transition-all group z-50 flex items-center justify-center"
+                    >
+                        <svg className="w-5 h-5 text-pink-400 group-hover:text-pink-600 group-hover:scale-110 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                        </svg>
+                    </button>
+
+                    {/* Botão Área do Cliente no canto superior direito */}
+                    <button
+                        onClick={() => setView('clientLogin')}
+                        aria-label="Área do cliente"
+                        title="Área do cliente"
+                        className="absolute top-3 right-3 sm:top-5 sm:right-5 p-2 rounded-full hover:bg-pink-50/40 transition-all group z-50"
+                    >
+                        <svg className="w-5 h-5 text-pink-400 group-hover:text-pink-600 group-hover:scale-110 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                        </svg>
+                    </button>
+                </>
             )}
             <div className="w-full max-w-7xl relative z-10 flex flex-col items-center">
                 {/* ═══ HERO SECTION — Petal Luxe ═══ */}
@@ -13936,22 +13953,26 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                     <p className="text-pink-700/70 text-sm sm:text-base md:text-lg font-medium tracking-wide max-w-md" style={{ fontFamily: '"Lobster Two", cursive' }}>Onde cada patinha é tratada com amor</p>
 
                     {/* Chips de ação rápida — glassmorphism */}
-                    <div className="grid grid-cols-4 gap-1.5 sm:gap-3 mt-8 w-full max-w-2xl px-1 sm:px-4">
+                    <div className="grid grid-cols-5 gap-1 sm:gap-3 mt-8 w-full max-w-3xl px-1 sm:px-4">
                         <button onClick={openPriceModal} className="group flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 w-full py-2.5 sm:py-3 bg-white/60 backdrop-blur-xl text-pink-800 font-bold rounded-2xl sm:rounded-full shadow-lg shadow-pink-200/30 border border-pink-100/80 hover:bg-white hover:shadow-xl hover:shadow-pink-300/40 hover:-translate-y-0.5 transition-all duration-300">
                             <span className="text-base sm:text-xl">📋</span>
-                            <span className="uppercase tracking-wider text-[9px] xs:text-[10px] sm:text-xs font-black">Preços</span>
+                            <span className="uppercase tracking-wider text-[8px] xs:text-[9px] sm:text-xs font-black">Preços</span>
                         </button>
                         <button onClick={() => setShowPublicAlbum(true)} className="group flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 w-full py-2.5 sm:py-3 bg-white/60 backdrop-blur-xl text-pink-800 font-bold rounded-2xl sm:rounded-full shadow-lg shadow-pink-200/30 border border-pink-100/80 hover:bg-white hover:shadow-xl hover:shadow-pink-300/40 hover:-translate-y-0.5 transition-all duration-300">
                             <span className="text-base sm:text-xl">📸</span>
-                            <span className="uppercase tracking-wider text-[9px] xs:text-[10px] sm:text-xs font-black">Álbum</span>
+                            <span className="uppercase tracking-wider text-[8px] xs:text-[9px] sm:text-xs font-black">Álbum</span>
                         </button>
                         <button onClick={openWeeklySchedule} className="group flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 w-full py-2.5 sm:py-3 bg-white/60 backdrop-blur-xl text-pink-800 font-bold rounded-2xl sm:rounded-full shadow-lg shadow-pink-200/30 border border-pink-100/80 hover:bg-white hover:shadow-xl hover:shadow-pink-300/40 hover:-translate-y-0.5 transition-all duration-300">
                             <span className="text-base sm:text-xl">📅</span>
-                            <span className="uppercase tracking-wider text-[9px] xs:text-[10px] sm:text-xs font-black">Agenda</span>
+                            <span className="uppercase tracking-wider text-[8px] xs:text-[9px] sm:text-xs font-black">Agenda</span>
                         </button>
                         <button onClick={openAdoption} className="group flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 w-full py-2.5 sm:py-3 bg-white/60 backdrop-blur-xl text-pink-800 font-bold rounded-2xl sm:rounded-full shadow-lg shadow-pink-200/30 border border-pink-100/80 hover:bg-white hover:shadow-xl hover:shadow-pink-300/40 hover:-translate-y-0.5 transition-all duration-300">
                             <span className="text-base sm:text-xl">🏠</span>
-                            <span className="uppercase tracking-wider text-[9px] xs:text-[10px] sm:text-xs font-black">Adote</span>
+                            <span className="uppercase tracking-wider text-[8px] xs:text-[9px] sm:text-xs font-black">Adote</span>
+                        </button>
+                        <button onClick={() => setView('store')} className="group flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 w-full py-2.5 sm:py-3 bg-gradient-to-r from-pink-500/15 via-rose-500/20 to-pink-500/15 backdrop-blur-xl text-pink-900 font-bold rounded-2xl sm:rounded-full shadow-lg shadow-pink-200/40 border border-pink-300 hover:bg-white hover:shadow-xl hover:shadow-pink-400/40 hover:-translate-y-0.5 transition-all duration-300">
+                            <SafeImage src="https://cdn-icons-png.flaticon.com/512/1557/1557110.png" alt="Loja" className="w-5 h-5 sm:w-6 sm:h-6 object-contain group-hover:scale-110 transition-transform duration-300" loading="eager" />
+                            <span className="uppercase tracking-wider text-[8px] xs:text-[9px] sm:text-xs font-black text-pink-700">Loja</span>
                         </button>
                     </div>
                 </header>
@@ -14148,18 +14169,37 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                             <button 
                                 type="button" 
                                 onClick={() => { setView('visitSelector'); }} 
-                                className="group relative col-span-2 md:col-span-4 overflow-hidden rounded-2xl md:rounded-[2rem] bg-white/70 backdrop-blur-md p-5 md:p-8 text-center md:text-left transition-all duration-500 hover:shadow-[0_20px_60px_-15px_rgba(236,72,153,0.3)] border border-pink-100/60 flex flex-row items-center justify-between gap-3 md:gap-4 min-h-[100px] md:min-h-[170px] hover:-translate-y-2 active:scale-[0.97]"
+                                className="group relative col-span-1 md:col-span-2 overflow-hidden rounded-2xl md:rounded-[2rem] bg-white/70 backdrop-blur-md p-5 md:p-8 text-center transition-all duration-500 hover:shadow-[0_20px_60px_-15px_rgba(236,72,153,0.3)] border border-pink-100/60 flex flex-col items-center justify-center min-h-[140px] md:min-h-[170px] hover:-translate-y-2 active:scale-[0.97]"
                             >
                                 <div className="absolute bottom-0 right-0 w-32 md:w-48 h-32 md:h-48 bg-gradient-to-br from-rose-50/80 to-transparent rounded-full blur-2xl translate-y-1/3 translate-x-1/4"></div>
-                                <div className="relative z-10 flex flex-col items-start text-left">
-                                    <h3 className="text-lg md:text-3xl font-extrabold text-pink-950 mb-0.5 md:mb-1.5 tracking-tight leading-tight">Visita</h3>
-                                    <p className="text-pink-700/50 font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] text-[8px] md:text-xs">Agendar Tour</p>
+                                <div className="relative z-10 mb-2 md:mb-3">
+                                    <SafeImage src="https://cdn-icons-png.flaticon.com/512/2196/2196747.png" alt="Visita" className="w-12 h-12 md:w-16 md:h-16 object-contain transform group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500 drop-shadow-md" loading="lazy" />
                                 </div>
-                                <div className="relative z-10 bg-pink-50/80 backdrop-blur-sm p-3 sm:p-4 rounded-2xl group-hover:bg-pink-100/80 transition-all duration-300 group-hover:scale-110 group-hover:-rotate-3 flex">
-                                    <SafeImage src="https://cdn-icons-png.flaticon.com/512/2196/2196747.png" alt="Visita" className="w-10 h-10 sm:w-12 sm:h-12" loading="lazy" />
+                                <div className="relative z-10 flex flex-col items-center text-center">
+                                    <h3 className="text-lg md:text-2xl font-extrabold text-pink-950 mb-0.5 md:mb-1.5 tracking-tight leading-tight">Visita</h3>
+                                    <p className="text-pink-700/50 font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] text-[8px] md:text-xs">Agendar Tour</p>
                                 </div>
                                 <div className="hidden md:block absolute bottom-3 right-5 opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all duration-400">
                                     <span className="text-pink-400 text-sm font-bold tracking-wide">Agendar →</span>
+                                </div>
+                            </button>
+
+                            {/* LOJA / SANDY'S STORE */}
+                            <button 
+                                type="button" 
+                                onClick={() => { setView('store'); }} 
+                                className="group relative col-span-1 md:col-span-2 overflow-hidden rounded-2xl md:rounded-[2rem] bg-gradient-to-br from-pink-50/90 via-white/80 to-rose-50/90 backdrop-blur-md p-5 md:p-8 text-center transition-all duration-500 hover:shadow-[0_20px_60px_-15px_rgba(236,72,153,0.35)] border-2 border-pink-200/80 flex flex-col items-center justify-center min-h-[140px] md:min-h-[170px] hover:-translate-y-2 active:scale-[0.97]"
+                            >
+                                <div className="absolute top-0 right-0 w-32 md:w-48 h-32 md:h-48 bg-gradient-to-bl from-pink-300/40 via-rose-200/20 to-transparent rounded-full blur-2xl -translate-y-1/3 translate-x-1/4"></div>
+                                <div className="relative z-10 mb-2 md:mb-3">
+                                    <SafeImage src="https://cdn-icons-png.flaticon.com/512/1557/1557110.png" alt="Loja" className="w-12 h-12 md:w-16 md:h-16 object-contain transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 drop-shadow-md" loading="lazy" />
+                                </div>
+                                <div className="relative z-10 flex flex-col items-center text-center">
+                                    <h3 className="text-lg md:text-2xl font-extrabold text-pink-950 mb-0.5 md:mb-1.5 tracking-tight leading-tight">Loja</h3>
+                                    <p className="text-pink-700/50 font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] text-[8px] md:text-xs">SAÚDE, MIMOS E MAIS</p>
+                                </div>
+                                <div className="hidden md:block absolute bottom-3 right-5 opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all duration-400">
+                                    <span className="text-pink-500 text-sm font-bold tracking-wide">Comprar →</span>
                                 </div>
                             </button>
 
@@ -20240,6 +20280,7 @@ const AdminDashboard: React.FC<{
             case 'closeDay': return <CloseDayView onBack={() => setActiveView(previousView)} />;
             case 'insights': return <InsightsDashboard key={dataKey} onBack={() => setActiveView('resumo')} />;
             case 'fiscalNotes': return <FiscalNotesView />;
+            case 'storeAdmin': return <StoreAdminView onBack={() => setActiveView('resumo')} />;
             case 'financial': return <FinancialDashboardProtected onBack={() => setActiveView('resumo')} />;
 
             case 'feedbacks': return <FeedbacksView key={dataKey} adminTheme={adminTheme} />;
@@ -20384,6 +20425,13 @@ const AdminDashboard: React.FC<{
                                 <h3 className="text-xl font-bold text-pink-600" style={{ fontFamily: 'Lobster Two, cursive' }}>Ajustes</h3>
                             </div>
                             <button
+                                onClick={() => { setActiveView('storeAdmin'); closeMobileMenu(); }}
+                                className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-base font-medium transition-colors ${activeView === 'storeAdmin' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                            >
+                                <SafeImage src="https://cdn-icons-png.flaticon.com/512/1557/1557110.png" alt="Loja" className="w-6 h-6 object-contain" />
+                                Loja
+                            </button>
+                            <button
                                 onClick={() => { setActiveView('financial'); closeMobileMenu(); }}
                                 className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-base font-medium transition-colors ${activeView === 'financial' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-50'}`}
                             >
@@ -20464,6 +20512,13 @@ const AdminDashboard: React.FC<{
                             <div className="px-4 pb-2">
                                 <h3 className="text-xl font-bold text-pink-600" style={{ fontFamily: 'Lobster Two, cursive' }}>Ajustes</h3>
                             </div>
+                            <button
+                                onClick={() => setActiveView('storeAdmin')}
+                                className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-base font-medium transition-colors ${activeView === 'storeAdmin' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                            >
+                                <SafeImage src="https://cdn-icons-png.flaticon.com/512/1557/1557110.png" alt="Loja" className="w-6 h-6 object-contain" />
+                                Loja
+                            </button>
                             <button
                                 onClick={() => setActiveView('financial')}
                                 className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-base font-medium transition-colors ${activeView === 'financial' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-50'}`}
@@ -21121,12 +21176,55 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
             handleCloseObservationModal();
         }
     };
-    const [view, setView] = useState<'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration' | 'visitSelector' | 'visitAppointment' | 'splash' | 'clientLogin' | 'clientArea' | 'clientSplash'>('scheduler');
+    const [view, setView] = useState<'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration' | 'visitSelector' | 'visitAppointment' | 'splash' | 'clientLogin' | 'clientArea' | 'clientSplash' | 'store'>(() => {
+        if (typeof window !== 'undefined') {
+            const p = window.location.pathname.toLowerCase().replace(/\/+$/, '');
+            if (p === '/loja' || p === '/store' || p === '/produtos' || p === '/carrinho') {
+                return 'store';
+            }
+        }
+        return 'scheduler';
+    });
+    const [storeInitialTab, setStoreInitialTab] = useState<'produtos' | 'carrinho'>(() => {
+        if (typeof window !== 'undefined') {
+            const p = window.location.pathname.toLowerCase().replace(/\/+$/, '');
+            if (p === '/carrinho') return 'carrinho';
+        }
+        return 'produtos';
+    });
     const [visitServiceType, setVisitServiceType] = useState<'Creche Pet' | 'Hotel Pet' | null>(null);
 
+    // Efeito para sincronizar as rotas /loja e /carrinho com o histórico do navegador
+    useEffect(() => {
+        const handleStorePop = () => {
+            const p = window.location.pathname.toLowerCase().replace(/\/+$/, '');
+            if (p === '/loja' || p === '/store' || p === '/produtos') {
+                setStoreInitialTab('produtos');
+                setView('store');
+            } else if (p === '/carrinho') {
+                setStoreInitialTab('carrinho');
+                setView('store');
+            } else if (view === 'store') {
+                setView('scheduler');
+            }
+        };
+        window.addEventListener('popstate', handleStorePop);
+        return () => window.removeEventListener('popstate', handleStorePop);
+    }, [view]);
+
     // Debug: Log mudanças de view
-    const setViewWithLog = (newView: 'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration' | 'visitSelector' | 'visitAppointment' | 'splash' | 'clientLogin' | 'clientArea' | 'clientSplash') => {
+    const setViewWithLog = (newView: 'scheduler' | 'login' | 'admin' | 'daycareRegistration' | 'hotelRegistration' | 'visitSelector' | 'visitAppointment' | 'splash' | 'clientLogin' | 'clientArea' | 'clientSplash' | 'store', initialTab?: 'produtos' | 'carrinho') => {
         console.log('Mudando view de', view, 'para', newView);
+        if (initialTab) setStoreInitialTab(initialTab);
+        if (newView === 'store') {
+            if (typeof window !== 'undefined' && window.location.pathname !== '/loja' && window.location.pathname !== '/carrinho') {
+                window.history.pushState({}, '', initialTab === 'carrinho' ? '/carrinho' : '/loja');
+            }
+        } else if (view === 'store') {
+            if (typeof window !== 'undefined' && (window.location.pathname === '/loja' || window.location.pathname === '/carrinho')) {
+                window.history.pushState({}, '', '/');
+            }
+        }
         setView(newView);
     };
 
@@ -21777,6 +21875,15 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
         return <ClientAreaView phone={clientPhone} clientData={clientData} onLogout={() => { setClientPhone(''); setClientData(null); setViewWithLog('scheduler'); }} />;
     }
 
+    if (view === 'store') {
+        return (
+            <SandysStore 
+                initialTab={storeInitialTab} 
+                onBack={() => setViewWithLog('scheduler')} 
+            />
+        );
+    }
+
     if (!isScheduleOpen) {
         return <ScheduleClosedPage setView={setViewWithLog} />;
     }
@@ -22318,9 +22425,10 @@ const PublicDiaryPage: React.FC<{ enrollment: DaycareRegistration; date: string;
 };
 
 const AppShell: React.FC<AppProps> = (props) => {
-    const path = typeof window !== 'undefined' ? window.location.pathname : '';
+    const path = typeof window !== 'undefined' ? window.location.pathname.toLowerCase().replace(/\/+$/, '') : '';
     const publicDiaryMatch = path.match(/^\/diario\/([^/]+)$/);
-    const shouldSkipIntro = !!publicDiaryMatch || (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('fidelidade') === 'true');
+    const isStorePath = path === '/loja' || path === '/carrinho' || path === '/store' || path === '/produtos';
+    const shouldSkipIntro = !!publicDiaryMatch || isStorePath || (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('fidelidade') === 'true');
     const [showIntroSplash, setShowIntroSplash] = React.useState<boolean>(() => !shouldSkipIntro);
 
     return (
