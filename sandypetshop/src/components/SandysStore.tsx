@@ -617,7 +617,7 @@ export const SandysStore: React.FC<SandysStoreProps> = ({ onBack, initialTab = '
 
                   <span className="text-xs text-[#8A5868] text-center flex items-center gap-1 font-medium">
                     <span className="material-symbols-outlined text-[15px] text-[#25D366]">bolt</span>
-                    Atendimento amoroso direto pelo WhatsApp da Sandy
+                    Atendimento direto pelo WhatsApp da Sandy
                   </span>
                 </section>
               </>
