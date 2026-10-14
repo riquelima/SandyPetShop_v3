@@ -71,24 +71,49 @@ export const SandysStore: React.FC<SandysStoreProps> = ({ onBack, initialTab = '
     closeProductModalAnimated();
   };
 
-  const handleDragStart = (clientY: number) => {
-    dragStartY.current = clientY;
-    setIsDragging(true);
+  // Referência para saber se o gesture atual deve ser tratado como drag
+  const dragCandidate = React.useRef<{ startY: number; startX: number; pointerId: number; active: boolean } | null>(null);
+
+  const handlePanelPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Se clicou em algo interativo (botão, link, input), não captura para drag
+    const target = e.target as HTMLElement;
+    if (target.closest('button, a, input, textarea, select, [role="button"]')) return;
+    dragCandidate.current = { startY: e.clientY, startX: e.clientX, pointerId: e.pointerId, active: false };
   };
-  const handleDragMove = (clientY: number) => {
-    if (dragStartY.current === null) return;
-    const delta = clientY - dragStartY.current;
-    if (delta > 0) {
-      setDragOffset(delta);
+  const handlePanelPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragCandidate.current || dragCandidate.current.pointerId !== e.pointerId) return;
+    const deltaY = e.clientY - dragCandidate.current.startY;
+    const deltaX = e.clientX - dragCandidate.current.startX;
+    // Só ativa o drag se moveu mais de 8px verticalmente E o movimento é predominantemente vertical
+    if (!dragCandidate.current.active && deltaY > 8 && Math.abs(deltaY) > Math.abs(deltaX)) {
+      dragCandidate.current.active = true;
+      dragStartY.current = dragCandidate.current.startY;
+      setIsDragging(true);
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    }
+    if (dragCandidate.current.active && deltaY > 0) {
+      setDragOffset(deltaY);
     }
   };
-  const handleDragEnd = () => {
-    if (dragStartY.current === null) return;
-    if (dragOffset > 120) {
-      closeProductModalAnimated();
-    } else {
+  const handlePanelPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragCandidate.current) return;
+    if (dragCandidate.current.active) {
+      // Encerrou um drag
+      if (dragOffset > 120) {
+        closeProductModalAnimated();
+      } else {
+        setDragOffset(0);
+      }
+    }
+    dragCandidate.current = null;
+    dragStartY.current = null;
+    setIsDragging(false);
+  };
+  const handlePanelPointerCancel = () => {
+    if (dragCandidate.current?.active) {
       setDragOffset(0);
     }
+    dragCandidate.current = null;
     dragStartY.current = null;
     setIsDragging(false);
   };
@@ -791,15 +816,13 @@ export const SandysStore: React.FC<SandysStoreProps> = ({ onBack, initialTab = '
               transition: panelTransition
             }}
             onClick={(e) => e.stopPropagation()}
+            onPointerDown={handlePanelPointerDown}
+            onPointerMove={handlePanelPointerMove}
+            onPointerUp={handlePanelPointerUp}
+            onPointerCancel={handlePanelPointerCancel}
           >
-            {/* Puxador / Drag Handle */}
-            <div
-              className="w-full pt-3 pb-2 flex justify-center items-center cursor-grab active:cursor-grabbing touch-none select-none"
-              onPointerDown={(e) => { (e.target as HTMLElement).setPointerCapture(e.pointerId); handleDragStart(e.clientY); }}
-              onPointerMove={(e) => handleDragMove(e.clientY)}
-              onPointerUp={handleDragEnd}
-              onPointerCancel={handleDragEnd}
-            >
+            {/* Puxador / Drag Handle (visual apenas) */}
+            <div className="w-full pt-3 pb-2 flex justify-center items-center select-none">
               <div className="w-12 h-1.5 rounded-full bg-[#e1bec4]"></div>
             </div>
 
