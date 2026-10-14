@@ -377,7 +377,8 @@ export function evaluateSlotAvailability(args: {
     // - Quinta (4) 08 às 16: sem horário duplo (capacidade 1)
     // - Sexta (5) 08 às 16: duplo (capacidade 2); às 17: um só horário (capacidade 1)
     const [y, m, d] = ymd.split('-').map(Number);
-    const dayOfWeek = new Date(y, m - 1, d).getDay(); // 0=Dom..6=Sáb
+    const utcRef = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+    const dayOfWeek = getSaoPauloTimeParts(utcRef).day;
     let mobileCapacity = 1;
     if (args.type === 'mobile') {
         const isWednesday = dayOfWeek === 3 || (args.condo && matchesCondo(args.condo, 'Vitta Parque'));
@@ -5473,7 +5474,7 @@ const AdminAddAppointmentModal: React.FC<{
                                             appointments={appointments}
                                             onTimeSelect={setSelectedTime}
                                             selectedTime={selectedTime}
-                                            workingHours={isVisitService ? VISIT_WORKING_HOURS : (serviceStepView === 'bath_groom' ? BATH_GROOMING_HOURS : (isPetMovel ? getPetMovelWorkingHours(selectedDate?.getDay(), selectedCondo) : WORKING_HOURS))}
+                                            workingHours={isVisitService ? VISIT_WORKING_HOURS : (serviceStepView === 'bath_groom' ? BATH_GROOMING_HOURS : (isPetMovel ? getPetMovelWorkingHours(selectedDate ? getSaoPauloTimeParts(selectedDate).day : null, selectedCondo) : WORKING_HOURS))}
                                             isPetMovel={isPetMovel}
                                             allowedDays={allowedDays}
                                             selectedCondo={selectedCondo}
@@ -6705,7 +6706,7 @@ const EditPetMovelAppointmentModal: React.FC<{
                         <div>
                             <label className="font-semibold text-gray-600">Hora</label>
                             <select value={timePart} onChange={e => setTimePart(Number(e.target.value))} className="w-full mt-1 px-5 py-4 border rounded-lg bg-white">
-                                {getPetMovelWorkingHours(datePart?.getDay(), formData.condominium).map(h => <option key={h} value={h}>{`${h}:00`}</option>)}
+                                {getPetMovelWorkingHours(datePart ? getSaoPauloTimeParts(datePart).day : null, formData.condominium).map(h => <option key={h} value={h}>{`${h}:00`}</option>)}
                             </select>
                         </div>
                     </div>
@@ -12785,7 +12786,8 @@ export const TimeSlotPicker: React.FC<{
     // - Quarta (3) 08 às 16: horário duplo (2 slots). 17h: um só horário (1 slot).
     // - Quinta (4) 08 às 16: sem horário duplo (1 slot para cada horário).
     // - Sexta (5) 08 às 16: duplo (2 slots). 17h: um só horário (1 slot).
-    const condoWeekday = selectedDate ? (getSaoPauloTimeParts(selectedDate).weekday ?? selectedDate.getDay()) : null;
+    const spParts = selectedDate ? getSaoPauloTimeParts(selectedDate) : null;
+    const condoWeekday = spParts ? (spParts.day ?? (spParts as any).weekday ?? selectedDate.getDay()) : null;
 
     const isHourDuplicatedForPetMovel = (hour: number) => {
         if (!isPetMovel) return false;
@@ -14654,7 +14656,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                                             appointments={appointments}
                                             onTimeSelect={setSelectedTime}
                                             selectedTime={selectedTime}
-                                            workingHours={isVisitService ? VISIT_WORKING_HOURS : (serviceStepView === 'bath_groom' || (selectedService && [ServiceType.BATH, ServiceType.GROOMING_ONLY, ServiceType.BATH_AND_GROOMING].includes(selectedService)) ? BATH_GROOMING_HOURS : (selectedCondo ? getPetMovelWorkingHours(selectedDate?.getDay(), selectedCondo) : WORKING_HOURS))}
+                                            workingHours={isVisitService ? VISIT_WORKING_HOURS : (serviceStepView === 'bath_groom' || (selectedService && [ServiceType.BATH, ServiceType.GROOMING_ONLY, ServiceType.BATH_AND_GROOMING].includes(selectedService)) ? BATH_GROOMING_HOURS : (selectedCondo ? getPetMovelWorkingHours(selectedDate ? getSaoPauloTimeParts(selectedDate).day : null, selectedCondo) : WORKING_HOURS))}
                                             isPetMovel={!!selectedCondo}
                                             allowedDays={(() => {
                                                 if ([ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_BATH_AND_GROOMING, ServiceType.PET_MOBILE_GROOMING_ONLY].includes(selectedService)) {
