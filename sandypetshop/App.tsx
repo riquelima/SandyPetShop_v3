@@ -190,6 +190,69 @@ export function getSlotCapacity(appt: any): number {
     return getSlotBlockRange(appt);
 }
 
+// --- TIMEZONE-AWARE HELPER FUNCTIONS (UTC-3 / SÃO PAULO) ---
+export const SAO_PAULO_OFFSET_MS = 3 * 60 * 60 * 1000;
+
+export function toSaoPauloUTC(year: number, month: number, day: number, hour = 0, minute = 0, second = 0): Date {
+    return new Date(Date.UTC(year, month, day, hour, minute, second) + SAO_PAULO_OFFSET_MS);
+}
+
+export function parseISODateAsSaoPaulo(isoDate: string): Date {
+    if (!isoDate) return new Date();
+    const clean = isoDate.split('T')[0].trim();
+    const [y, m, d] = clean.split('-').map(Number);
+    if (isNaN(y) || isNaN(m) || isNaN(d)) return new Date();
+    return toSaoPauloUTC(y, m - 1, d, 12, 0, 0);
+}
+
+export function getSaoPauloTimeParts(date: Date | string | null | undefined) {
+    if (!date) {
+        const now = new Date();
+        const spDate = new Date(now.getTime() - SAO_PAULO_OFFSET_MS);
+        return {
+            year: spDate.getUTCFullYear(),
+            month: spDate.getUTCMonth(),
+            date: spDate.getUTCDate(),
+            hour: spDate.getUTCHours(),
+            day: spDate.getUTCDay(),
+        };
+    }
+    let d: Date;
+    if (typeof date === 'string') {
+        const trimmed = date.trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+            d = parseISODateAsSaoPaulo(trimmed);
+        } else {
+            d = new Date(trimmed);
+        }
+    } else {
+        d = date;
+    }
+    const time = isNaN(d.getTime()) ? Date.now() : d.getTime();
+    const spDate = new Date(time - SAO_PAULO_OFFSET_MS);
+    return {
+        year: spDate.getUTCFullYear(),
+        month: spDate.getUTCMonth(),
+        date: spDate.getUTCDate(),
+        hour: spDate.getUTCHours(),
+        day: spDate.getUTCDay(), // 0 = Sunday
+    };
+}
+
+export function isSameSaoPauloDay(date1: Date | string | null | undefined, date2: Date | string | null | undefined): boolean {
+    if (!date1 || !date2) return false;
+    const d1 = typeof date1 === 'string' ? new Date(date1) : date1;
+    const d2 = typeof date2 === 'string' ? new Date(date2) : date2;
+    if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return false;
+    try {
+        const s1 = d1.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+        const s2 = d2.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+        return s1 === s2;
+    } catch {
+        return false;
+    }
+}
+
 /**
  * Formato YYYY-MM-DD no fuso de São Paulo para uma data JS.
  */
@@ -1332,45 +1395,6 @@ const AlbumManagementView: React.FC = () => {
     );
 };
 
-// --- TIMEZONE-AWARE HELPER FUNCTIONS (UTC-3 / SÃO PAULO) ---
-const SAO_PAULO_OFFSET_MS = 3 * 60 * 60 * 1000;
-
-/**
- * Creates a Date object in UTC that represents the desired wall-clock time in São Paulo.
- * Example: toSaoPauloUTC(2025, 9, 21, 11) creates a Date object for 2025-10-21 14:00:00Z.
- */
-const toSaoPauloUTC = (year: number, month: number, day: number, hour = 0, minute = 0, second = 0) => {
-    return new Date(Date.UTC(year, month, day, hour, minute, second) + SAO_PAULO_OFFSET_MS);
-}
-
-// Parse YYYY-MM-DD as a São Paulo wall-clock date using midday to avoid DST/offset edge cases
-const parseISODateAsSaoPaulo = (isoDate: string): Date => {
-    const [y, m, d] = isoDate.split('-').map(Number);
-    return toSaoPauloUTC(y, (m - 1), d, 12, 0, 0);
-};
-
-/**
- * Takes a Date object or ISO date string (which is inherently UTC based) and returns the São Paulo wall-clock time parts.
- */
-const getSaoPauloTimeParts = (date: Date | string) => {
-    const d = typeof date === 'string' ? parseISODateAsSaoPaulo(date) : date;
-    const spDate = new Date(d.getTime() - SAO_PAULO_OFFSET_MS);
-    return {
-        year: spDate.getUTCFullYear(),
-        month: spDate.getUTCMonth(),
-        date: spDate.getUTCDate(),
-        hour: spDate.getUTCHours(),
-        day: spDate.getUTCDay(), // 0 = Sunday
-    };
-};
-
-
-const isSameSaoPauloDay = (date1: Date, date2: Date): boolean => {
-    const d1 = date1.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
-    const d2 = date2.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
-    return d1 === d2;
-};
-
 const isPastSaoPauloDate = (date: Date): boolean => {
     const now = new Date();
     const todaySaoPaulo = getSaoPauloTimeParts(now);
@@ -2368,10 +2392,17 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
     subtitle = "Área Administrativa", 
     loadingText = "Iniciando sistema..." 
 }) => {
+    const onCompleteRef = useRef(onComplete);
+    onCompleteRef.current = onComplete;
+
     useEffect(() => {
-        const timer = setTimeout(onComplete, 2800);
+        const timer = setTimeout(() => {
+            if (onCompleteRef.current) {
+                onCompleteRef.current();
+            }
+        }, 1200);
         return () => clearTimeout(timer);
-    }, [onComplete]);
+    }, []);
 
     return (
         <div className="fixed inset-0 z-[99999] bg-white flex flex-col items-center justify-center overflow-hidden">
@@ -5699,7 +5730,7 @@ const AdminAddAppointmentModal: React.FC<{
                                         <label className="text-sm font-medium text-gray-700 ml-1">Horário Disponível</label>
                                         <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 h-full">
                                             <TimeSlotPicker
-                                                key={`${selectedDate.toISOString()}-${selectedCondo || 'store'}`}
+                                                key={`${selectedDate && !isNaN(selectedDate.getTime()) ? selectedDate.toISOString() : 'no-date'}-${selectedCondo || 'store'}`}
                                                 isAdmin={true}
                                                 selectedDate={selectedDate}
                                                 selectedService={selectedService}
@@ -19412,6 +19443,41 @@ const ResumoView: React.FC<{
     );
 };
 
+class AdminErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
+    constructor(props: { children: React.ReactNode }) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+    static getDerivedStateFromError(error: any) {
+        return { hasError: true, error };
+    }
+    componentDidCatch(error: any, errorInfo: any) {
+        console.error("AdminDashboard error caught by boundary:", error, errorInfo);
+    }
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="min-h-screen bg-pink-50/50 flex flex-col items-center justify-center p-6 text-center">
+                    <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full border border-pink-100">
+                        <div className="w-16 h-16 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                        </div>
+                        <h2 className="text-xl font-bold text-gray-800 mb-2">Erro ao carregar o Painel</h2>
+                        <p className="text-sm text-gray-500 mb-6">Ocorreu uma falha ao exibir a tela administrativa: {this.state.error?.message || 'Erro inesperado'}</p>
+                        <button 
+                            onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
+                            className="w-full py-3 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-xl shadow-md transition-all"
+                        >
+                            Recarregar Painel
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
+
 const AdminDashboard: React.FC<{
     onLogout: () => void;
     isScheduleOpen: boolean;
@@ -22002,36 +22068,38 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
     if (isAuthenticated) {
         return (
             <>
-                <AdminDashboard
-                    onLogout={handleLogout}
-                    isScheduleOpen={isScheduleOpen}
-                    setIsScheduleOpen={setIsScheduleOpen}
-                    onAddObservation={handleOpenObservationModal}
-                    appointments={appointments}
-                    setAppointments={setAppointments}
-                    handleOpenExtraServicesModal={handleOpenExtraServicesModal}
-                    onOpenActionMenu={handleOpenActionMenu}
-                    monthlyClients={monthlyClients}
-                    onDeleteObservation={async (appointment: AdminAppointment) => {
-                        try {
-                            const [appointmentsResult, petMovelResult] = await Promise.all([
-                                supabase.from('appointments').update({ observation: null }).eq('id', appointment.id),
-                                supabase.from('pet_movel_appointments').update({ observation: null }).eq('id', appointment.id)
-                            ]);
-                            const hasError = appointmentsResult.error && petMovelResult.error;
-                            if (hasError) {
-                                console.error('Erro ao remover observação em appointments:', appointmentsResult.error);
-                                console.error('Erro ao remover observação em pet_movel_appointments:', petMovelResult.error);
-                                alert('Falha ao remover a observação.');
-                            } else {
-                                setAppointments(prev => prev.map(app => app.id === appointment.id ? { ...app, observation: undefined } : app));
+                <AdminErrorBoundary>
+                    <AdminDashboard
+                        onLogout={handleLogout}
+                        isScheduleOpen={isScheduleOpen}
+                        setIsScheduleOpen={setIsScheduleOpen}
+                        onAddObservation={handleOpenObservationModal}
+                        appointments={appointments}
+                        setAppointments={setAppointments}
+                        handleOpenExtraServicesModal={handleOpenExtraServicesModal}
+                        onOpenActionMenu={handleOpenActionMenu}
+                        monthlyClients={monthlyClients}
+                        onDeleteObservation={async (appointment: AdminAppointment) => {
+                            try {
+                                const [appointmentsResult, petMovelResult] = await Promise.all([
+                                    supabase.from('appointments').update({ observation: null }).eq('id', appointment.id),
+                                    supabase.from('pet_movel_appointments').update({ observation: null }).eq('id', appointment.id)
+                                ]);
+                                const hasError = appointmentsResult.error && petMovelResult.error;
+                                if (hasError) {
+                                    console.error('Erro ao remover observação em appointments:', appointmentsResult.error);
+                                    console.error('Erro ao remover observação em pet_movel_appointments:', petMovelResult.error);
+                                    alert('Falha ao remover a observação.');
+                                } else {
+                                    setAppointments(prev => prev.map(app => app.id === appointment.id ? { ...app, observation: undefined } : app));
+                                }
+                            } catch (err) {
+                                console.error('Erro inesperado ao remover observação:', err);
+                                alert('Erro inesperado ao remover a observação.');
                             }
-                        } catch (err) {
-                            console.error('Erro inesperado ao remover observação:', err);
-                            alert('Erro inesperado ao remover a observação.');
-                        }
-                    }}
-                />
+                        }}
+                    />
+                </AdminErrorBoundary>
 
                 {isObservationModalOpen && selectedAppointmentForObservation && (
                     <ObservationModal
@@ -22068,7 +22136,7 @@ const App: React.FC<AppProps> = ({ prefillService, prefillDate, prefillTime }) =
     }
 
     if (view === 'login') {
-        return <AdminLogin onLoginSuccess={() => { setIsAuthenticated(true); setViewWithLog('splash'); }} onBack={() => setViewWithLog('scheduler')} />;
+        return <AdminLogin onLoginSuccess={() => { setIsAuthenticated(true); setViewWithLog('admin'); }} onBack={() => setViewWithLog('scheduler')} />;
     }
 
     if (view === 'daycareRegistration') {
