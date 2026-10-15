@@ -19497,6 +19497,11 @@ const AdminDashboard: React.FC<{
     const [dataKey, setDataKey] = useState(Date.now()); // Used to force re-fetches
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [isDrawerVisible, setIsDrawerVisible] = useState(false);
+
+    // Alias para compatibilidade com código que chama handleDataChanged() (força re-fetch)
+    const handleDataChanged = useCallback(() => {
+        setDataKey(Date.now());
+    }, []);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [loyaltyPreview, setLoyaltyPreview] = useState<{ pet: string; owner: string } | null>(null);
