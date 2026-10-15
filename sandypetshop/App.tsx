@@ -375,9 +375,10 @@ export function evaluateSlotAvailability(args: {
     const occupied = occupiedFromTables + occupiedFromMonthly;
 
     // Capacidade dos slots do Pet Móvel:
-    // - Quarta (3) 08 às 16: horário duplo (capacidade 2); às 17: um só horário (capacidade 1)
-    // - Quinta (4) 08 às 16: sem horário duplo (capacidade 1)
-    // - Sexta (5) 08 às 16: duplo (capacidade 2); às 17: um só horário (capacidade 1)
+    // - Quarta (3) e Sexta (5):
+    //   - 09h às 12h e 14h às 15h: horário duplo (capacidade 2 - Rafa + Bia)
+    //   - 08h, 13h, 16h e 17h: horário simples (capacidade 1)
+    // - Quinta (4): 08h às 15h direto (inclusive 13h): sem horário duplo (capacidade 1 - apenas Rafa)
     const [y, m, d] = ymd.split('-').map(Number);
     const utcRef = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
     const dayOfWeek = getSaoPauloTimeParts(utcRef).day;
@@ -385,7 +386,7 @@ export function evaluateSlotAvailability(args: {
     if (args.type === 'mobile') {
         const isWednesday = dayOfWeek === 3 || (args.condo && matchesCondo(args.condo, 'Vitta Parque'));
         const isFriday = dayOfWeek === 5 || (args.condo && matchesCondo(args.condo, 'Paseo'));
-        if ((isWednesday || isFriday) && args.hour >= 8 && args.hour <= 16) {
+        if ((isWednesday || isFriday) && [9, 10, 11, 12, 14, 15].includes(args.hour)) {
             mobileCapacity = 2;
         } else {
             mobileCapacity = 1;
@@ -12785,9 +12786,9 @@ export const TimeSlotPicker: React.FC<{
     const isSameDaySP = (d1: Date, d2: Date) => isSameSaoPauloDay(d1, d2);
 
     // Duplicação de slots para Pet Móvel nos condomínios/dias específicos:
-    // - Quarta (3) 08 às 16: horário duplo (2 slots). 17h: um só horário (1 slot).
-    // - Quinta (4) 08 às 16: sem horário duplo (1 slot para cada horário).
-    // - Sexta (5) 08 às 16: duplo (2 slots). 17h: um só horário (1 slot).
+    // - Quarta (3) e Sexta (5): 09h às 12h e 14h às 15h são duplos (2 slots).
+    //   08h, 13h, 16h e 17h são simples (1 slot).
+    // - Quinta (4): 08h às 15h direto (inclusive 13h), sem horário duplo (1 slot para cada horário).
     const spParts = selectedDate ? getSaoPauloTimeParts(selectedDate) : null;
     const condoWeekday = spParts ? (spParts.day ?? (spParts as any).weekday ?? selectedDate.getDay()) : null;
 
@@ -12795,7 +12796,7 @@ export const TimeSlotPicker: React.FC<{
         if (!isPetMovel) return false;
         const isWednesday = condoWeekday === 3 || (selectedCondo && matchesCondo(selectedCondo, 'Vitta Parque'));
         const isFriday = condoWeekday === 5 || (selectedCondo && matchesCondo(selectedCondo, 'Paseo'));
-        if ((isWednesday || isFriday) && hour >= 8 && hour <= 16) {
+        if ((isWednesday || isFriday) && [9, 10, 11, 12, 14, 15].includes(hour)) {
             return true;
         }
         return false;
@@ -12809,11 +12810,11 @@ export const TimeSlotPicker: React.FC<{
             return workingHours;
         }
         if (isThursday) {
-            // Quinta: 08 às 16 (sem 13h)
-            return [8, 9, 10, 11, 12, 14, 15, 16];
+            // Quinta: 08 às 15 (inclusive 13h)
+            return [8, 9, 10, 11, 12, 13, 14, 15];
         }
-        // Quarta, Sexta ou Pet Móvel geral: 08 às 17 (sem 13h)
-        return [8, 9, 10, 11, 12, 14, 15, 16, 17];
+        // Quarta, Sexta ou Pet Móvel geral: 08 às 17 (inclusive 13h)
+        return [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
     }, [isPetMovel, condoWeekday, selectedCondo, workingHours]);
 
     // Separate calendars logic
