@@ -56,7 +56,7 @@ import { toBlob } from 'html-to-image';
 import { CheckCircleIcon as CheckCircleOutlineIcon, XCircleIcon as XCircleOutlineIcon, EyeIcon as EyeOutlineIcon, PencilSquareIcon as PencilOutlineIcon, PlusIcon as PlusOutlineIcon, TrashIcon as TrashOutlineIcon, LockClosedIcon as LockClosedOutlineIcon, XMarkIcon, PhoneIcon, SparklesIcon, ChartPieIcon, ChevronUpIcon, ChevronDownIcon as HeroChevronDownIcon, ArrowTrendingUpIcon, PhotoIcon, Cog6ToothIcon, ArrowUpTrayIcon, UserPlusIcon, Squares2X2Icon, ChevronLeftIcon, ChevronRightIcon, GiftIcon, DocumentTextIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 // FIX: Moved AddonService from constants import to types import, as it's a type defined in types.ts.
 import { Appointment, ServiceType, PetWeight, AdminAppointment, Client, MonthlyClient, DaycareRegistration, PetMovelAppointment, AddonService, HotelRegistration } from './types';
-import { SERVICES, WORKING_HOURS, BATH_GROOMING_HOURS, MAX_CAPACITY_PER_SLOT, LUNCH_HOUR, PET_WEIGHT_OPTIONS, SERVICE_PRICES as FALLBACK_PRICES, ADDON_SERVICES, VISIT_WORKING_HOURS, DAYCARE_PLAN_PRICES, DAYCARE_EXTRA_SERVICES_PRICES, HOTEL_BASE_PRICE, HOTEL_EXTRA_SERVICES_PRICES, getPetMovelWorkingHours } from './constants';
+import { SERVICES, WORKING_HOURS, BATH_GROOMING_HOURS, MAX_CAPACITY_PER_SLOT, LUNCH_HOUR, PET_WEIGHT_OPTIONS, SERVICE_PRICES as FALLBACK_PRICES, ADDON_SERVICES, VISIT_WORKING_HOURS, DAYCARE_PLAN_PRICES, DAYCARE_EXTRA_SERVICES_PRICES, HOTEL_BASE_PRICE, HOTEL_EXTRA_SERVICES_PRICES, getPetMovelWorkingHours, isPetMovelHourDuplicated } from './constants';
 import { useServicePrices } from './src/hooks/useServicePrices';
 import { supabase } from './supabaseClient';
 import NotificationBell from './NotificationBell';
@@ -2440,17 +2440,113 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
 };
 
 
-const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void; }> = ({ onBack, onSuccess }) => {
+const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void; initialCondominium?: string; }> = ({ onBack, onSuccess, initialCondominium }) => {
     const { getPricesForWeight } = useServicePrices();
     const [isAnimating, setIsAnimating] = useState(false);
-    const [formData, setFormData] = useState({ petName: '', ownerName: '', whatsapp: '', owner_cpf: '', petBreed: '', ownerAddress: '', condominium: '', observation: '' });
+    const [formData, setFormData] = useState({ 
+        petName: '', 
+        ownerName: '', 
+        whatsapp: '', 
+        owner_cpf: '', 
+        petBreed: '', 
+        ownerAddress: '', 
+        condominium: initialCondominium || '', 
+        observation: '' 
+    });
     const [serviceQuantities, setServiceQuantities] = useState<Record<string, number>>({});
     const [selectedWeight, setSelectedWeight] = useState<PetWeight | null>(null);
     const [selectedAddons, setSelectedAddons] = useState<Record<string, boolean>>({});
     const [packagePrice, setPackagePrice] = useState(0);
-    const [recurrence, setRecurrence] = useState<{ type: 'weekly' | 'bi-weekly' | 'monthly', day: number, time: number }>({ type: 'weekly', day: 1, time: 9 });
+
+    const isPetMovel = useMemo(() => {
+        if (formData.condominium) {
+            return ['Vitta Parque', 'Max Haus', 'Paseo'].includes(formData.condominium);
+        }
+        return true;
+    }, [formData.condominium]);
+
+    const initialDay = useMemo(() => {
+        if (initialCondominium === 'Max Haus') return 4;
+        if (initialCondominium === 'Paseo') return 5;
+        if (initialCondominium === 'Banho & Tosa Fixo') return 1;
+        return 3; // Quarta (Vitta Parque) como padrão do Pet Móvel
+    }, [initialCondominium]);
+
+    const [recurrence, setRecurrence] = useState<{ type: 'weekly' | 'bi-weekly' | 'monthly', day: number, time: number }>({ 
+        type: 'weekly', 
+        day: initialDay, 
+        time: 9 
+    });
 
     const [serviceStartDate, setServiceStartDate] = useState('');
+    const [existingMonthlyClients, setExistingMonthlyClients] = useState<any[]>([]);
+
+    useEffect(() => {
+        supabase
+            .from('monthly_clients')
+            .select('id, pet_name, condominium, recurrence_day, recurrence_time, is_active')
+            .eq('is_active', true)
+            .then(({ data, error }) => {
+                if (data && !error) {
+                    setExistingMonthlyClients(data);
+                }
+            });
+    }, []);
+
+    const workingHours = useMemo(() => {
+        if (isPetMovel) {
+            return getPetMovelWorkingHours(recurrence.day, formData.condominium);
+        }
+        return formData.condominium === 'Banho & Tosa Fixo' ? BATH_GROOMING_HOURS : WORKING_HOURS;
+    }, [isPetMovel, recurrence.day, formData.condominium]);
+
+    // Garantir que recurrence.time seja um horário válido na grade do condomínio
+    useEffect(() => {
+        if (!workingHours.includes(recurrence.time)) {
+            const firstAvailable = workingHours.find(h => {
+                const isDup = isPetMovel && isPetMovelHourDuplicated(h, recurrence.day, formData.condominium);
+                const maxCap = isPetMovel ? (isDup ? 2 : 1) : 1;
+                const count = existingMonthlyClients.filter(mc =>
+                    Number(mc.recurrence_day) === Number(recurrence.day) &&
+                    Number(mc.recurrence_time) === Number(h) &&
+                    (!formData.condominium || !mc.condominium || matchesCondo(mc.condominium, formData.condominium))
+                ).length;
+                return count < maxCap;
+            }) ?? workingHours[0];
+
+            if (firstAvailable !== undefined) {
+                setRecurrence(prev => ({ ...prev, time: firstAvailable }));
+            }
+        }
+    }, [workingHours, recurrence.time, recurrence.day, formData.condominium, existingMonthlyClients, isPetMovel]);
+
+    // Auto-preencher data de início para o próximo dia válido do condomínio
+    useEffect(() => {
+        if (recurrence.type === 'weekly' || recurrence.type === 'bi-weekly') {
+            const targetDay = Number(recurrence.day);
+            const now = new Date();
+            const start = new Date(now);
+            start.setDate(start.getDate() + 1);
+            for (let i = 0; i < 14; i++) {
+                const probe = new Date(start);
+                probe.setDate(start.getDate() + i);
+                const { day } = getSaoPauloTimeParts(probe);
+                if (day === targetDay) {
+                    const nextDateStr = getSaoPauloYMD(probe);
+                    if (!serviceStartDate) {
+                        setServiceStartDate(nextDateStr);
+                    } else {
+                        const currentStartObj = parseISODateAsSaoPaulo(serviceStartDate);
+                        if (getSaoPauloTimeParts(currentStartObj).day !== targetDay) {
+                            setServiceStartDate(nextDateStr);
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    }, [recurrence.day, recurrence.type]);
+
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [alertInfo, setAlertInfo] = useState<{ title: string; message: string; variant: 'success' | 'error' } | null>(null);
 
@@ -2560,7 +2656,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
         }
     }, [selectedWeight]);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         let finalValue = value;
         if (name === 'whatsapp') {
@@ -2568,9 +2664,18 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
         } else if (name === 'owner_cpf') {
             const raw = value.replace(/\D/g, '').slice(0, 11);
             finalValue = raw.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+        } else if (name === 'condominium') {
+            if (value === 'Vitta Parque') {
+                setRecurrence(prev => ({ ...prev, day: 3 }));
+            } else if (value === 'Max Haus') {
+                setRecurrence(prev => ({ ...prev, day: 4 }));
+            } else if (value === 'Paseo') {
+                setRecurrence(prev => ({ ...prev, day: 5 }));
+            } else if (value === 'Banho & Tosa Fixo') {
+                setRecurrence(prev => ({ ...prev, day: 1 }));
+            }
         }
         setFormData(prev => ({ ...prev, [name]: finalValue }));
-
     };
 
     const handleQuantityChange = (service: ServiceType, change: number) => {
@@ -2592,7 +2697,21 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
     // FIX: Ensure recurrence day and time are stored as numbers to prevent comparison/arithmetic errors.
     const handleRecurrenceChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
         const { name, value } = e.target;
-        setRecurrence(prev => ({ ...prev, [name]: name === 'type' ? value : Number(value) }));
+        if (name === 'day') {
+            const numDay = Number(value);
+            setRecurrence(prev => ({ ...prev, day: numDay }));
+            if (numDay === 3) {
+                setFormData(prev => ({ ...prev, condominium: 'Vitta Parque' }));
+            } else if (numDay === 4) {
+                setFormData(prev => ({ ...prev, condominium: 'Max Haus' }));
+            } else if (numDay === 5) {
+                setFormData(prev => ({ ...prev, condominium: 'Paseo' }));
+            }
+        } else if (name === 'type') {
+            setRecurrence(prev => ({ ...prev, type: value as any }));
+        } else if (name === 'time') {
+            setRecurrence(prev => ({ ...prev, time: Number(value) }));
+        }
     };
 
     const handleClose = () => {
@@ -2814,8 +2933,8 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                     owner_cpf: formData.owner_cpf.replace(/\D/g, '')
                 }));
 
-            // Check if any of the selected services is a Pet Móvel service
-            const isPetMovelService = Object.keys(serviceQuantities).some(serviceKey =>
+            // Check if any of the selected services is a Pet Móvel service or condo
+            const isPetMovelService = (formData.condominium && ['Vitta Parque', 'Max Haus', 'Paseo'].includes(formData.condominium)) || Object.keys(serviceQuantities).some(serviceKey =>
                 Number(serviceQuantities[serviceKey]) > 0 &&
                 [ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_BATH_AND_GROOMING, ServiceType.PET_MOBILE_GROOMING_ONLY].includes(serviceKey as ServiceType)
             );
@@ -2843,9 +2962,9 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
         }
     };
 
-    const isStep1Valid = formData.petName && formData.ownerName && formData.whatsapp.length > 13 && formData.petBreed && formData.ownerAddress && formData.condominium;
-    const isStep2Valid = Object.values(serviceQuantities).some(q => Number(q) > 0) && selectedWeight;
-    const isFormValid = isStep1Valid && isStep2Valid && serviceStartDate;
+    const isStep1Valid = !!(formData.petName && formData.ownerName && formData.whatsapp.replace(/\D/g, '').length >= 10 && formData.petBreed && formData.ownerAddress && formData.condominium);
+    const isStep2Valid = Object.values(serviceQuantities).some(q => Number(q) > 0) && !!selectedWeight;
+    const isFormValid = isStep1Valid && isStep2Valid && !!serviceStartDate;
 
     return (
         <>
@@ -2937,11 +3056,11 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                                 <div className="relative">
                                     <span className="absolute inset-y-0 left-0 flex items-center pl-3.5"><AddressIcon /></span>
                                     <select name="condominium" id="condominium" value={formData.condominium} onChange={handleInputChange} className="block w-full pl-11 pr-10 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all appearance-none text-ellipsis overflow-hidden whitespace-nowrap">
-                                        <option value="">Selecione...</option>
-                                        <option value="Banho & Tosa Fixo">Banho & Tosa Fixo</option>
-                                        <option value="Vitta Parque">Vitta Parque</option>
-                                        <option value="Max Haus">Max Haus</option>
-                                        <option value="Paseo">Paseo</option>
+                                        <option value="">Selecione o condomínio...</option>
+                                        <option value="Vitta Parque">Vitta Parque (Quarta-feira)</option>
+                                        <option value="Max Haus">Max Haus (Quinta-feira)</option>
+                                        <option value="Paseo">Paseo (Sexta-feira)</option>
+                                        <option value="Banho & Tosa Fixo">Banho & Tosa Fixo (Loja Física)</option>
                                     </select>
                                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -3058,7 +3177,21 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                                     {recurrence.type === 'weekly' || recurrence.type === 'bi-weekly' ? (
                                         <div className="relative">
                                             <select name="day" onChange={handleRecurrenceChange} value={recurrence.day} className="w-full pl-4 pr-10 py-3.5 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-pink-500 transition-all appearance-none text-ellipsis overflow-hidden whitespace-nowrap">
-                                                <option value={1}>Segunda-feira</option><option value={2}>Terça-feira</option><option value={3}>Quarta-feira</option><option value={4}>Quinta-feira</option><option value={5}>Sexta-feira</option>
+                                                {isPetMovel ? (
+                                                    <>
+                                                        <option value={3}>Quarta-feira (Vitta Parque)</option>
+                                                        <option value={4}>Quinta-feira (Max Haus)</option>
+                                                        <option value={5}>Sexta-feira (Paseo)</option>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <option value={1}>Segunda-feira</option>
+                                                        <option value={2}>Terça-feira</option>
+                                                        <option value={3}>Quarta-feira</option>
+                                                        <option value={4}>Quinta-feira</option>
+                                                        <option value={5}>Sexta-feira</option>
+                                                    </>
+                                                )}
                                             </select>
                                             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                                                 <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -3072,7 +3205,37 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">Horário Padrão</label>
                                     <div className="relative">
                                         <select name="time" onChange={handleRecurrenceChange} value={recurrence.time} className="w-full pl-4 pr-10 py-3.5 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-pink-500 transition-all appearance-none text-ellipsis overflow-hidden whitespace-nowrap">
-                                            {WORKING_HOURS.map(h => <option key={h} value={h}>{`${h}:00`}</option>)}
+                                            {workingHours.map(h => {
+                                                const isDup = isPetMovel && isPetMovelHourDuplicated(h, recurrence.day, formData.condominium);
+                                                const maxCap = isPetMovel ? (isDup ? 2 : 1) : MAX_CAPACITY_PER_SLOT;
+                                                const bookedCount = existingMonthlyClients.filter(mc => {
+                                                    if (Number(mc.recurrence_day) !== Number(recurrence.day)) return false;
+                                                    if (Number(mc.recurrence_time) !== Number(h)) return false;
+                                                    if (isPetMovel && formData.condominium && mc.condominium && !matchesCondo(mc.condominium, formData.condominium)) {
+                                                        return false;
+                                                    }
+                                                    return true;
+                                                }).length;
+                                                const isFull = bookedCount >= maxCap;
+
+                                                return (
+                                                    <option
+                                                        key={h}
+                                                        value={h}
+                                                        disabled={isFull}
+                                                        className={isFull ? 'text-red-400 bg-gray-100 font-normal' : ''}
+                                                    >
+                                                        {`${h}:00`}
+                                                        {isFull 
+                                                            ? ` (Lotado - ${bookedCount}/${maxCap})` 
+                                                            : (isDup 
+                                                                ? (bookedCount > 0 ? ` (1 vaga livre - ${bookedCount}/${maxCap})` : ` (2 vagas livres)`) 
+                                                                : (bookedCount > 0 ? ` (${bookedCount}/${maxCap} ocupada)` : ` (1 vaga livre)`)
+                                                              )
+                                                        }
+                                                    </option>
+                                                );
+                                            })}
                                         </select>
                                         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                                             <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -8185,7 +8348,7 @@ const updateClientPaymentStatusForMonth = (client: any, monthStr: string, newSta
 };
 
 const MonthlyClientsView: React.FC<{ 
-    onAddClient: () => void; 
+    onAddClient: (initialCondo?: string) => void; 
     onDataChanged: () => void; 
     onOpenDashboard: () => void;
     onEmitNFe: (client: MonthlyClient) => void;
@@ -8800,7 +8963,7 @@ const MonthlyClientsView: React.FC<{
 
                         <div className="flex gap-2 sm:gap-3 flex-nowrap w-full sm:w-auto overflow-x-auto no-scrollbar items-center pb-1 sm:pb-0">
                             <button
-                                onClick={onAddClient}
+                                onClick={() => onAddClient(filterCondominium || undefined)}
                                 className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-pink-600 to-pink-700 text-white font-bold h-11 px-3 sm:px-6 rounded-xl hover:from-pink-700 hover:to-pink-800 transition-all shadow-md hover:shadow-lg focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 shrink-0"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 sm:h-7 sm:w-7 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -19513,8 +19676,11 @@ const AdminDashboard: React.FC<{
         return () => clearInterval(timer);
     }, []);
 
-    const handleDataChanged = useCallback(() => setDataKey(Date.now()), []);
-    const handleAddMonthlyClient = () => setActiveView('addMonthlyClient');
+    const [addMonthlyClientInitialCondo, setAddMonthlyClientInitialCondo] = useState<string | undefined>(undefined);
+    const handleAddMonthlyClient = (initialCondo?: string) => {
+        setAddMonthlyClientInitialCondo(initialCondo);
+        setActiveView('addMonthlyClient');
+    };
 
     // CRUD States lifted from AppointmentsView
     const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
@@ -20348,7 +20514,7 @@ const AdminDashboard: React.FC<{
                 emittingNFeId={emittingNFeId}
                 fiscalNotesMap={fiscalNotesMap}
             />;
-            case 'addMonthlyClient': return <AddMonthlyClientView onBack={() => setActiveView('monthlyClients')} onSuccess={() => { handleDataChanged(); setActiveView('monthlyClients'); }} />;
+            case 'addMonthlyClient': return <AddMonthlyClientView onBack={() => setActiveView('monthlyClients')} onSuccess={() => { handleDataChanged(); setActiveView('monthlyClients'); }} initialCondominium={addMonthlyClientInitialCondo} />;
             case 'dashboard': return <StatisticsDashboardModal onBack={() => setActiveView(previousView)} />;
             case 'closeDay': return <CloseDayView onBack={() => setActiveView(previousView)} />;
             case 'insights': return <InsightsDashboard key={dataKey} onBack={() => setActiveView('resumo')} />;
