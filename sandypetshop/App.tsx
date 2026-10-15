@@ -6686,6 +6686,8 @@ const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             isEmittingNFe={emittingNFeId === appt.id}
             fiscalNotesMap={fiscalNotesMap}
             monthlyClients={monthlyClients}
+            onStatusChanged={onDataChanged}
+            isAdmin={true}
         />
     );
 
@@ -7188,6 +7190,8 @@ const PetMovelView: React.FC<PetMovelViewProps> = ({
             isEmittingNFe={emittingNFeId === appt.id}
             fiscalNotesMap={fiscalNotesMap}
             monthlyClients={monthlyClients}
+            onStatusChanged={onDataChanged}
+            isAdmin={true}
         />
     );
 
@@ -15182,22 +15186,65 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
     );
 };
 
-// Componente para renderizar os pets da creche com diária/pernoite no Hotel Pet
+// Componente para renderizar os pets da creche com diária/pernoite no Hotel Pet com flip 3D e edição inline
 const DaycareCardForHotelView: React.FC<{
     enrollment: DaycareRegistration;
     type: 'diaria' | 'pernoite';
     onArchive?: (enrollment: DaycareRegistration) => void;
     onDelete?: (enrollment: DaycareRegistration) => void;
     onChangePhoto?: (enrollment: DaycareRegistration) => void;
-}> = ({ enrollment, type, onArchive, onDelete, onChangePhoto }) => {
+    onUpdate?: (updatedEnrollment: DaycareRegistration) => void;
+    isAdmin?: boolean;
+}> = ({ enrollment, type, onArchive, onDelete, onChangePhoto, onUpdate, isAdmin = true }) => {
     const { pet_name, tutor_name, contact_phone } = enrollment;
     
     // Recupera o valor configurado em extra_services ou usa o fallback
-    const es = enrollment.extra_services as any;
+    const es = (enrollment.extra_services as any) || {};
     const valueFromExtras = type === 'pernoite' 
         ? (es?.pernoite?.value) 
         : (es?.dias_extras?.value);
-    const price = Number(valueFromExtras) || (type === 'pernoite' ? 50 : 30);
+    const initialPrice = Number(valueFromExtras) || (type === 'pernoite' ? 50 : 30);
+    const initialQuantity = type === 'diaria' ? (Number(es?.dias_extras?.quantity) || 1) : 1;
+
+    // Estado do flip 3D
+    const [isFlipped, setIsFlipped] = useState<boolean>(false);
+    const [saving, setSaving] = useState<boolean>(false);
+
+    // Form de edição inline
+    const [editPrice, setEditPrice] = useState<number | string>(initialPrice);
+    const [editQuantity, setEditQuantity] = useState<number>(initialQuantity);
+    const [editDate, setEditDate] = useState<string>(() => {
+        const dateVal = type === 'pernoite' ? es?.pernoite?.date : es?.dias_extras?.date;
+        const rawDate = dateVal || enrollment.created_at || new Date().toISOString();
+        try {
+            return new Date(rawDate).toISOString().split('T')[0];
+        } catch {
+            return new Date().toISOString().split('T')[0];
+        }
+    });
+    const [editTutor, setEditTutor] = useState<string>(tutor_name || '');
+    const [editPhone, setEditPhone] = useState<string>(contact_phone || '');
+    const [editNotes, setEditNotes] = useState<string>(() => {
+        return (type === 'pernoite' ? es?.pernoite?.notes : es?.dias_extras?.notes) || '';
+    });
+
+    // Sincroniza form se enrollment mudar externamente
+    useEffect(() => {
+        const curEs = (enrollment.extra_services as any) || {};
+        const curVal = type === 'pernoite' ? curEs?.pernoite?.value : curEs?.dias_extras?.value;
+        setEditPrice(Number(curVal) || (type === 'pernoite' ? 50 : 30));
+        setEditQuantity(type === 'diaria' ? (Number(curEs?.dias_extras?.quantity) || 1) : 1);
+        const curDateVal = type === 'pernoite' ? curEs?.pernoite?.date : curEs?.dias_extras?.date;
+        const rawDate = curDateVal || enrollment.created_at || new Date().toISOString();
+        try {
+            setEditDate(new Date(rawDate).toISOString().split('T')[0]);
+        } catch {
+            setEditDate(new Date().toISOString().split('T')[0]);
+        }
+        setEditTutor(enrollment.tutor_name || '');
+        setEditPhone(enrollment.contact_phone || '');
+        setEditNotes((type === 'pernoite' ? curEs?.pernoite?.notes : curEs?.dias_extras?.notes) || '');
+    }, [enrollment, type]);
 
     const buildWhatsAppLink = (phone: string) => {
         const digits = String(phone || '').replace(/\D/g, '');
@@ -15222,102 +15269,393 @@ const DaycareCardForHotelView: React.FC<{
 
     const isArchived = type === 'pernoite' ? es?.pernoite?.archived === true : es?.dias_extras?.archived === true;
 
-    return (
-        <div className="p-4 sm:p-5 flex flex-col h-full flex-grow bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-gray-200 relative group font-jakarta">
-            {/* Tag Origem: Creche Pet */}
-            <div className="absolute top-3 right-3 z-10 flex gap-1">
-                {isArchived && (
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gray-500 text-white uppercase tracking-wider shadow-sm">
-                        Arquivado
-                    </span>
-                )}
-                <span className="text-[9px] font-bold px-2.5 py-1 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white uppercase tracking-wider shadow-sm">
-                    Creche Pet
-                </span>
-            </div>
+    const handleFlipTrigger = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        if (!isAdmin) {
+            alert('Acesso restrito: Apenas administradores podem editar este serviço extra.');
+            return;
+        }
+        setIsFlipped(true);
+    };
 
-            <div className="flex items-center justify-between mb-4 gap-2">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="relative flex-shrink-0 isolate">
-                        <div className="absolute inset-0 bg-gradient-to-br from-pink-200 to-purple-200 rounded-full blur-md opacity-40 group-hover:opacity-60 transition-opacity pointer-events-none z-0"></div>
-                        <SafeImage 
-                            src={enrollment.pet_photo_url || 'https://cdn-icons-png.flaticon.com/512/11201/11201086.png'} 
-                            alt={pet_name} 
-                            className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border-2 border-white shadow-md hover:scale-105 transition-transform cursor-pointer z-10 opacity-100 brightness-100" 
-                            loading="eager" 
-                            onClick={(e) => { e.stopPropagation(); onChangePhoto && onChangePhoto(enrollment); }}
-                        />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                        <h3 className="font-outfit font-bold text-lg sm:text-xl text-gray-900 leading-tight group-hover:text-pink-600 transition-colors truncate">
-                            {pet_name}
-                        </h3>
-                        <div className="flex items-center gap-1.5 mt-1 flex-nowrap overflow-x-auto custom-scrollbar-hide">
-                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border uppercase tracking-wide flex-shrink-0 bg-purple-50 text-purple-700 border-purple-100">
-                                {type === 'pernoite' ? 'Pernoite Extra' : 'Diária Extra'}
+    const handleFlipBack = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        setIsFlipped(false);
+    };
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isAdmin) {
+            alert('Apenas administradores podem salvar alterações.');
+            return;
+        }
+
+        setSaving(true);
+        try {
+            const currentExtras = enrollment.extra_services && typeof enrollment.extra_services === 'object'
+                ? { ...enrollment.extra_services } as any
+                : {};
+
+            const numPrice = parseFloat(String(editPrice)) || 0;
+            const numQty = Math.max(1, Number(editQuantity) || 1);
+
+            if (type === 'pernoite') {
+                currentExtras.pernoite = {
+                    ...(currentExtras.pernoite || {}),
+                    enabled: true,
+                    value: numPrice,
+                    date: editDate ? `${editDate}T12:00:00` : new Date().toISOString(),
+                    notes: editNotes.trim(),
+                };
+            } else {
+                currentExtras.dias_extras = {
+                    ...(currentExtras.dias_extras || {}),
+                    enabled: true,
+                    value: numPrice,
+                    quantity: numQty,
+                    date: editDate ? `${editDate}T12:00:00` : new Date().toISOString(),
+                    notes: editNotes.trim(),
+                };
+            }
+
+            const updatePayload: any = {
+                extra_services: currentExtras,
+                tutor_name: editTutor.trim() || enrollment.tutor_name,
+                contact_phone: editPhone.trim() || enrollment.contact_phone,
+            };
+
+            const { data, error } = await supabase
+                .from('daycare_enrollments')
+                .update(updatePayload)
+                .eq('id', enrollment.id)
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            setIsFlipped(false);
+            if (onUpdate && data) {
+                onUpdate(data as DaycareRegistration);
+            }
+        } catch (err: any) {
+            console.error('Erro ao salvar serviço extra do hotel:', err);
+            alert('Erro ao salvar serviço extra: ' + (err?.message || 'Tente novamente.'));
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="relative w-full h-full min-h-[350px]" style={{ perspective: '1200px' }}>
+            <div
+                className="relative w-full h-full"
+                style={{
+                    transformStyle: 'preserve-3d',
+                    transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                }}
+            >
+                {/* FRONT FACE */}
+                <div
+                    className="p-4 sm:p-5 flex flex-col h-full flex-grow bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-gray-200 relative group font-jakarta"
+                    style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                >
+                    {/* Tag Origem: Creche Pet */}
+                    <div className="absolute top-3 right-3 z-10 flex gap-1">
+                        {isArchived && (
+                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gray-500 text-white uppercase tracking-wider shadow-sm">
+                                Arquivado
                             </span>
+                        )}
+                        <span className="text-[9px] font-bold px-2.5 py-1 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white uppercase tracking-wider shadow-sm">
+                            Creche Pet
+                        </span>
+                    </div>
+
+                    <div className="flex items-center justify-between mb-4 gap-2">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="relative flex-shrink-0 isolate">
+                                <div className="absolute inset-0 bg-gradient-to-br from-pink-200 to-purple-200 rounded-full blur-md opacity-40 group-hover:opacity-60 transition-opacity pointer-events-none z-0"></div>
+                                <SafeImage 
+                                    src={enrollment.pet_photo_url || 'https://cdn-icons-png.flaticon.com/512/11201/11201086.png'} 
+                                    alt={pet_name} 
+                                    className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border-2 border-white shadow-md hover:scale-105 transition-transform cursor-pointer z-10 opacity-100 brightness-100" 
+                                    loading="eager" 
+                                    onClick={(e) => { e.stopPropagation(); onChangePhoto && onChangePhoto(enrollment); }}
+                                />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <h3 
+                                    onClick={handleFlipTrigger}
+                                    className="font-outfit font-bold text-lg sm:text-xl text-gray-900 leading-tight group-hover:text-pink-600 transition-colors truncate cursor-pointer"
+                                    title="Clique para editar"
+                                >
+                                    {pet_name}
+                                </h3>
+                                <div className="flex items-center gap-1.5 mt-1 flex-nowrap overflow-x-auto custom-scrollbar-hide">
+                                    <button
+                                        type="button"
+                                        onClick={handleFlipTrigger}
+                                        className="text-[10px] font-semibold px-2 py-0.5 rounded-full border uppercase tracking-wide flex-shrink-0 bg-purple-50 text-purple-700 border-purple-100 hover:bg-purple-100 transition-colors"
+                                        title="Clique para editar este serviço"
+                                    >
+                                        {type === 'pernoite' ? 'Pernoite Extra' : `Diária Extra${initialQuantity > 1 ? ` (${initialQuantity}x)` : ''}`}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="text-right flex flex-col items-end flex-shrink-0 pl-2">
+                            <div className="font-outfit font-bold text-lg sm:text-xl text-gray-900 whitespace-nowrap">
+                                R$ {(initialPrice * (type === 'diaria' ? initialQuantity : 1)).toFixed(2).replace('.', ',')}
+                            </div>
+                            {type === 'diaria' && initialQuantity > 1 && (
+                                <span className="text-[10px] text-gray-400 font-medium">
+                                    {initialQuantity}x R$ {initialPrice.toFixed(2).replace('.', ',')}
+                                </span>
+                            )}
                         </div>
                     </div>
-                </div>
-                <div className="text-right flex flex-col items-end flex-shrink-0 pl-2">
-                    <div className="font-outfit font-bold text-lg sm:text-xl text-gray-900 whitespace-nowrap">
-                        R$ {price.toFixed(2).replace('.', ',')}
-                    </div>
-                </div>
-            </div>
 
-            {/* Info Grid */}
-            <div className="grid grid-cols-2 gap-y-3 gap-x-2 mb-3 bg-gray-50/50 p-2.5 sm:p-3 rounded-xl border border-gray-100">
-                <div className="flex items-start sm:items-center gap-2 overflow-hidden">
-                    <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
-                    <div className="flex flex-col min-w-0">
-                        <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate">Tutor</span>
-                        <span className="text-xs font-medium text-gray-700 truncate">{tutor_name}</span>
+                    {/* Info Grid */}
+                    <div className="grid grid-cols-2 gap-y-3 gap-x-2 mb-3 bg-gray-50/50 p-2.5 sm:p-3 rounded-xl border border-gray-100">
+                        <div className="flex items-start sm:items-center gap-2 overflow-hidden">
+                            <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+                            <div className="flex flex-col min-w-0">
+                                <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate">Tutor</span>
+                                <span className="text-xs font-medium text-gray-700 truncate">{tutor_name}</span>
+                            </div>
+                        </div>
+                        <div className="flex items-start sm:items-center gap-2 overflow-hidden">
+                            <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-2.824-1.502-5.18-3.856-6.682-6.682l1.293-.97c.362-.271.528-.733.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" /></svg>
+                            <div className="flex flex-col min-w-0">
+                                <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate">WhatsApp</span>
+                                {contact_phone ? (
+                                    <a href={buildWhatsAppLink(contact_phone)} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-green-600 hover:underline truncate" onClick={e => e.stopPropagation()}>
+                                        {contact_phone.replace(/\D/g, '').replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')}
+                                    </a>
+                                ) : (
+                                    <span className="text-xs font-medium text-gray-700 truncate">-</span>
+                                )}
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div className="flex items-start sm:items-center gap-2 overflow-hidden">
-                    <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-2.824-1.502-5.18-3.856-6.682-6.682l1.293-.97c.362-.271.528-.733.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" /></svg>
-                    <div className="flex flex-col min-w-0">
-                        <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate">WhatsApp</span>
-                        {contact_phone ? (
-                            <a href={buildWhatsAppLink(contact_phone)} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-green-600 hover:underline truncate" onClick={e => e.stopPropagation()}>
-                                {contact_phone.replace(/\D/g, '').replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')}
-                            </a>
-                        ) : (
-                            <span className="text-xs font-medium text-gray-700 truncate">-</span>
+
+                    {/* Data de Registro */}
+                    <div className="flex items-center justify-between text-[11px] text-gray-500 font-jakarta border-t border-dashed border-gray-100 pt-2.5 mt-1.5 mb-2.5">
+                        <span className="font-semibold text-gray-400">Data do Serviço:</span>
+                        <span className="font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md">{getFormattedDate()}</span>
+                    </div>
+
+                    {/* Botões de Ação */}
+                    <div className="flex gap-2 mt-auto border-t border-gray-100 pt-3">
+                        <button
+                            type="button"
+                            onClick={handleFlipTrigger}
+                            className="flex-1 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 border border-indigo-100 shadow-sm active:scale-95"
+                            title="Editar Dados e Valor do Serviço Extra"
+                        >
+                            <svg className="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            Editar
+                        </button>
+                        {onArchive && !isArchived && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onArchive(enrollment); }}
+                                className="flex-1 px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 border border-gray-200"
+                                title="Arquivar Registro"
+                            >
+                                <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                                Arquivar
+                            </button>
+                        )}
+                        {onDelete && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onDelete(enrollment); }}
+                                className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 border border-red-100"
+                                title="Excluir Adicional"
+                            >
+                                <svg className="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
                         )}
                     </div>
                 </div>
-            </div>
+                {/* END FRONT FACE */}
 
-            {/* Data de Registro */}
-            <div className="flex items-center justify-between text-[11px] text-gray-500 font-jakarta border-t border-dashed border-gray-100 pt-2.5 mt-1.5 mb-2.5">
-                <span className="font-semibold text-gray-400">Data de Registro:</span>
-                <span className="font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md">{getFormattedDate()}</span>
-            </div>
+                {/* BACK FACE — Edição Inline */}
+                <div
+                    className="absolute inset-0 bg-white rounded-2xl border border-slate-100 shadow-xl shadow-purple-500/10 flex flex-col font-jakarta pt-1 pb-4 px-4 overflow-hidden"
+                    style={{
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                        transform: 'rotateY(180deg)',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Top Accent Bar */}
+                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-t-2xl" />
 
-            {/* Botões de Ação */}
-            <div className="flex gap-2 mt-auto border-t border-gray-100 pt-3">
-                {onArchive && !isArchived && (
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onArchive(enrollment); }}
-                        className="flex-1 px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 border border-gray-200"
-                        title="Arquivar Registro"
-                    >
-                        <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
-                        Arquivar
-                    </button>
-                )}
-                {onDelete && (
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onDelete(enrollment); }}
-                        className="flex-1 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 border border-red-100"
-                        title="Excluir Adicional"
-                    >
-                        <svg className="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        Excluir
-                    </button>
-                )}
+                    {/* Header do Verso */}
+                    <header className="mt-3 mb-2 flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <button
+                                type="button"
+                                onClick={handleFlipBack}
+                                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-colors shrink-0"
+                                title="Voltar"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                            </button>
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-sm font-black text-slate-800 truncate">
+                                    Editar {type === 'pernoite' ? 'Pernoite Extra' : 'Diária Extra'}
+                                </h3>
+                                <p className="text-[10px] text-purple-600 font-bold truncate">{pet_name}</p>
+                            </div>
+                        </div>
+                    </header>
+
+                    {!isAdmin ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-4 text-slate-500">
+                            <span className="text-2xl mb-2">🔒</span>
+                            <p className="font-bold text-xs">Acesso Restrito</p>
+                            <p className="text-[10px] text-slate-400 mt-1">Apenas administradores podem editar este serviço extra.</p>
+                            <button
+                                type="button"
+                                onClick={handleFlipBack}
+                                className="mt-3 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg"
+                            >
+                                Voltar
+                            </button>
+                        </div>
+                    ) : (
+                        <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0">
+                            {/* Campos — scrolláveis */}
+                            <div className="flex flex-col gap-2 flex-1 overflow-y-auto no-scrollbar pr-0.5">
+                                {/* Financeiro & Quantidade */}
+                                <div className="grid grid-cols-2 gap-2 mt-1">
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider ml-0.5">Preço Unitário (R$)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={editPrice}
+                                            onChange={(e) => setEditPrice(e.target.value)}
+                                            required
+                                            className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                        />
+                                    </div>
+                                    {type === 'diaria' ? (
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider ml-0.5">Qtd. Diárias</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                step="1"
+                                                value={editQuantity}
+                                                onChange={(e) => setEditQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                                required
+                                                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider ml-0.5">Total</label>
+                                            <div className="w-full px-2.5 py-1.5 bg-purple-50 border border-purple-100 rounded-lg text-xs text-purple-700 font-black">
+                                                R$ {(parseFloat(String(editPrice)) || 0).toFixed(2).replace('.', ',')}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {type === 'diaria' && (
+                                    <div className="p-2 rounded-lg bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 flex items-center justify-between text-xs">
+                                        <span className="text-[10px] font-bold text-purple-700 uppercase tracking-wider">Total Calculado:</span>
+                                        <span className="font-black text-purple-900">
+                                            R$ {((parseFloat(String(editPrice)) || 0) * (Number(editQuantity) || 1)).toFixed(2).replace('.', ',')}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {/* Data do Serviço */}
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider ml-0.5">Data do Serviço</label>
+                                    <input
+                                        type="date"
+                                        value={editDate}
+                                        onChange={(e) => setEditDate(e.target.value)}
+                                        required
+                                        className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                    />
+                                </div>
+
+                                {/* Tutor & WhatsApp */}
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider ml-0.5">Tutor</label>
+                                        <input
+                                            type="text"
+                                            value={editTutor}
+                                            onChange={(e) => setEditTutor(e.target.value)}
+                                            className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider ml-0.5">WhatsApp</label>
+                                        <input
+                                            type="text"
+                                            value={editPhone}
+                                            onChange={(e) => setEditPhone(e.target.value)}
+                                            placeholder="(00) 00000-0000"
+                                            className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Observações */}
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider ml-0.5">Observações do Serviço</label>
+                                    <textarea
+                                        rows={2}
+                                        value={editNotes}
+                                        onChange={(e) => setEditNotes(e.target.value)}
+                                        placeholder="Detalhes ou cuidados especiais..."
+                                        className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all resize-none"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Footer do Verso: Salvar / Cancelar */}
+                            <footer className="mt-2.5 pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleFlipBack}
+                                    disabled={saving}
+                                    className="py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors active:scale-95 disabled:opacity-50"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="py-2 rounded-xl text-white text-xs font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-md shadow-indigo-500/20 active:scale-95 disabled:opacity-60 flex items-center justify-center gap-1.5 transition-all"
+                                >
+                                    {saving ? (
+                                        <>
+                                            <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                                            Salvando...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                            Salvar
+                                        </>
+                                    )}
+                                </button>
+                            </footer>
+                        </form>
+                    )}
+                </div>
+                {/* END BACK FACE */}
             </div>
         </div>
     );
@@ -16929,6 +17267,8 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                                             type="diaria" 
                                             onDelete={(e) => handleDeleteDaycareExtra(e, 'diaria')}
                                             onChangePhoto={(enr) => { setUploadTargetDaycareEnrollment(enr); setIsUploadDaycarePhotoModalOpen(true); }}
+                                            onUpdate={(updated) => setDaycareEnrollmentsForHotel(prev => prev.map(e => e.id === updated.id ? updated : e))}
+                                            isAdmin={true}
                                         />
                                     </div>
                                 ))}
@@ -16939,6 +17279,8 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                                             type="pernoite" 
                                             onDelete={(e) => handleDeleteDaycareExtra(e, 'pernoite')}
                                             onChangePhoto={(enr) => { setUploadTargetDaycareEnrollment(enr); setIsUploadDaycarePhotoModalOpen(true); }}
+                                            onUpdate={(updated) => setDaycareEnrollmentsForHotel(prev => prev.map(e => e.id === updated.id ? updated : e))}
+                                            isAdmin={true}
                                         />
                                     </div>
                                 ))}
@@ -16964,6 +17306,8 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                                             onArchive={(e) => handleArchiveDaycareExtra(e, 'diaria')}
                                             onDelete={(e) => handleDeleteDaycareExtra(e, 'diaria')}
                                             onChangePhoto={(enr) => { setUploadTargetDaycareEnrollment(enr); setIsUploadDaycarePhotoModalOpen(true); }}
+                                            onUpdate={(updated) => setDaycareEnrollmentsForHotel(prev => prev.map(e => e.id === updated.id ? updated : e))}
+                                            isAdmin={true}
                                         />
                                     </div>
                                 ))}
@@ -16989,6 +17333,8 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                                             onArchive={(e) => handleArchiveDaycareExtra(e, 'pernoite')}
                                             onDelete={(e) => handleDeleteDaycareExtra(e, 'pernoite')}
                                             onChangePhoto={(enr) => { setUploadTargetDaycareEnrollment(enr); setIsUploadDaycarePhotoModalOpen(true); }}
+                                            onUpdate={(updated) => setDaycareEnrollmentsForHotel(prev => prev.map(e => e.id === updated.id ? updated : e))}
+                                            isAdmin={true}
                                         />
                                     </div>
                                 ))}
