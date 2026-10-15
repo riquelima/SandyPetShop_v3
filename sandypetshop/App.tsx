@@ -1343,25 +1343,27 @@ const toSaoPauloUTC = (year: number, month: number, day: number, hour = 0, minut
     return new Date(Date.UTC(year, month, day, hour, minute, second) + SAO_PAULO_OFFSET_MS);
 }
 
+// Parse YYYY-MM-DD as a São Paulo wall-clock date using midday to avoid DST/offset edge cases
+const parseISODateAsSaoPaulo = (isoDate: string): Date => {
+    const [y, m, d] = isoDate.split('-').map(Number);
+    return toSaoPauloUTC(y, (m - 1), d, 12, 0, 0);
+};
+
 /**
- * Takes a Date object (which is inherently UTC based) and returns the São Paulo wall-clock time parts.
+ * Takes a Date object or ISO date string (which is inherently UTC based) and returns the São Paulo wall-clock time parts.
  */
-const getSaoPauloTimeParts = (date: Date) => {
-    const spDate = new Date(date.getTime() - SAO_PAULO_OFFSET_MS);
+const getSaoPauloTimeParts = (date: Date | string) => {
+    const d = typeof date === 'string' ? parseISODateAsSaoPaulo(date) : date;
+    const spDate = new Date(d.getTime() - SAO_PAULO_OFFSET_MS);
     return {
         year: spDate.getUTCFullYear(),
         month: spDate.getUTCMonth(),
         date: spDate.getUTCDate(),
         hour: spDate.getUTCHours(),
         day: spDate.getUTCDay(), // 0 = Sunday
-    }
-}
-
-// Parse YYYY-MM-DD as a São Paulo wall-clock date using midday to avoid DST/offset edge cases
-const parseISODateAsSaoPaulo = (isoDate: string): Date => {
-    const [y, m, d] = isoDate.split('-').map(Number);
-    return toSaoPauloUTC(y, (m - 1), d, 12, 0, 0);
+    };
 };
+
 
 const isSameSaoPauloDay = (date1: Date, date2: Date): boolean => {
     const d1 = date1.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
@@ -4573,19 +4575,28 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
                                             }}
                                             className="w-full pl-4 pr-10 py-3 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500 transition-all text-gray-700 font-medium shadow-sm"
                                         >
-                                            {(['Creche Pet', 'Hotel Pet', visitDaycareLabel, visitHotelLabel].includes(formData.service) ? VISIT_WORKING_HOURS : WORKING_HOURS).map(h => {
-                                                const isFull = (availabilityCounts[h] || 0) >= MAX_CAPACITY_PER_SLOT;
-                                                return (
-                                                    <option
-                                                        key={h}
-                                                        value={h}
-                                                        disabled={isFull}
-                                                        className={isFull ? 'text-red-400 bg-gray-100' : ''}
-                                                    >
-                                                        {`${h}:00`} {isFull ? '(Indisponível)' : ''}
-                                                    </option>
-                                                );
-                                            })}
+                                            {(() => {
+                                                const isMobileAppt = !!formData.condominium || !!appointment.condominium || isMobileAppointment(appointment as any);
+                                                const hoursList = isMobileAppt
+                                                    ? getPetMovelWorkingHours(datePart ? getSaoPauloTimeParts(datePart).day : null, formData.condominium || appointment.condominium)
+                                                    : (['Creche Pet', 'Hotel Pet', visitDaycareLabel, visitHotelLabel].includes(formData.service) ? VISIT_WORKING_HOURS : WORKING_HOURS);
+
+                                                return hoursList.map(h => {
+                                                    const isDup = isMobileAppt && isPetMovelHourDuplicated(h, datePart ? getSaoPauloTimeParts(datePart).day : null, formData.condominium || appointment.condominium);
+                                                    const maxCap = isMobileAppt ? (isDup ? 2 : 1) : MAX_CAPACITY_PER_SLOT;
+                                                    const isFull = (availabilityCounts[h] || 0) >= maxCap;
+                                                    return (
+                                                        <option
+                                                            key={h}
+                                                            value={h}
+                                                            disabled={isFull}
+                                                            className={isFull ? 'text-red-400 bg-gray-100' : ''}
+                                                        >
+                                                            {`${h}:00`} {isFull ? '(Indisponível)' : ''}
+                                                        </option>
+                                                    );
+                                                });
+                                            })()}
                                         </select>
                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" /></svg></div>
                                     </div>
@@ -4626,7 +4637,8 @@ const AdminAddAppointmentModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
     onAppointmentCreated: (created: AdminAppointment) => void;
-}> = ({ isOpen, onClose, onAppointmentCreated }) => {
+    initialServiceView?: 'main' | 'bath_groom' | 'pet_movel';
+}> = ({ isOpen, onClose, onAppointmentCreated, initialServiceView = 'main' }) => {
     const { getPricesForWeight } = useServicePrices();
     const [formData, setFormData] = useState({
         petName: '',
@@ -4639,7 +4651,7 @@ const AdminAddAppointmentModal: React.FC<{
         petPhoto: null as string | null
     });
     const [selectedService, setSelectedService] = useState<ServiceType | null>(null);
-    const [serviceStepView, setServiceStepView] = useState<'main' | 'bath_groom' | 'pet_movel' | 'pet_movel_condo' | 'hotel_pet' | 'daycare_options' | 'hotel_options'>('main');
+    const [serviceStepView, setServiceStepView] = useState<'main' | 'bath_groom' | 'pet_movel' | 'pet_movel_condo' | 'hotel_pet' | 'daycare_options' | 'hotel_options'>(initialServiceView);
     const [selectedCondo, setSelectedCondo] = useState<string | null>(null);
     const [selectedWeight, setSelectedWeight] = useState<PetWeight | null>(null);
     const [selectedAddons, setSelectedAddons] = useState<Record<string, boolean>>({});
@@ -4712,14 +4724,14 @@ const AdminAddAppointmentModal: React.FC<{
         [selectedService]
     );
 
-    const isPetMovel = useMemo(() => serviceStepView === 'pet_movel', [serviceStepView]);
+    const isPetMovel = useMemo(() => serviceStepView === 'pet_movel' || !!selectedCondo, [serviceStepView, selectedCondo]);
 
     // Reset form when modal opens/closes
     useEffect(() => {
         if (isOpen) {
             setFormData({ petName: '', ownerName: '', whatsapp: '', owner_cpf: '', petBreed: '', ownerAddress: '', observation: '', petPhoto: null });
             setSelectedService(null);
-            setServiceStepView('main');
+            setServiceStepView(initialServiceView);
             setSelectedCondo(null);
             setSelectedWeight(null);
             setSelectedAddons({});
@@ -4838,18 +4850,31 @@ const AdminAddAppointmentModal: React.FC<{
     }, [isOpen, selectedDate, serviceStepView]);
 
 
-    // Calendar day restrictions based on service type
+    // Calendar day restrictions based on service type & condominium
     useEffect(() => {
         if (serviceStepView === 'bath_groom') {
-            setAllowedDays([1, 2, 3, 4, 5]); // Segunda (1), Terça (2), Quarta (3), Quinta (4), Sexta (5)
+            setAllowedDays([1, 2, 3, 4, 5]); // Segunda (1) a Sexta (5)
         } else if (serviceStepView === 'pet_movel') {
-            setAllowedDays(undefined);
+            switch (selectedCondo) {
+                case 'Vitta Parque':
+                    setAllowedDays([3]); // Quarta-feira
+                    break;
+                case 'Max Haus':
+                    setAllowedDays([4]); // Quinta-feira
+                    break;
+                case 'Paseo':
+                    setAllowedDays([5]); // Sexta-feira
+                    break;
+                default:
+                    setAllowedDays([]); // Nenhum condomínio selecionado
+                    break;
+            }
         } else {
             setAllowedDays(undefined);
         }
     }, [serviceStepView, selectedCondo]);
 
-    // Ensure initial selected date is the next allowed (Mon/Tue), never today
+    // Ensure initial selected date is the next allowed (Mon/Tue) for bath_groom
     useEffect(() => {
         if (serviceStepView === 'bath_groom' && allowedDays && allowedDays.length > 0) {
             const now = new Date();
@@ -4866,6 +4891,34 @@ const AdminAddAppointmentModal: React.FC<{
             }
         }
     }, [serviceStepView, allowedDays]);
+
+    // Auto-advance selectedDate to the condo's specific day when condo is selected for pet_movel
+    useEffect(() => {
+        if (serviceStepView === 'pet_movel' && selectedCondo) {
+            const condoDays = (() => {
+                switch (selectedCondo) {
+                    case 'Vitta Parque': return [3];
+                    case 'Max Haus': return [4];
+                    case 'Paseo': return [5];
+                    default: return [];
+                }
+            })();
+            if (condoDays.length > 0) {
+                const now = new Date();
+                const start = new Date(now);
+                start.setDate(start.getDate() + 1);
+                for (let i = 0; i < 60; i++) {
+                    const probe = new Date(start);
+                    probe.setDate(start.getDate() + i);
+                    const { day } = getSaoPauloTimeParts(probe);
+                    if (condoDays.includes(day)) {
+                        setSelectedDate(probe);
+                        break;
+                    }
+                }
+            }
+        }
+    }, [serviceStepView, selectedCondo]);
 
     // Reset selected time when date or service changes
     useEffect(() => {
@@ -5210,7 +5263,7 @@ const AdminAddAppointmentModal: React.FC<{
         }
     };
 
-    const isStep1Valid = formData.petName && formData.ownerName && formData.whatsapp.length > 13 && formData.petBreed && formData.ownerAddress;
+    const isStep1Valid = !!(formData.petName && formData.ownerName && formData.whatsapp.replace(/\D/g, '').length >= 10 && formData.petBreed && formData.ownerAddress);
     const isPetMovelServiceSelected = !!selectedService && [ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_BATH_AND_GROOMING, ServiceType.PET_MOBILE_GROOMING_ONLY].includes(selectedService);
     const isStep2Valid = serviceStepView !== 'main' && selectedService && (isVisitService || selectedWeight) && (!isPetMovelServiceSelected || !!selectedCondo);
     const isStep3Valid = selectedTime !== null;
@@ -5328,7 +5381,7 @@ const AdminAddAppointmentModal: React.FC<{
                                     <div className="flex justify-between items-end mb-1.5">
                                         <label htmlFor="addAppt-ownerAddress" className="block text-sm font-semibold text-gray-700">Endereço</label>
                                         {clientFound && (
-                                            <button type="button" onClick={() => { setClientFound(false); setFormData({ petName: '', ownerName: '', whatsapp: '', petBreed: '', ownerAddress: '', owner_cpf: '', observation: '' }); }} className="text-xs text-red-500 hover:text-red-700 underline">Limpar e novo cadastro</button>
+                                            <button type="button" onClick={() => { setClientFound(false); setFormData({ petName: '', ownerName: '', whatsapp: '', petBreed: '', ownerAddress: '', owner_cpf: '', observation: '', petPhoto: null }); }} className="text-xs text-red-500 hover:text-red-700 underline">Limpar e novo cadastro</button>
                                         )}
                                     </div>
                                     <div className="relative">
@@ -5354,7 +5407,7 @@ const AdminAddAppointmentModal: React.FC<{
                         </section>
 
                         {/* Seção 2: Seleção de Serviço */}
-                        <section className={!isStep1Valid ? 'opacity-50 pointer-events-none transition-opacity' : 'transition-opacity'}>
+                        <section className="transition-opacity">
                             <div className="flex items-center gap-3 border-b border-gray-100 pb-3 mb-6">
                                 <span className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-600 font-bold text-sm">2</span>
                                 <h3 className="text-xl font-bold text-gray-800">Detalhes do Serviço</h3>
@@ -5451,45 +5504,64 @@ const AdminAddAppointmentModal: React.FC<{
                         </section>
 
                         {/* Seção 3: Agendamento */}
-                        <section className={!isStep2Valid ? 'opacity-50 pointer-events-none transition-opacity' : 'transition-opacity'}>
+                        <section className="transition-opacity">
                             <div className="flex items-center gap-3 border-b border-gray-100 pb-3 mb-6">
                                 <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-bold text-sm">3</span>
                                 <h3 className="text-xl font-bold text-gray-800">Data e Horário</h3>
                             </div>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-sm font-medium text-gray-700 ml-1">Data do Agendamento</label>
-                                    <Calendar
-                                        selectedDate={selectedDate}
-                                        onDateChange={setSelectedDate}
-                                        disablePast={true}
-                                        disableWeekends={true}
-                                        allowedDays={allowedDays}
-                                    />
+
+                            {serviceStepView === 'main' ? (
+                                <div className="p-6 bg-pink-50/50 rounded-2xl border border-pink-100 text-center">
+                                    <p className="text-pink-900 font-bold text-sm">Selecione o serviço no Passo 2 acima</p>
+                                    <p className="text-pink-700/80 text-xs mt-1">Escolha Banho & Tosa ou Pet Móvel para carregar os dias e horários de atendimento.</p>
                                 </div>
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-sm font-medium text-gray-700 ml-1">Horário Disponível</label>
-                                    <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 h-full">
-                                        <TimeSlotPicker
-                                            isAdmin={true}
+                            ) : serviceStepView === 'pet_movel' && !selectedCondo ? (
+                                <div className="p-6 bg-amber-50/60 rounded-2xl border border-amber-200 text-center">
+                                    <p className="text-amber-900 font-bold text-sm">Selecione o Condomínio no Passo 2 acima</p>
+                                    <p className="text-amber-700/80 text-xs mt-1">Selecione Vitta Parque (Quarta-feira), Max Haus (Quinta-feira) ou Paseo (Sexta-feira) para exibir a grade de horários do Pet Móvel.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-sm font-medium text-gray-700 ml-1">Data do Agendamento</label>
+                                        <Calendar
                                             selectedDate={selectedDate}
-                                            selectedService={selectedService}
-                                            appointments={appointments}
-                                            onTimeSelect={setSelectedTime}
-                                            selectedTime={selectedTime}
-                                            workingHours={isVisitService ? VISIT_WORKING_HOURS : (serviceStepView === 'bath_groom' ? BATH_GROOMING_HOURS : (isPetMovel ? getPetMovelWorkingHours(selectedDate ? getSaoPauloTimeParts(selectedDate).day : null, selectedCondo) : WORKING_HOURS))}
-                                            isPetMovel={isPetMovel}
+                                            onDateChange={setSelectedDate}
+                                            disablePast={true}
+                                            disableWeekends={true}
                                             allowedDays={allowedDays}
-                                            selectedCondo={selectedCondo}
-                                            disablePastTimes={false}
                                         />
                                     </div>
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-sm font-medium text-gray-700 ml-1">Horário Disponível</label>
+                                        <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 h-full">
+                                            <TimeSlotPicker
+                                                key={`${selectedDate.toISOString()}-${selectedCondo || 'store'}`}
+                                                isAdmin={true}
+                                                selectedDate={selectedDate}
+                                                selectedService={selectedService}
+                                                appointments={appointments}
+                                                onTimeSelect={setSelectedTime}
+                                                selectedTime={selectedTime}
+                                                workingHours={isVisitService ? VISIT_WORKING_HOURS : (serviceStepView === 'bath_groom' ? BATH_GROOMING_HOURS : (selectedCondo || isPetMovel ? getPetMovelWorkingHours(selectedDate ? getSaoPauloTimeParts(selectedDate).day : null, selectedCondo) : WORKING_HOURS))}
+                                                isPetMovel={isPetMovel}
+                                                allowedDays={allowedDays}
+                                                selectedCondo={selectedCondo}
+                                                disablePastTimes={false}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </section>
                     </div>
 
-                    <div className="px-8 py-5 bg-gray-50/80 border-t border-gray-100 flex justify-end gap-3 rounded-b-[2rem]">
+                    <div className="px-8 py-5 bg-gray-50/80 border-t border-gray-100 flex items-center justify-end gap-3 rounded-b-[2rem]">
+                        {!isFormValid && (
+                            <span className="text-xs text-gray-500 font-medium mr-auto hidden sm:inline">
+                                {!isStep1Valid ? 'Preencha os dados do pet/tutor no Passo 1' : (!isStep2Valid ? 'Selecione o serviço/porte no Passo 2' : 'Escolha um horário no Passo 3')}
+                            </span>
+                        )}
                         <button type="button" onClick={onClose} className="px-6 py-2.5 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 hover:text-gray-900 transition-all shadow-sm">
                             Cancelar
                         </button>
@@ -20632,6 +20704,7 @@ const AdminDashboard: React.FC<{
                     isOpen={isAddModalOpen} 
                     onClose={handleCloseAddModal} 
                     onAppointmentCreated={handleAppointmentCreated} 
+                    initialServiceView={activeView === 'appointments' ? 'pet_movel' : (activeView === 'petMovel' ? 'bath_groom' : 'main')}
                 />
             )}
             {appointmentToDelete && (
