@@ -13,7 +13,8 @@ export default defineConfig(({ mode }) => {
   return {
     envPrefix: ['VITE_', 'MINIMAX_'],
     server: {
-      port: 5173,
+      port: 5175,
+      strictPort: true,
       host: '0.0.0.0',
       allowedHosts: true,
       historyApiFallback: true,

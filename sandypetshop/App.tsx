@@ -5722,7 +5722,7 @@ const AdminAddAppointmentModal: React.FC<{
                                             selectedDate={selectedDate}
                                             onDateChange={setSelectedDate}
                                             disablePast={true}
-                                            disableWeekends={true}
+                                            disableWeekends={selectedService === ServiceType.VISIT_HOTEL ? false : true}
                                             allowedDays={allowedDays}
                                         />
                                     </div>
@@ -11609,7 +11609,7 @@ const HotelRegistrationForm: React.FC<{
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
                                         <div className="space-y-3">
                                             <label className="block text-sm font-bold text-pink-900 uppercase tracking-widest px-1">Última Vacina</label>
-                                            <DatePicker value={formData.last_vaccination_date || ''} onChange={(value) => setFormData(prev => ({ ...prev, last_vaccination_date: value }))} label="" />
+                                            <DatePicker disableWeekends={false} value={formData.last_vaccination_date || ''} onChange={(value) => setFormData(prev => ({ ...prev, last_vaccination_date: value }))} label="" />
                                         </div>
                                     </div>
                                 </div>
@@ -11681,11 +11681,11 @@ const HotelRegistrationForm: React.FC<{
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                         <div className="space-y-3">
                                             <label className="block text-xs font-bold text-pink-700 uppercase tracking-widest px-1 text-center">Data Check-in</label>
-                                            <DatePicker value={formData.check_in_date || ''} onChange={(value) => setFormData(prev => ({ ...prev, check_in_date: value }))} label="" />
+                                            <DatePicker disableWeekends={false} value={formData.check_in_date || ''} onChange={(value) => setFormData(prev => ({ ...prev, check_in_date: value }))} label="" />
                                         </div>
                                         <div className="space-y-3">
                                             <label className="block text-xs font-bold text-pink-700 uppercase tracking-widest px-1 text-center">Data Check-out</label>
-                                            <DatePicker value={formData.check_out_date || ''} onChange={(value) => setFormData(prev => ({ ...prev, check_out_date: value }))} label="" />
+                                            <DatePicker disableWeekends={false} value={formData.check_out_date || ''} onChange={(value) => setFormData(prev => ({ ...prev, check_out_date: value }))} label="" />
                                         </div>
                                         <div className="space-y-3">
                                             <label className="block text-xs font-bold text-pink-700 uppercase tracking-widest px-1 text-center">Horário Check-in</label>
@@ -14937,7 +14937,7 @@ const Scheduler: React.FC<SchedulerProps> = ({ setView, prefillService, prefillD
                                         selectedDate={selectedDate}
                                         onDateChange={setSelectedDate}
                                         disablePast
-                                        disableWeekends={true}
+                                        disableWeekends={selectedService === ServiceType.VISIT_HOTEL ? false : true}
                                         allowedDays={(() => {
                                             if ([ServiceType.PET_MOBILE_BATH, ServiceType.PET_MOBILE_BATH_AND_GROOMING, ServiceType.PET_MOBILE_GROOMING_ONLY].includes(selectedService)) {
                                                 switch (selectedCondo) {
@@ -22622,6 +22622,7 @@ const ObservationModal: React.FC<{
 // Componentes auxiliares movidos após o App para manter o fluxo
 
 const VisitAppointmentForm: React.FC<{ serviceLabel: string; onBack: () => void; onDone: () => void }> = ({ serviceLabel, onBack, onDone }) => {
+    const isHotel = serviceLabel === 'Hotel Pet' || serviceLabel.toLowerCase().includes('hotel');
     const [petName, setPetName] = useState('');
     const [petBreed, setPetBreed] = useState('');
     const [isOtherBreed, setIsOtherBreed] = useState(false);
@@ -22629,7 +22630,7 @@ const VisitAppointmentForm: React.FC<{ serviceLabel: string; onBack: () => void;
     const [whatsapp, setWhatsapp] = useState('');
     const [ownerAddress, setOwnerAddress] = useState('');
     const [observation, setObservation] = useState('');
-    const [date, setDate] = useState(() => getNextValidWeekday().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }));
+    const [date, setDate] = useState(() => isHotel ? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date()) : getNextValidWeekday().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }));
     const [time, setTime] = useState<number | ''>('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
@@ -22641,7 +22642,7 @@ const VisitAppointmentForm: React.FC<{ serviceLabel: string; onBack: () => void;
         }
         const [y, m, d] = val.split('-').map(Number);
         const dt = new Date(y, m - 1, d);
-        if (dt.getDay() === 0 || dt.getDay() === 6 || isSaoPauloWeekend(dt)) {
+        if (!isHotel && (dt.getDay() === 0 || dt.getDay() === 6 || isSaoPauloWeekend(dt))) {
             alert('Agendamentos não são permitidos aos sábados e domingos! Selecionando o próximo dia útil.');
             const valid = getNextValidWeekday(dt);
             const validStr = `${valid.getFullYear()}-${String(valid.getMonth() + 1).padStart(2, '0')}-${String(valid.getDate()).padStart(2, '0')}`;
@@ -22657,7 +22658,7 @@ const VisitAppointmentForm: React.FC<{ serviceLabel: string; onBack: () => void;
 
         const [year, month, day] = date.split('-').map(Number);
         const checkDate = new Date(year, month - 1, day);
-        if (checkDate.getDay() === 0 || checkDate.getDay() === 6 || isSaoPauloWeekend(checkDate)) {
+        if (!isHotel && (checkDate.getDay() === 0 || checkDate.getDay() === 6 || isSaoPauloWeekend(checkDate))) {
             alert('Agendamentos não são permitidos aos sábados e domingos. Por favor, escolha um dia útil (segunda a sexta-feira).');
             setIsSubmitting(false);
             return;
