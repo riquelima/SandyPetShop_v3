@@ -17075,8 +17075,8 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                 </div>
 
                 {/* Resumo Rápido */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4 mt-6 sm:mt-8 relative z-10">
-                    <div className="bg-green-50 rounded-xl p-2 sm:p-4 border border-green-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden">
+                <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 sm:gap-4 mt-6 sm:mt-8 relative z-10 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none pb-1">
+                    <div className="bg-green-50 rounded-xl p-2 sm:p-4 border border-green-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden snap-start shrink-0 min-w-[70vw] md:min-w-0">
                         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-200 rounded-full flex items-center justify-center shrink-0">
                             <span className="relative flex h-2 w-2 sm:h-3 sm:w-3">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
@@ -17088,7 +17088,7 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                             <p className="text-lg sm:text-2xl font-black text-green-900 truncate">{currentInHotel.length}</p>
                         </div>
                     </div>
-                    <div className="bg-blue-50 rounded-xl p-2 sm:p-4 border border-blue-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden">
+                    <div className="bg-blue-50 rounded-xl p-2 sm:p-4 border border-blue-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden snap-start shrink-0 min-w-[70vw] md:min-w-0">
                         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-200 text-blue-700 rounded-full flex items-center justify-center shrink-0 font-bold">
                             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         </div>
@@ -17097,7 +17097,7 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                             <p className="text-lg sm:text-2xl font-black text-blue-900 truncate">{approved.length}</p>
                         </div>
                     </div>
-                    <div className="bg-yellow-50 rounded-xl p-2 sm:p-4 border border-yellow-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden">
+                    <div className="bg-yellow-50 rounded-xl p-2 sm:p-4 border border-yellow-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden snap-start shrink-0 min-w-[70vw] md:min-w-0">
                         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-200 text-yellow-700 rounded-full flex items-center justify-center shrink-0 font-bold">
                             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         </div>
@@ -17106,7 +17106,7 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                             <p className="text-lg sm:text-2xl font-black text-yellow-900 truncate">{analysis.length}</p>
                         </div>
                     </div>
-                    <div className="bg-purple-50 rounded-xl p-2 sm:p-4 border border-purple-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden">
+                    <div className="bg-purple-50 rounded-xl p-2 sm:p-4 border border-purple-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden snap-start shrink-0 min-w-[70vw] md:min-w-0">
                         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-200 text-purple-700 rounded-full flex items-center justify-center shrink-0 font-bold">
                             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                         </div>
@@ -17115,7 +17115,7 @@ const HotelView: React.FC<{ refreshKey?: number; setShowHotelStatistics?: (show:
                             <p className="text-lg sm:text-2xl font-black text-purple-900 truncate">{daycareDiarias.length}</p>
                         </div>
                     </div>
-                    <div className="bg-indigo-50 rounded-xl p-2 sm:p-4 border border-indigo-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden">
+                    <div className="bg-indigo-50 rounded-xl p-2 sm:p-4 border border-indigo-100 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2 sm:gap-4 overflow-hidden snap-start shrink-0 min-w-[70vw] md:min-w-0">
                         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-200 text-indigo-700 rounded-full flex items-center justify-center shrink-0 font-bold">
                             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
                         </div>
