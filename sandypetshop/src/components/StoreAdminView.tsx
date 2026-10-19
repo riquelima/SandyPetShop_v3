@@ -215,6 +215,7 @@ export const StoreAdminView: React.FC<StoreAdminViewProps> = ({ onBack }) => {
         name: formName.trim(),
         category: formCategory,
         price: cleanPrice,
+        stock: Math.max(0, Number(formStock) || 0),
         rating: 5.0,
         reviews: 0,
         weight_or_unit: formPortion.trim() || null,
@@ -236,6 +237,7 @@ export const StoreAdminView: React.FC<StoreAdminViewProps> = ({ onBack }) => {
         setFormName('');
         setFormPortion('');
         setFormPrice('');
+        setFormStock(15);
         setFormDesc('');
         setFormAlt('');
         setFormImages([]);
@@ -260,7 +262,7 @@ export const StoreAdminView: React.FC<StoreAdminViewProps> = ({ onBack }) => {
       setEditCategory(prod.category);
       setEditPortion(prod.weight_or_unit || '');
       setEditPrice(prod.price ? prod.price.toFixed(2).replace('.', ',') : '0,00');
-      setEditStock(prod.stock ?? 18);
+      setEditStock(prod.stock !== undefined && prod.stock !== null ? Number(prod.stock) : 0);
       setEditDesc(prod.description || '');
       setEditImage(prod.image);
     }
@@ -269,6 +271,7 @@ export const StoreAdminView: React.FC<StoreAdminViewProps> = ({ onBack }) => {
   // Salvar Edição em Linha
   const handleSaveEdit = async (productId: string) => {
     const cleanPrice = parseFloat(editPrice.replace(',', '.').replace(/[^\d.]/g, '')) || 0;
+    const cleanStock = Math.max(0, parseInt(String(editStock), 10) || 0);
 
     setSaving(true);
     try {
@@ -277,6 +280,7 @@ export const StoreAdminView: React.FC<StoreAdminViewProps> = ({ onBack }) => {
         category: editCategory,
         weight_or_unit: editPortion.trim() || null,
         price: cleanPrice,
+        stock: cleanStock,
         description: editDesc.trim() || null,
         image: editImage,
         updated_at: new Date().toISOString()
@@ -291,7 +295,24 @@ export const StoreAdminView: React.FC<StoreAdminViewProps> = ({ onBack }) => {
         console.error('Erro ao atualizar produto:', error);
         alert(`Erro ao atualizar: ${error.message}`);
       } else {
-        showNotification('Alterações Salvas!', 'O produto foi atualizado com sucesso no catálogo ✨');
+        // Atualização imediata no estado local
+        setProducts(prev =>
+          prev.map(p =>
+            p.id === productId
+              ? {
+                  ...p,
+                  name: editName.trim(),
+                  category: editCategory as any,
+                  weight_or_unit: editPortion.trim() || null,
+                  price: cleanPrice,
+                  stock: cleanStock,
+                  description: editDesc.trim() || null,
+                  image: editImage
+                }
+              : p
+          )
+        );
+        showNotification('Alterações Salvas!', 'O produto e o estoque foram atualizados com sucesso ✨');
         setEditingCardId(null);
         await fetchProducts();
       }
@@ -632,7 +653,16 @@ export const StoreAdminView: React.FC<StoreAdminViewProps> = ({ onBack }) => {
                 >
                   <span className="material-symbols-outlined text-[18px]">remove</span>
                 </button>
-                <span className="font-bold text-base text-[#b50a53] w-8 text-center">{formStock}</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={formStock}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    setFormStock(isNaN(val) ? 0 : Math.max(0, val));
+                  }}
+                  className="font-bold text-base text-[#b50a53] w-12 text-center bg-transparent border-0 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
                 <button
                   type="button"
                   onClick={() => setFormStock(formStock + 1)}
@@ -726,7 +756,7 @@ export const StoreAdminView: React.FC<StoreAdminViewProps> = ({ onBack }) => {
                           {prod.category === 'saude' ? 'Saúde' : prod.category === 'racao' ? 'Ração' : 'Mimos'}
                         </span>
                         <span className="text-[11px] text-[#8A5868]">
-                          {prod.is_active ? `Estoque: ${prod.stock ?? 18} un` : 'Pausado'}
+                          {prod.is_active ? `Estoque: ${prod.stock ?? 0} un` : 'Pausado'}
                         </span>
                       </div>
                       <p className="text-sm font-bold text-[#3f0019] truncate">{prod.name}</p>
@@ -861,7 +891,16 @@ export const StoreAdminView: React.FC<StoreAdminViewProps> = ({ onBack }) => {
                             >
                               <span className="material-symbols-outlined text-[16px]">remove</span>
                             </button>
-                            <span className="text-sm text-[#3f0019] font-bold">{editStock}</span>
+                            <input
+                              type="number"
+                              min={0}
+                              value={editStock}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                setEditStock(isNaN(val) ? 0 : Math.max(0, val));
+                              }}
+                              className="w-14 text-center text-sm text-[#3f0019] font-bold bg-transparent border-0 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
                             <button
                               type="button"
                               onClick={() => setEditStock(editStock + 1)}

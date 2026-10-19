@@ -13,6 +13,7 @@ export interface ProductItem {
   alt: string;
   description?: string;
   badge?: string;
+  stock?: number;
 }
 
 export interface CartItem {
@@ -183,7 +184,8 @@ export const SandysStore: React.FC<SandysStoreProps> = ({ onBack, initialTab = '
             image: row.image,
             alt: row.alt,
             description: row.description || undefined,
-            badge: row.badge || undefined
+            badge: row.badge || undefined,
+            stock: row.stock !== undefined && row.stock !== null ? Number(row.stock) : 0
           }));
           setProducts(mapped);
         }

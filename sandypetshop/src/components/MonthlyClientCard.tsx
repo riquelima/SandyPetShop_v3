@@ -17,6 +17,14 @@ import {
 import { MonthlyClient } from '../../types';
 import { useServiceValidation } from '../hooks/useServiceValidation';
 import { supabase } from '../../supabaseClient';
+import {
+    WORKING_HOURS,
+    BATH_GROOMING_HOURS,
+    MAX_CAPACITY_PER_SLOT,
+    getPetMovelWorkingHours,
+    isPetMovelHourDuplicated,
+    matchesCondo
+} from '../../constants';
 
 // --- Helpers ---
 const FALLBACK_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="28">🐾</text></svg>';
@@ -558,10 +566,119 @@ const MonthlyClientCard: React.FC<{
         });
     }, [client.id, client.pet_photo_url, client.pet_name, client.pet_breed, client.owner_name, client.owner_address, client.owner_cpf, client.whatsapp, client.condominium, client.service, client.weight, client.recurrence_type, client.recurrence_day, client.recurrence_time, client.observation, client.payment_status, client.payment_due_date, client.price, client.extra_services]);
 
+    const [existingMonthlyClients, setExistingMonthlyClients] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (isFlipped && inlineMode === 'edit') {
+            supabase
+                .from('monthly_clients')
+                .select('id, pet_name, condominium, recurrence_day, recurrence_time, is_active')
+                .eq('is_active', true)
+                .then(({ data, error }) => {
+                    if (data && !error) {
+                        setExistingMonthlyClients(data);
+                    }
+                });
+        }
+    }, [isFlipped, inlineMode]);
+
+    const isFormPetMovel = React.useMemo(() => {
+        const srv = `${inlineForm.service || ''} ${client.service || ''}`.toLowerCase();
+        const cdo = `${inlineForm.condominium || ''} ${client.condominium || ''}`.toLowerCase();
+        const obs = `${inlineForm.observation || ''} ${client.observation || ''}`.toLowerCase();
+        if (srv.includes('móvel') || srv.includes('movel')) return true;
+        if (cdo.includes('vitta') || cdo.includes('max') || cdo.includes('paseo')) return true;
+        if (obs.includes('vitta') || obs.includes('max haus') || obs.includes('paseo')) return true;
+        return false;
+    }, [inlineForm.service, inlineForm.condominium, inlineForm.observation, client.service, client.condominium, client.observation]);
+
+    const formEffectiveCondo = React.useMemo(() => {
+        const rawCondo = (inlineForm.condominium || client.condominium || '').trim();
+        if (rawCondo && rawCondo !== 'Nenhum Condomínio') return rawCondo;
+        const obs = `${inlineForm.observation || ''} ${client.observation || ''}`.toLowerCase();
+        if (obs.includes('paseo')) return 'Paseo';
+        if (obs.includes('max haus')) return 'Max Haus';
+        if (obs.includes('vitta')) return 'Vitta Parque';
+        if (isFormPetMovel) {
+            const d = Number(inlineForm.recurrence_day ?? client.recurrence_day);
+            if (d === 3) return 'Vitta Parque';
+            if (d === 4) return 'Max Haus';
+            if (d === 5) return 'Paseo';
+            return 'Pet Móvel';
+        }
+        return 'Banho & Tosa Fixo';
+    }, [inlineForm.condominium, inlineForm.observation, inlineForm.recurrence_day, inlineForm.service, client, isFormPetMovel]);
+
+    const formWorkingHours = React.useMemo(() => {
+        if (isFormPetMovel) {
+            return getPetMovelWorkingHours(Number(inlineForm.recurrence_day), formEffectiveCondo);
+        }
+        if (formEffectiveCondo === 'Banho & Tosa Fixo' || inlineForm.service?.includes('Fixo')) {
+            return BATH_GROOMING_HOURS;
+        }
+        return WORKING_HOURS;
+    }, [isFormPetMovel, inlineForm.recurrence_day, formEffectiveCondo, inlineForm.service]);
+
     const handleInlineChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
+        if (name === 'recurrence_day') {
+            const numDay = Number(value);
+            setInlineForm(prev => {
+                const next = { ...prev, recurrence_day: numDay };
+                if (isFormPetMovel) {
+                    if (numDay === 3 && (!prev.condominium || !prev.condominium.toLowerCase().includes('vitta'))) {
+                        next.condominium = 'Vitta Parque';
+                    } else if (numDay === 4 && (!prev.condominium || !prev.condominium.toLowerCase().includes('max'))) {
+                        next.condominium = 'Max Haus';
+                    } else if (numDay === 5 && (!prev.condominium || !prev.condominium.toLowerCase().includes('paseo'))) {
+                        next.condominium = 'Paseo';
+                    }
+                }
+                return next;
+            });
+            return;
+        }
+        if (name === 'condominium') {
+            setInlineForm(prev => {
+                const next = { ...prev, condominium: value };
+                const lower = value.toLowerCase();
+                if (isFormPetMovel) {
+                    if (lower.includes('vitta')) next.recurrence_day = 3;
+                    else if (lower.includes('max')) next.recurrence_day = 4;
+                    else if (lower.includes('paseo')) next.recurrence_day = 5;
+                }
+                return next;
+            });
+            return;
+        }
         setInlineForm(prev => ({ ...prev, [name]: value }));
     };
+
+    // Garantir que inlineForm.recurrence_time seja válido na grade ativa
+    useEffect(() => {
+        if (!isFlipped || inlineMode !== 'edit') return;
+        if (formWorkingHours.length > 0 && inlineForm.recurrence_time !== undefined && inlineForm.recurrence_time !== null) {
+            const currTime = Number(inlineForm.recurrence_time);
+            if (!formWorkingHours.includes(currTime)) {
+                const firstAvailable = formWorkingHours.find(h => {
+                    const isDup = isFormPetMovel && isPetMovelHourDuplicated(h, Number(inlineForm.recurrence_day), formEffectiveCondo);
+                    const maxCap = isFormPetMovel ? (isDup ? 2 : 1) : 1;
+                    const count = existingMonthlyClients.filter(mc =>
+                        mc.id !== client.id &&
+                        mc.is_active &&
+                        Number(mc.recurrence_day) === Number(inlineForm.recurrence_day) &&
+                        Number(mc.recurrence_time) === Number(h) &&
+                        (!formEffectiveCondo || !mc.condominium || matchesCondo(mc.condominium, formEffectiveCondo))
+                    ).length;
+                    return count < maxCap;
+                }) ?? formWorkingHours[0];
+
+                if (firstAvailable !== undefined) {
+                    setInlineForm(prev => ({ ...prev, recurrence_time: firstAvailable }));
+                }
+            }
+        }
+    }, [formWorkingHours, isFlipped, inlineMode]);
 
     const handleInlinePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -1375,32 +1492,85 @@ const MonthlyClientCard: React.FC<{
                                         onChange={handleInlineChange}
                                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
                                     >
-                                        <option value={1}>Segunda</option>
-                                        <option value={2}>Terça</option>
-                                        <option value={3}>Quarta</option>
-                                        <option value={4}>Quinta</option>
-                                        <option value={5}>Sexta</option>
-                                        <option value={6}>Sábado</option>
-                                        <option value={7}>Domingo</option>
+                                        {inlineForm.recurrence_type === 'monthly' ? (
+                                            Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                                                <option key={d} value={d}>Dia {d}</option>
+                                            ))
+                                        ) : isFormPetMovel ? (
+                                            <>
+                                                <option value={3}>Quarta (Vitta Parque)</option>
+                                                <option value={4}>Quinta (Max Haus)</option>
+                                                <option value={5}>Sexta (Paseo)</option>
+                                                {![3, 4, 5].includes(Number(inlineForm.recurrence_day)) && (
+                                                    <option value={inlineForm.recurrence_day}>
+                                                        {weekDaysLabel[Number(inlineForm.recurrence_day)] || `Dia ${inlineForm.recurrence_day}`}
+                                                    </option>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <>
+                                                <option value={1}>Segunda</option>
+                                                <option value={2}>Terça</option>
+                                                <option value={3}>Quarta</option>
+                                                <option value={4}>Quinta</option>
+                                                <option value={5}>Sexta</option>
+                                                <option value={6}>Sábado</option>
+                                                <option value={7}>Domingo</option>
+                                            </>
+                                        )}
                                     </select>
                                 </div>
                                 <div className="flex flex-col gap-1">
                                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Horário</label>
                                     <select
                                         name="recurrence_time"
-                                        value={inlineForm.recurrence_time ?? 9}
+                                        value={inlineForm.recurrence_time ?? formWorkingHours[0] ?? 9}
                                         onChange={handleInlineChange}
                                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition-all"
                                     >
-                                        <option value={9}>9:00</option>
-                                        <option value={10}>10:00</option>
-                                        <option value={11}>11:00</option>
-                                        <option value={12}>12:00</option>
-                                        <option value={13}>13:00</option>
-                                        <option value={14}>14:00</option>
-                                        <option value={15}>15:00</option>
-                                        <option value={16}>16:00</option>
-                                        <option value={17}>17:00</option>
+                                        {inlineForm.recurrence_time !== undefined &&
+                                         inlineForm.recurrence_time !== null &&
+                                         !formWorkingHours.includes(Number(inlineForm.recurrence_time)) && (
+                                            <option value={inlineForm.recurrence_time}>
+                                                {`${inlineForm.recurrence_time}:00 (Atual - Fora da grade)`}
+                                            </option>
+                                        )}
+                                        {formWorkingHours.map(h => {
+                                            const isDup = isFormPetMovel && isPetMovelHourDuplicated(h, Number(inlineForm.recurrence_day), formEffectiveCondo);
+                                            const maxCap = isFormPetMovel ? (isDup ? 2 : 1) : MAX_CAPACITY_PER_SLOT;
+                                            const bookedCount = existingMonthlyClients.filter(mc => {
+                                                if (mc.id === client.id) return false;
+                                                if (!mc.is_active) return false;
+                                                if (Number(mc.recurrence_day) !== Number(inlineForm.recurrence_day)) return false;
+                                                if (Number(mc.recurrence_time) !== Number(h)) return false;
+                                                if (isFormPetMovel && formEffectiveCondo && mc.condominium && !matchesCondo(mc.condominium, formEffectiveCondo)) {
+                                                    return false;
+                                                }
+                                                return true;
+                                            }).length;
+                                            const isCurrentClientSlot = Number(inlineForm.recurrence_time) === h;
+                                            const isFull = bookedCount >= maxCap && !isCurrentClientSlot;
+
+                                            return (
+                                                <option
+                                                    key={h}
+                                                    value={h}
+                                                    disabled={isFull}
+                                                    className={isFull ? 'text-red-400 bg-gray-100 font-normal' : ''}
+                                                >
+                                                    {`${h}:00`}
+                                                    {isCurrentClientSlot
+                                                        ? (isDup ? ` (Vaga atual de ${client.pet_name} - ${bookedCount + 1}/${maxCap})` : ` (Vaga atual de ${client.pet_name})`)
+                                                        : isFull
+                                                            ? ` (Lotado - ${bookedCount}/${maxCap})`
+                                                            : (isDup
+                                                                ? (bookedCount > 0 ? ` (1 vaga livre - ${bookedCount}/${maxCap})` : ` (2 vagas livres)`)
+                                                                : (bookedCount > 0 ? ` (${bookedCount}/${maxCap} ocupada)` : ` (1 vaga livre)`)
+                                                              )
+                                                    }
+                                                </option>
+                                            );
+                                        })}
                                     </select>
                                 </div>
                             </div>

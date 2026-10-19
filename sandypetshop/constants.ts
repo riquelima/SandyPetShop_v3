@@ -156,4 +156,15 @@ export function getPetMovelSlotCapacity(hour: number, dayOfWeek?: number | null,
   return isPetMovelHourDuplicated(hour, dayOfWeek, condo) ? 2 : 1;
 }
 
+export function matchesCondo(apptCondo?: string, targetCondo?: string): boolean {
+  if (!targetCondo) return true;
+  if (!apptCondo) return true;
+  const c1 = apptCondo.toLowerCase().trim();
+  const c2 = targetCondo.toLowerCase().trim();
+  if (c2.includes('paseo') && c1.includes('paseo')) return true;
+  if (c2.includes('vitta') && c1.includes('vitta')) return true;
+  if (c2.includes('max') && c1.includes('max')) return true;
+  return c1.includes(c2) || c2.includes(c1);
+}
+
 

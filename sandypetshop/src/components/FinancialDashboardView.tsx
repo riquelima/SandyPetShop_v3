@@ -30,7 +30,8 @@ import {
   Sparkles,
   X,
   Filter,
-  CheckCircle2
+  CheckCircle2,
+  ShoppingBag
 } from 'lucide-react';
 
 // Tipos para os dados do Supabase
@@ -250,13 +251,28 @@ const FinancialDashboardView: React.FC = () => {
     petMovel: any[];
     daycare: any[];
     hotel: any[];
+    storeOrders: any[];
+    storeProducts: any[];
   }>({
     banhoTosa: [],
     appointments: [],
     petMovel: [],
     daycare: [],
-    hotel: []
+    hotel: [],
+    storeOrders: [],
+    storeProducts: []
   });
+
+  // Estados para o Modal de Adicionar Item Vendido da Loja
+  const [isStoreSaleModalOpen, setIsStoreSaleModalOpen] = useState(false);
+  const [saleProductId, setSaleProductId] = useState('');
+  const [saleQuantity, setSaleQuantity] = useState(1);
+  const [saleUnitPrice, setSaleUnitPrice] = useState<number>(0);
+  const [saleDate, setSaleDate] = useState('');
+  const [saleClientName, setSaleClientName] = useState('');
+  const [salePaymentMethod, setSalePaymentMethod] = useState('PIX');
+  const [saleDeductStock, setSaleDeductStock] = useState(true);
+  const [savingStoreSale, setSavingStoreSale] = useState(false);
 
   // Estados de dados, loading e modais (Gastos)
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -337,18 +353,24 @@ const FinancialDashboardView: React.FC = () => {
     else setRefreshing(true);
 
     try {
-      const banhoRes = await supabase.from('agendamento_banhotosa').select('price, appointment_time, status, pet_name, owner_name');
-      const apptRes = await supabase.from('appointments').select('price, appointment_time, status, service, pet_name, owner_name');
-      const pmRes = await supabase.from('pet_movel_appointments').select('price, appointment_time, status, pet_name, owner_name');
-      const daycareRes = await supabase.from('daycare_enrollments').select('total_price, created_at, status, pet_name, pet_breed, tutor_name, extra_services');
-      const hotelRes = await supabase.from('hotel_registrations').select('id, total_services_price, check_in_date, check_out_date, status, pet_name, pet_breed, tutor_name, registration_date, extra_services, service_daily_rate, approval_status');
+      const [banhoRes, apptRes, pmRes, daycareRes, hotelRes, storeOrdersRes, storeProductsRes] = await Promise.all([
+        supabase.from('agendamento_banhotosa').select('price, appointment_time, status, pet_name, owner_name'),
+        supabase.from('appointments').select('price, appointment_time, status, service, pet_name, owner_name'),
+        supabase.from('pet_movel_appointments').select('price, appointment_time, status, pet_name, owner_name'),
+        supabase.from('daycare_enrollments').select('total_price, created_at, status, pet_name, pet_breed, tutor_name, extra_services'),
+        supabase.from('hotel_registrations').select('id, total_services_price, check_in_date, check_out_date, status, pet_name, pet_breed, tutor_name, registration_date, extra_services, service_daily_rate, approval_status'),
+        supabase.from('store_orders').select('*').order('created_at', { ascending: false }),
+        supabase.from('store_products').select('id, name, price, stock, image, category, weight_or_unit, is_active').order('name', { ascending: true })
+      ]);
 
       setDbData({
         banhoTosa: banhoRes.data || [],
         appointments: apptRes.data || [],
         petMovel: pmRes.data || [],
         daycare: daycareRes.data || [],
-        hotel: hotelRes.data || []
+        hotel: hotelRes.data || [],
+        storeOrders: storeOrdersRes.data || [],
+        storeProducts: storeProductsRes.data || []
       });
     } catch (err) {
       console.error('Erro ao buscar dados de faturamento do Supabase:', err);
@@ -775,6 +797,122 @@ const FinancialDashboardView: React.FC = () => {
   const closeModal = () => {
     setIsExpenseModalOpen(false);
     setEditingExpense(null);
+  };
+
+  // Abrir modal de venda da loja
+  const openStoreSaleModal = () => {
+    const today = new Date();
+    const isCurrentMonthYear = today.getMonth() === selectedMonth && today.getFullYear() === selectedYear;
+    const defaultDay = isCurrentMonthYear ? String(today.getDate()).padStart(2, '0') : '05';
+    const defaultDateStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${defaultDay}`;
+    setSaleDate(defaultDateStr);
+
+    const prods = dbData.storeProducts || [];
+    if (prods.length > 0) {
+      const first = prods[0];
+      setSaleProductId(first.id);
+      setSaleUnitPrice(Number(first.price || 0));
+    }
+    setSaleQuantity(1);
+    setSaleClientName('');
+    setSalePaymentMethod('PIX');
+    setSaleDeductStock(true);
+    setIsStoreSaleModalOpen(true);
+  };
+
+  // Salvar venda da loja no Supabase (entra imediatamente nas entradas financeiras)
+  const handleSaveStoreSale = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const selectedProd = (dbData.storeProducts || []).find(p => p.id === saleProductId);
+    if (!selectedProd) {
+      alert('Selecione um produto do catálogo.');
+      return;
+    }
+    const qty = Math.max(1, Number(saleQuantity) || 1);
+    const unitP = Math.max(0, Number(saleUnitPrice) || 0);
+    const totalVal = qty * unitP;
+    const saleDateTime = saleDate ? new Date(`${saleDate}T12:00:00Z`).toISOString() : new Date().toISOString();
+
+    setSavingStoreSale(true);
+    try {
+      const orderPayload = {
+        items: [{
+          id: selectedProd.id,
+          name: selectedProd.name,
+          price: unitP,
+          quantity: qty,
+          image: selectedProd.image,
+          category: selectedProd.category
+        }],
+        total_items: qty,
+        subtotal: totalVal,
+        total: totalVal,
+        status: 'completed',
+        client_name: saleClientName.trim() || 'Venda Balcão / Loja',
+        notes: salePaymentMethod ? `Pagamento: ${salePaymentMethod}` : null,
+        created_at: saleDateTime
+      };
+
+      const { error: orderErr } = await supabase
+        .from('store_orders')
+        .insert([orderPayload]);
+
+      if (orderErr) throw orderErr;
+
+      // Dar baixa no estoque se solicitado
+      if (saleDeductStock && selectedProd.stock !== undefined && selectedProd.stock !== null) {
+        const newStock = Math.max(0, Number(selectedProd.stock) - qty);
+        await supabase
+          .from('store_products')
+          .update({ stock: newStock })
+          .eq('id', selectedProd.id);
+      }
+
+      await loadFinancialData(true);
+      setIsStoreSaleModalOpen(false);
+    } catch (err: any) {
+      console.error('Erro ao registrar venda:', err);
+      alert(`Erro ao registrar venda: ${err.message || 'Erro desconhecido'}`);
+    } finally {
+      setSavingStoreSale(false);
+    }
+  };
+
+  // Excluir venda da loja no Supabase (o valor sai imediatamente das entradas financeiras)
+  const handleDeleteStoreSale = async (sale: any) => {
+    const salePrice = Number(sale.total || sale.price || 0);
+    const confirmMsg = `Deseja realmente remover esta venda de R$ ${salePrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}?\n\nO valor sairá imediatamente das entradas do financeiro e o estoque será restabelecido.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const { error } = await supabase
+        .from('store_orders')
+        .delete()
+        .eq('id', sale.id);
+
+      if (error) throw error;
+
+      // Restaurar estoque se aplicável
+      if (sale.items && Array.isArray(sale.items) && sale.items.length > 0) {
+        for (const item of sale.items) {
+          if (item.id) {
+            const prod = (dbData.storeProducts || []).find(p => p.id === item.id);
+            if (prod && prod.stock !== undefined && prod.stock !== null) {
+              const restoredStock = Number(prod.stock) + Number(item.quantity || 1);
+              await supabase
+                .from('store_products')
+                .update({ stock: restoredStock })
+                .eq('id', item.id);
+            }
+          }
+        }
+      }
+
+      await loadFinancialData(true);
+    } catch (err: any) {
+      console.error('Erro ao excluir venda da loja:', err);
+      alert(`Erro ao remover venda: ${err.message || 'Erro desconhecido'}`);
+    }
   };
 
   // MOTOR HÍBRIDO DE CONSOLIDAÇÃO DO FATURAMENTO (MANTIDO E PROTEGIDO)
@@ -1239,28 +1377,100 @@ const FinancialDashboardView: React.FC = () => {
       month: hotelMes
     };
 
-    const totalMonth = metricsBanhoTosa.month + metricsPetMovel.month + metricsCreche.month + metricsHotel.month;
+    // ── SANDY'S STORE (LOJA): Vendas de produtos ────────────────────────
+    const realStoreOrders = (dbData.storeOrders || []).map((o: any) => {
+      const orderDate = o.created_at ? new Date(o.created_at) : new Date();
+      const totalVal = Number(o.total || o.subtotal || 0);
+      const isPaid = isConcluido(o.status);
+      const itemsList = Array.isArray(o.items) ? o.items : [];
+      return {
+        id: o.id,
+        price: totalVal,
+        total: totalVal,
+        date: orderDate,
+        dateStr: o.created_at,
+        status: o.status || 'completed',
+        isPaid,
+        client_name: o.client_name || 'Venda Balcão / Loja',
+        client_phone: o.client_phone || '',
+        items: itemsList,
+        total_items: Number(o.total_items || itemsList.reduce((sum: number, it: any) => sum + Number(it.quantity || 1), 0) || 1),
+        notes: o.notes || ''
+      };
+    });
+
+    const storeVendasConcluidas = realStoreOrders.filter(d => isConcluido(d.status));
+
+    const storeVendasNoMes = storeVendasConcluidas.filter(d => {
+      const { year, month } = parseYearMonth(d.dateStr);
+      return year === currentYear && month === currentMonth;
+    });
+
+    const totalLojaMes = storeVendasNoMes.reduce((sum, d) => sum + d.total, 0);
+    const totalItensVendidosMes = storeVendasNoMes.reduce((sum, d) => sum + d.total_items, 0);
+
+    const chartLoja = getMonthlyChartData(
+      storeVendasConcluidas.map(d => ({ price: d.total, dateStr: d.dateStr, status: d.status }))
+    );
+
+    const storeHoje = storeVendasConcluidas
+      .filter(d => {
+        const ds = `${d.date.getFullYear()}-${String(d.date.getMonth() + 1).padStart(2, '0')}-${String(d.date.getDate()).padStart(2, '0')}`;
+        return ds === hojeStr;
+      })
+      .reduce((sum, d) => sum + d.total, 0);
+
+    const storeSemana = storeVendasConcluidas
+      .filter(d => d.date >= inicioDaSemana && d.date <= fimDaSemana)
+      .reduce((sum, d) => sum + d.total, 0);
+
+    const storeAnual = storeVendasConcluidas
+      .filter(d => {
+        const { year } = parseYearMonth(d.dateStr);
+        return year === currentYear;
+      })
+      .reduce((sum, d) => sum + d.total, 0);
+
+    const prevMonthLoja = chartLoja[currentMonth === 0 ? 11 : currentMonth - 1];
+    const growthLoja = prevMonthLoja > 0 ? ((totalLojaMes - prevMonthLoja) / prevMonthLoja) * 100 : 0;
+
+    const metricsLoja = {
+      today: storeHoje,
+      week: storeSemana,
+      month: totalLojaMes,
+      year: storeAnual,
+      growth: growthLoja,
+      growthAbs: totalLojaMes - prevMonthLoja,
+      totalItems: totalItensVendidosMes,
+      salesCount: storeVendasNoMes.length,
+      vendasNoMes: storeVendasNoMes
+    };
+
+    const totalMonth = metricsBanhoTosa.month + metricsPetMovel.month + metricsCreche.month + metricsHotel.month + metricsLoja.month;
     const totalPrevMonth =
       chartBanhoTosa[selectedMonth === 0 ? 11 : selectedMonth - 1] +
       chartPetMovel[selectedMonth === 0 ? 11 : selectedMonth - 1] +
       chartCreche[selectedMonth === 0 ? 11 : selectedMonth - 1] +
-      chartHotel[selectedMonth === 0 ? 11 : selectedMonth - 1];
+      chartHotel[selectedMonth === 0 ? 11 : selectedMonth - 1] +
+      chartLoja[selectedMonth === 0 ? 11 : selectedMonth - 1];
 
     const overallDifference = totalMonth - totalPrevMonth;
     const overallPercentage = totalPrevMonth > 0 ? (overallDifference / totalPrevMonth) * 100 : 0;
 
-    const totalYear = metricsBanhoTosa.year + metricsPetMovel.year + metricsCreche.year + metricsHotel.year;
+    const totalYear = metricsBanhoTosa.year + metricsPetMovel.year + metricsCreche.year + metricsHotel.year + metricsLoja.year;
 
     const shareBanhoTosa = totalMonth > 0 ? (metricsBanhoTosa.month / totalMonth) * 100 : 0;
     const sharePetMovel = totalMonth > 0 ? (metricsPetMovel.month / totalMonth) * 100 : 0;
     const shareCreche = totalMonth > 0 ? (metricsCreche.month / totalMonth) * 100 : 0;
     const shareHotel = totalMonth > 0 ? (metricsHotel.month / totalMonth) * 100 : 0;
+    const shareLoja = totalMonth > 0 ? (metricsLoja.month / totalMonth) * 100 : 0;
 
     const servicesList = [
       { name: 'Banho & Tosa', value: metricsBanhoTosa.month, key: 'banhotosa' },
       { name: 'Pet Móvel', value: metricsPetMovel.month, key: 'petmovel' },
       { name: 'Creche Pet', value: metricsCreche.month, key: 'creche' },
-      { name: 'Hotel Pet', value: metricsHotel.month, key: 'hotel' }
+      { name: 'Hotel Pet', value: metricsHotel.month, key: 'hotel' },
+      { name: "Sandy's Store", value: metricsLoja.month, key: 'loja' }
     ];
     servicesList.sort((a, b) => b.value - a.value);
     const topService = servicesList[0].name;
@@ -1371,6 +1581,23 @@ const FinancialDashboardView: React.FC = () => {
         }
       });
 
+      storeVendasNoMes.forEach(o => {
+        const firstItem = o.items && o.items[0];
+        const itemName = firstItem
+          ? o.items.length > 1
+            ? `${firstItem.name} (+${o.items.length - 1})`
+            : `${o.total_items}x ${firstItem.name}`
+          : 'Produtos da Loja';
+
+        items.push({
+          origem: "Sandy's Store",
+          pet_name: itemName,
+          valor: Number(o.total || 0),
+          date: o.date,
+          timeStr: o.dateStr && o.dateStr.length > 10 ? new Date(o.dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--'
+        });
+      });
+
       return items.sort((a, b) => b.date.getTime() - a.date.getTime());
     })();
 
@@ -1416,6 +1643,7 @@ const FinancialDashboardView: React.FC = () => {
       petmovel: metricsPetMovel,
       creche: metricsCreche,
       hotel: metricsHotel,
+      loja: metricsLoja,
       totalCrecheAprovado,
       approvedCrechePets,
       totalHotelAprovado,
@@ -1430,7 +1658,8 @@ const FinancialDashboardView: React.FC = () => {
         banhotosa: chartBanhoTosa,
         petmovel: chartPetMovel,
         creche: chartCreche,
-        hotel: chartHotel
+        hotel: chartHotel,
+        loja: chartLoja
       },
       summary: {
         monthTotal: totalMonth,
@@ -1442,10 +1671,12 @@ const FinancialDashboardView: React.FC = () => {
           petmovel: sharePetMovel,
           creche: shareCreche,
           hotel: shareHotel,
+          loja: shareLoja,
           valBanhoTosa: metricsBanhoTosa.month,
           valPetMovel: metricsPetMovel.month,
           valCreche: crecheMes,
-          valHotel: hotelMes
+          valHotel: hotelMes,
+          valLoja: totalLojaMes
         },
         topService,
         serviceLucrativo,
@@ -1915,7 +2146,8 @@ const FinancialDashboardView: React.FC = () => {
       { name: 'Banho & Tosa', value: shares.banhotosa, color: '#ec4899', amount: shares.valBanhoTosa },
       { name: 'Pet Móvel', value: shares.petmovel, color: '#06b6d4', amount: shares.valPetMovel },
       { name: 'Creche Pet', value: shares.creche, color: '#8b5cf6', amount: shares.valCreche },
-      { name: 'Hotel Pet', value: shares.hotel, color: '#f59e0b', amount: shares.valHotel }
+      { name: 'Hotel Pet', value: shares.hotel, color: '#f59e0b', amount: shares.valHotel },
+      { name: "Sandy's Store", value: (shares as any).loja || 0, color: '#b50a53', amount: (shares as any).valLoja || 0 }
     ];
 
     // Fatias do donut apenas para valores maiores que zero
@@ -2244,10 +2476,19 @@ const FinancialDashboardView: React.FC = () => {
 
               <div className="flex-1 flex justify-between items-center bg-white/60 p-3 rounded-2xl border border-pink-50/50 hover:bg-white transition-all shadow-sm">
                 <div className="flex items-center gap-3">
-                  <span className="text-lg">{isBanho ? '🧼' : '🚐'}</span>
+                  <span className="text-lg">
+                    {isBanho ? '🧼' : item.origem === 'Hotel Pet' ? '🏨' : item.origem === "Sandy's Store" ? '🛍️' : '🚐'}
+                  </span>
                   <div>
-                    <span className={`text-[10px] font-black uppercase tracking-wider block ${isBanho ? 'text-pink-500' : 'text-cyan-500'
-                      }`}>
+                    <span className={`text-[10px] font-black uppercase tracking-wider block ${
+                      isBanho
+                        ? 'text-pink-500'
+                        : item.origem === 'Hotel Pet'
+                        ? 'text-amber-500'
+                        : item.origem === "Sandy's Store"
+                        ? 'text-[#b50a53]'
+                        : 'text-cyan-500'
+                    }`}>
                       {item.origem}
                     </span>
                     <span className="text-xs font-black text-gray-800">{item.pet_name}</span>
@@ -2285,10 +2526,18 @@ const FinancialDashboardView: React.FC = () => {
         price: Number(d.total_services_price || 0)
       }));
 
+    const entradasLoja = (consolidatedMetrics.loja?.vendasNoMes || []).map((s: any) => ({
+      date: s.date,
+      pet_name: (s.items && s.items[0]?.name) || 'Produtos da Loja',
+      tutor_name: s.client_name || 'Balcão / Loja',
+      price: Number(s.total || s.price || 0)
+    }));
+
     const totalEntradasBanhoTosa = entradasBanhoTosa.reduce((sum, item) => sum + item.price, 0);
     const totalEntradasPetMovel = entradasPetMovel.reduce((sum, item) => sum + item.price, 0);
     const totalEntradasCreche = entradasCreche.reduce((sum, item) => sum + item.price, 0);
     const totalEntradasHotel = entradasHotel.reduce((sum, item) => sum + item.price, 0);
+    const totalEntradasLoja = entradasLoja.reduce((sum, item) => sum + item.price, 0);
 
     const totalEntradas = consolidatedMetrics.summary.monthTotal;
 
@@ -2615,6 +2864,46 @@ const FinancialDashboardView: React.FC = () => {
               )}
             </div>
 
+            {/* SERVIÇO: SANDY'S STORE (LOJA) */}
+            <div className="bg-gray-50/20 p-5 rounded-2xl border border-gray-100">
+              <div className="flex justify-between items-center mb-3">
+                <h5 className="text-xs font-black text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#b50a53] inline-block" />
+                  Sandy's Store (Loja)
+                </h5>
+                <span className="text-xs font-black text-[#b50a53] bg-pink-50 px-2.5 py-1 rounded-full">
+                  Total: R$ {totalEntradasLoja.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              {entradasLoja.length === 0 ? (
+                <p className="text-xs text-gray-400 font-bold italic py-2">Nenhuma venda da loja realizada no período.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-gray-400 font-black uppercase tracking-wider">
+                        <th className="py-2">Data</th>
+                        <th className="py-2">Produto</th>
+                        <th className="py-2">Cliente</th>
+                        <th className="py-2 text-right">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody className="font-bold text-gray-600">
+                      {entradasLoja.map((item, idx) => (
+                        <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+                          <td className="py-2">{new Date(item.date).toLocaleDateString('pt-BR')}</td>
+                          <td className="py-2 font-black text-gray-800">{item.pet_name}</td>
+                          <td className="py-2">{item.tutor_name}</td>
+                          <td className="py-2 text-right text-gray-800">R$ {item.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
 
@@ -2869,6 +3158,29 @@ const FinancialDashboardView: React.FC = () => {
             status: d.status || 'CONCLUÍDO',
             details: d.check_out_date ? `Check-out: ${new Date(d.check_out_date).toLocaleDateString('pt-BR')}` : undefined,
             service: 'Hotel Pet'
+          });
+        }
+      }
+    });
+
+    // 5. Sandy's Store (Loja)
+    (dbData.storeOrders || []).forEach(o => {
+      if (isConcluido(o.status)) {
+        const date = o.created_at ? new Date(o.created_at) : new Date();
+        const { year, month } = parseYearMonth(o.created_at);
+        if (year === currentYear && month === currentMonth) {
+          const firstItem = Array.isArray(o.items) && o.items[0];
+          const itemName = firstItem ? (o.items.length > 1 ? `${firstItem.name} (+${o.items.length - 1})` : firstItem.name) : 'Produto Loja';
+          allMonthRecords.push({
+            id: o.id,
+            origem: 'Hotel Pet' as any,
+            pet_name: itemName,
+            owner_name: o.client_name || 'Venda Loja',
+            date,
+            price: Number(o.total || o.subtotal || 0),
+            status: o.status || 'CONCLUÍDO',
+            details: o.notes || 'Sandy\'s Store',
+            service: "Sandy's Store"
           });
         }
       }
@@ -3767,6 +4079,135 @@ const FinancialDashboardView: React.FC = () => {
                 {renderHotelChart(consolidatedMetrics.hotelMonthlyData)}
               </div>
 
+              {/* Card Sandy's Store – Produtos Vendidos */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-[2rem] p-6 border border-pink-100/60 shadow-lg relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-pink-300 flex flex-col justify-between min-h-[570px]">
+                <div className="absolute top-0 right-0 -mt-6 -mr-6 w-20 h-20 bg-[#b50a53] rounded-full blur-2xl opacity-20"></div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="font-extrabold text-[#b50a53] flex items-center gap-2">
+                      <img src="https://cdn-icons-png.flaticon.com/512/3081/3081559.png" alt="Sandy's Store" className="w-6 h-6 object-contain" /> Sandy's Store (Loja)
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black bg-pink-50 text-[#b50a53] px-2.5 py-1 rounded-full border border-pink-100">
+                        {consolidatedMetrics.loja.salesCount} {consolidatedMetrics.loja.salesCount === 1 ? 'Venda' : 'Vendas'} ({consolidatedMetrics.loja.totalItems} un)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={openStoreSaleModal}
+                        className="py-1 px-2.5 rounded-full bg-[#b50a53] hover:bg-[#910540] text-white text-[10px] font-bold flex items-center gap-1 shadow-sm active:scale-95 transition-all cursor-pointer"
+                        title="Adicionar item vendido do catálogo"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Vender Item</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Destaque Elegante do Faturamento de Produtos Vendidos */}
+                  <div className="flex flex-col items-center justify-center text-center p-4 mb-4 rounded-2xl bg-gradient-to-br from-pink-50 to-rose-50/40 border border-pink-100/60 shadow-sm relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(181,10,83,0.1),transparent_40%)]"></div>
+                    <span className="text-[9px] text-[#b50a53] font-black tracking-widest uppercase mb-1 flex items-center gap-1.5 z-10">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#b50a53] animate-ping"></span>
+                      Faturamento da Loja
+                    </span>
+                    <span className="text-3xl font-black text-[#b50a53] tracking-tight flex items-baseline z-10 transform transition-transform duration-300 group-hover:scale-105">
+                      <span className="text-base font-extrabold mr-1 text-pink-400">R$</span>
+                      <AnimatedCounter value={consolidatedMetrics.loja.month} decimals={0} />
+                    </span>
+
+                    {/* Subtotais de Hoje, Semana e Total de Itens */}
+                    <div className="flex justify-between w-full mt-3 pt-2 border-t border-pink-100/60 z-10 text-[10px] font-black uppercase text-gray-500">
+                      <div className="flex flex-col items-center">
+                        <span className="text-[8px] text-[#b50a53] font-bold">Hoje</span>
+                        <span className="text-xs text-[#8A5868] font-black">R$ <AnimatedCounter value={consolidatedMetrics.loja.today} decimals={0} /></span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="text-[8px] text-[#b50a53] font-bold">Semana</span>
+                        <span className="text-xs text-[#8A5868] font-black">R$ <AnimatedCounter value={consolidatedMetrics.loja.week} decimals={0} /></span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="text-[8px] text-[#b50a53] font-bold">Total Itens</span>
+                        <span className="text-xs text-[#8A5868] font-black"><AnimatedCounter value={consolidatedMetrics.loja.totalItems} decimals={0} /> un</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Lista de Itens Vendidos (Com Rolagem Interna e Ação de Remoção) */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center px-1">
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider block">Produtos Vendidos no Mês</span>
+                      <button
+                        type="button"
+                        onClick={openStoreSaleModal}
+                        className="text-[10px] font-bold text-[#b50a53] hover:underline flex items-center gap-0.5 cursor-pointer"
+                      >
+                        <Plus className="w-2.5 h-2.5" /> Adicionar
+                      </button>
+                    </div>
+
+                    <div className="max-h-[160px] overflow-y-auto pr-1 space-y-1.5 scrollbar-purple">
+                      {consolidatedMetrics.loja.vendasNoMes.length === 0 ? (
+                        <div className="text-center py-6 px-3 bg-[#FFF0F5]/50 rounded-2xl border border-dashed border-pink-200 text-xs font-bold text-gray-400 flex flex-col items-center gap-1.5">
+                          <span>Nenhum produto vendido no mês</span>
+                          <button
+                            type="button"
+                            onClick={openStoreSaleModal}
+                            className="mt-1 px-3 py-1 rounded-full bg-[#b50a53] text-white text-[11px] font-bold hover:brightness-105 active:scale-95 transition-all shadow-xs cursor-pointer"
+                          >
+                            + Adicionar do Catálogo
+                          </button>
+                        </div>
+                      ) : (
+                        consolidatedMetrics.loja.vendasNoMes.map((sale: any, idx: number) => {
+                          const firstItem = Array.isArray(sale.items) && sale.items[0];
+                          const thumbImg = firstItem?.image || null;
+                          const itemName = firstItem
+                            ? (sale.items.length > 1 ? `${firstItem.name} (+${sale.items.length - 1} itens)` : firstItem.name)
+                            : 'Produto da Loja';
+                          const saleDateBR = sale.date ? new Date(sale.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '';
+
+                          return (
+                            <div key={sale.id || idx} className="flex justify-between items-center bg-pink-50/20 hover:bg-pink-50/50 p-2 rounded-xl border border-pink-50/30 transition-all group">
+                              <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
+                                {thumbImg ? (
+                                  <img src={thumbImg} alt={itemName} className="w-8 h-8 rounded-lg object-cover flex-shrink-0 border border-pink-100" />
+                                ) : (
+                                  <span className="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center text-sm flex-shrink-0">🛍️</span>
+                                )}
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-xs font-black text-gray-800 truncate">{itemName}</span>
+                                  <span className="text-[9px] font-bold text-gray-400 uppercase truncate">
+                                    {sale.total_items} un • {sale.client_name || 'Balcão'} • {saleDateBR}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <span className="text-xs font-black text-[#b50a53]">
+                                  R$ {sale.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteStoreSale(sale)}
+                                  className="w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors active:scale-90 cursor-pointer"
+                                  title="Remover venda (o valor sairá das entradas do financeiro)"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Gráfico Mensal da Loja */}
+                {renderLineChart(consolidatedMetrics.chart.loja, '#b50a53', 'loja')}
+              </div>
+
             </div>
           </div>
 
@@ -4560,6 +5001,201 @@ const FinancialDashboardView: React.FC = () => {
                   className="flex-1 py-3 bg-gradient-to-r from-pink-500 to-pink-600 text-white font-black text-xs rounded-2xl shadow-md hover:shadow-lg active:scale-95 transition-all cursor-pointer h-11"
                 >
                   Salvar Despesa
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==========================================
+          MODAL: ADICIONAR ITEM VENDIDO DA LOJA
+          ========================================== */}
+      {isStoreSaleModalOpen && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+          <div onClick={() => setIsStoreSaleModalOpen(false)} className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity duration-300"></div>
+
+          <div className="relative bg-white/95 backdrop-blur-lg border border-pink-100 rounded-3xl p-6 shadow-2xl max-w-lg w-full z-10 space-y-4 overflow-y-auto max-h-[90vh] animate-scaleIn">
+            <div className="flex justify-between items-center pb-2 border-b border-pink-50">
+              <h3 className="text-xl font-black text-[#b50a53] flex items-center gap-2">
+                <ShoppingBag className="w-5 h-5 text-[#b50a53]" />
+                Registrar Venda da Loja
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsStoreSaleModalOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer font-bold text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveStoreSale} className="space-y-4">
+              {/* Seleção de Produto */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
+                  Produto do Catálogo
+                </label>
+                <select
+                  value={saleProductId}
+                  onChange={e => {
+                    const prodId = e.target.value;
+                    setSaleProductId(prodId);
+                    const prod = (dbData.storeProducts || []).find(p => p.id === prodId);
+                    if (prod) {
+                      setSaleUnitPrice(Number(prod.price || 0));
+                    }
+                  }}
+                  className="w-full px-4 py-2.5 bg-white border border-pink-100 rounded-2xl text-xs font-bold text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#b50a53]/40 focus:border-transparent transition-all h-11"
+                  required
+                >
+                  {(dbData.storeProducts || []).map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} — R$ {Number(p.price).toFixed(2).replace('.', ',')} (Estoque: {p.stock ?? 0} un)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Preview do produto selecionado */}
+              {(() => {
+                const prod = (dbData.storeProducts || []).find(p => p.id === saleProductId);
+                if (!prod) return null;
+                return (
+                  <div className="flex items-center gap-3 p-2.5 bg-pink-50/40 rounded-2xl border border-pink-100">
+                    <img src={prod.image} alt={prod.name} className="w-12 h-12 rounded-xl object-cover border border-pink-100 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-gray-800 truncate">{prod.name}</p>
+                      <p className="text-[10px] text-gray-400 font-bold">
+                        {prod.category === 'saude' ? 'Saúde' : prod.category === 'racao' ? 'Ração' : 'Mimos'} • Estoque: <span className="text-[#b50a53] font-black">{prod.stock ?? 0} un</span>
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Quantidade */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Quantidade</label>
+                  <div className="flex items-center bg-white border border-pink-100 rounded-2xl h-11 px-2 justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setSaleQuantity(Math.max(1, saleQuantity - 1))}
+                      className="w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center text-[#b50a53] font-bold active:scale-90 transition-transform cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">remove</span>
+                    </button>
+                    <input
+                      type="number"
+                      min={1}
+                      value={saleQuantity}
+                      onChange={e => setSaleQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      className="w-14 text-center text-sm font-black text-gray-800 bg-transparent border-0 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setSaleQuantity(saleQuantity + 1)}
+                      className="w-8 h-8 rounded-xl bg-[#b50a53] text-white flex items-center justify-center font-bold active:scale-90 transition-transform shadow-xs cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">add</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Preço Unitário */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Preço Unitário (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={saleUnitPrice}
+                    onChange={e => setSaleUnitPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="w-full px-4 py-2 bg-white border border-pink-100 rounded-2xl text-xs font-bold text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#b50a53]/40 focus:border-transparent transition-all h-11"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Data da Venda */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Data da Venda</label>
+                  <input
+                    type="date"
+                    required
+                    value={saleDate}
+                    onChange={e => setSaleDate(e.target.value)}
+                    className="w-full px-4 py-2 bg-white border border-pink-100 rounded-2xl text-xs font-bold text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#b50a53]/40 focus:border-transparent transition-all h-11"
+                  />
+                </div>
+
+                {/* Forma de Pagamento */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Pagamento</label>
+                  <select
+                    value={salePaymentMethod}
+                    onChange={e => setSalePaymentMethod(e.target.value)}
+                    className="w-full px-4 py-2 bg-white border border-pink-100 rounded-2xl text-xs font-bold text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#b50a53]/40 focus:border-transparent transition-all h-11"
+                  >
+                    <option value="PIX">PIX ⚡</option>
+                    <option value="Cartão de Crédito">Cartão de Crédito 💳</option>
+                    <option value="Cartão de Débito">Cartão de Débito 💳</option>
+                    <option value="Dinheiro">Dinheiro 💵</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Cliente / Comprador */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Cliente / Observação (Opcional)</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Venda Balcão, Maria (Tutor do Fred)"
+                  value={saleClientName}
+                  onChange={e => setSaleClientName(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border border-pink-100 rounded-2xl text-xs font-bold text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#b50a53]/40 focus:border-transparent transition-all h-11"
+                />
+              </div>
+
+              {/* Dar baixa no estoque */}
+              <label className="flex items-center gap-2.5 px-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={saleDeductStock}
+                  onChange={e => setSaleDeductStock(e.target.checked)}
+                  className="w-4.5 h-4.5 text-[#b50a53] border-pink-100 rounded focus:ring-[#b50a53]/40 cursor-pointer focus:ring-2"
+                />
+                <div className="flex flex-col">
+                  <span className="text-xs font-black text-gray-700">Dar baixa automática no estoque</span>
+                  <span className="text-[9px] text-gray-400 font-bold">Subtrai {saleQuantity} un do estoque físico em loja</span>
+                </div>
+              </label>
+
+              {/* Resumo do Total */}
+              <div className="p-3 bg-gradient-to-r from-pink-50 to-rose-50 rounded-2xl border border-pink-100 flex justify-between items-center">
+                <span className="text-xs font-black text-gray-600">Total a Entrar no Financeiro:</span>
+                <span className="text-lg font-black text-[#b50a53]">
+                  R$ {(saleQuantity * saleUnitPrice).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              {/* Botões de Ação */}
+              <div className="flex gap-3 pt-3 border-t border-pink-50">
+                <button
+                  type="button"
+                  onClick={() => setIsStoreSaleModalOpen(false)}
+                  className="flex-1 py-3 bg-gray-50 border border-gray-100 text-gray-500 font-black text-xs rounded-2xl hover:bg-gray-100 active:scale-95 transition-all cursor-pointer h-11"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingStoreSale}
+                  className="flex-1 py-3 bg-gradient-to-r from-[#b50a53] to-[#8d003b] text-white font-black text-xs rounded-2xl shadow-md hover:shadow-lg active:scale-95 transition-all cursor-pointer h-11 flex items-center justify-center gap-1.5"
+                >
+                  {savingStoreSale ? 'Salvando...' : 'Confirmar Venda ✨'}
                 </button>
               </div>
             </form>

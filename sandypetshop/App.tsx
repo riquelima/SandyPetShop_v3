@@ -7829,6 +7829,23 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [alertInfo, setAlertInfo] = useState<{ title: string; message: string; variant: 'success' | 'error' } | null>(null);
 
+    const isPetMovel = useMemo(() => {
+        const srv = `${client.service || ''} ${selectedService || ''}`.toLowerCase();
+        const cdo = `${formData.condominium || ''} ${client.condominium || ''}`.toLowerCase();
+        const obs = `${formData.observation || ''} ${client.observation || ''}`.toLowerCase();
+        if (srv.includes('móvel') || srv.includes('movel')) return true;
+        if (cdo.includes('vitta') || cdo.includes('max') || cdo.includes('paseo')) return true;
+        if (obs.includes('vitta') || obs.includes('max haus') || obs.includes('paseo')) return true;
+        return false;
+    }, [client.service, selectedService, formData.condominium, client.condominium, formData.observation, client.observation]);
+
+    const workingHours = useMemo(() => {
+        if (isPetMovel) {
+            return getPetMovelWorkingHours(recurrence.day, formData.condominium || client.condominium);
+        }
+        return formData.condominium === 'Banho & Tosa Fixo' ? BATH_GROOMING_HOURS : WORKING_HOURS;
+    }, [isPetMovel, recurrence.day, formData.condominium, client.condominium]);
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         if (name === 'price') {
@@ -7850,7 +7867,17 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
     // FIX: Ensure recurrence day and time are stored as numbers to prevent comparison/arithmetic errors.
     const handleRecurrenceChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
         const { name, value } = e.target;
-        setRecurrence(prev => ({ ...prev, [name]: name === 'type' ? value : Number(value) }));
+        if (name === 'day') {
+            const numDay = Number(value);
+            setRecurrence(prev => ({ ...prev, day: numDay }));
+            if (isPetMovel) {
+                if (numDay === 3) setFormData(prev => ({ ...prev, condominium: 'Vitta Parque' }));
+                else if (numDay === 4) setFormData(prev => ({ ...prev, condominium: 'Max Haus' }));
+                else if (numDay === 5) setFormData(prev => ({ ...prev, condominium: 'Paseo' }));
+            }
+        } else {
+            setRecurrence(prev => ({ ...prev, [name]: name === 'type' ? value : Number(value) }));
+        }
     };
 
     const handleAlertClose = () => {
@@ -8115,7 +8142,24 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
                                                 {recurrence.type === 'weekly' || recurrence.type === 'bi-weekly' ? (
                                                     <div className="relative">
                                                         <select name="day" onChange={handleRecurrenceChange} value={recurrence.day} className="w-full pl-4 pr-10 py-3 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500 transition-all text-gray-700 font-medium shadow-sm">
-                                                            <option value={1}>Segunda</option><option value={2}>Terça</option><option value={3}>Quarta</option><option value={4}>Quinta</option><option value={5}>Sexta</option>
+                                                            {isPetMovel ? (
+                                                                <>
+                                                                    <option value={3}>Quarta (Vitta Parque)</option>
+                                                                    <option value={4}>Quinta (Max Haus)</option>
+                                                                    <option value={5}>Sexta (Paseo)</option>
+                                                                    {![3, 4, 5].includes(Number(recurrence.day)) && (
+                                                                        <option value={recurrence.day}>{`Dia ${recurrence.day}`}</option>
+                                                                    )}
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <option value={1}>Segunda</option>
+                                                                    <option value={2}>Terça</option>
+                                                                    <option value={3}>Quarta</option>
+                                                                    <option value={4}>Quinta</option>
+                                                                    <option value={5}>Sexta</option>
+                                                                </>
+                                                            )}
                                                         </select>
                                                         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" /></svg></div>
                                                     </div>
@@ -8127,7 +8171,10 @@ const EditMonthlyClientModal: React.FC<{ client: MonthlyClient; onClose: () => v
                                                 <label className="text-sm font-medium text-gray-700 ml-1">Horário</label>
                                                 <div className="relative">
                                                     <select name="time" onChange={handleRecurrenceChange} value={recurrence.time} className="w-full pl-4 pr-10 py-3 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500 transition-all text-gray-700 font-medium shadow-sm">
-                                                        {WORKING_HOURS.map(h => <option key={h} value={h}>{`${h}:00`}</option>)}
+                                                        {!workingHours.includes(Number(recurrence.time)) && (
+                                                            <option value={recurrence.time}>{`${recurrence.time}:00 (Atual)`}</option>
+                                                        )}
+                                                        {workingHours.map(h => <option key={h} value={h}>{`${h}:00`}</option>)}
                                                     </select>
                                                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" /></svg></div>
                                                 </div>
