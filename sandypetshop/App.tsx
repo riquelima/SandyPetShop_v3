@@ -86,6 +86,8 @@ import { formatPhoneForWebhook } from './src/lib/utils';
 import LoyaltyCardPage from './src/components/LoyaltyCardPage';
 import LoyaltyModal from './src/components/LoyaltyModal';
 import LoyaltyDashboardView from './src/components/LoyaltyDashboardView';
+import AtendimentoView from './src/components/AtendimentoView';
+import { getCachedSlotConfig, getActiveHoursForDay } from './src/hooks/useScheduleSlots';
 import FiscalNotesView from './src/components/FiscalNotesView';
 import FiscalFeedbackModal from './src/components/FiscalFeedbackModal';
 import { AdoptionPublicView } from './src/components/AdoptionPublicView';
@@ -437,10 +439,27 @@ export function evaluateSlotAvailability(args: {
 
     const occupied = occupiedFromTables + occupiedFromMonthly;
 
-    // Capacidade dos slots do Pet Móvel e Banho & Tosa:
-    // Conforme regra atualizada, todos os slots de quarta, quinta e sexta (e qualquer condomínio)
-    // são estritamente únicos (1 vaga por horário, sem duplicação).
-    const capacity = 1;
+    // Capacidade dinâmica dos slots do Pet Móvel e Banho & Tosa:
+    // Consulta configurações dinâmicas gerenciadas no menu 'Atendimento'.
+    // Suporta 1 slot, 2 slots ou horário fechado/desativado por condomínio/serviço.
+    const spTime = getSaoPauloTimeParts(args.date);
+    const dayOfWeek = spTime ? spTime.day : args.date.getDay();
+    const slotConf = getCachedSlotConfig(
+        args.type === 'mobile' ? 'pet_movel' : 'fixed',
+        args.condo,
+        dayOfWeek,
+        args.hour
+    );
+    const capacity = slotConf.capacity;
+
+    if (!slotConf.isActive || capacity <= 0) {
+        return {
+            available: false,
+            occupied,
+            capacity: 0,
+            reason: 'Horário indisponível ou fechado'
+        };
+    }
 
     if (occupied >= capacity) {
         return {
@@ -13109,9 +13128,14 @@ export const TimeSlotPicker: React.FC<{
         if (workingHours && workingHours.length <= 2 && workingHours.some(h => !WORKING_HOURS.includes(h) && h !== 8)) {
             return workingHours;
         }
+        // Consulta horários ativos configurados no menu Atendimento
+        const dynamicHours = getActiveHoursForDay('pet_movel', selectedCondo, condoWeekday ?? 0);
+        if (dynamicHours && dynamicHours.length > 0) {
+            return dynamicHours;
+        }
         // Todos os dias (Quarta, Quinta e Sexta) e todos os condomínios: 08h às 15h direto (inclusive 13h)
         return [8, 9, 10, 11, 12, 13, 14, 15];
-    }, [isPetMovel, workingHours]);
+    }, [isPetMovel, workingHours, selectedCondo, condoWeekday]);
 
     // Separate calendars logic
 
@@ -13179,10 +13203,21 @@ export const TimeSlotPicker: React.FC<{
             return true;
         }
 
-        // 2. Capacity Check — cada slot é único (capacidade = 1)
+        // 2. Dynamic Capacity Check (suporta 1 vaga, 2 vagas ou fechado)
+        const slotConf = getCachedSlotConfig(
+            isPetMovel ? 'pet_movel' : 'fixed',
+            selectedCondo,
+            condoWeekday ?? 0,
+            hour
+        );
+
+        if (!slotConf.isActive || slotConf.capacity <= 0) {
+            return false;
+        }
+
         let load = getAppointmentsAtHour(hour);
 
-        if (load >= 1) return false;
+        if (load >= slotConf.capacity) return false;
 
         return true;
     };
@@ -20945,6 +20980,7 @@ const AdminDashboard: React.FC<{
             case 'feedbacks': return <FeedbacksView key={dataKey} adminTheme={adminTheme} />;
             case 'album': return <AlbumManagementView />;
             case 'loyalty': return <LoyaltyDashboardView onBack={() => setActiveView('resumo')} />;
+            case 'atendimento': return <AtendimentoView onBack={() => setActiveView('resumo')} appointments={appointments} monthlyClients={monthlyClients} />;
             default: return <AppointmentsView 
                 key={dataKey} 
                 refreshKey={dataKey} 
@@ -21133,6 +21169,13 @@ const AdminDashboard: React.FC<{
                                 Fidelidade
                             </button>
                             <button
+                                onClick={() => { setActiveView('atendimento'); closeMobileMenu(); }}
+                                className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-base font-medium transition-colors ${activeView === 'atendimento' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                            >
+                                <SafeImage src="https://cdn-icons-png.flaticon.com/512/3652/3652191.png" alt="Atendimento" className="w-6 h-6 object-contain" />
+                                Atendimento
+                            </button>
+                            <button
                                 onClick={() => { setIsPriceManagementOpen(true); closeMobileMenu(); }}
                                 className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-base font-medium transition-colors text-pink-700 hover:bg-gray-50"
                             >
@@ -21219,6 +21262,13 @@ const AdminDashboard: React.FC<{
                             >
                                 <SafeImage src="https://cdn-icons-png.flaticon.com/512/6021/6021962.png" alt="Fidelidade" className="w-6 h-6 object-contain" />
                                 Fidelidade
+                            </button>
+                            <button
+                                onClick={() => setActiveView('atendimento')}
+                                className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-base font-medium transition-colors ${activeView === 'atendimento' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                            >
+                                <SafeImage src="https://cdn-icons-png.flaticon.com/512/3652/3652191.png" alt="Atendimento" className="w-6 h-6 object-contain" />
+                                Atendimento
                             </button>
                             <div className="md:hidden space-y-1.5">
                                 <button
