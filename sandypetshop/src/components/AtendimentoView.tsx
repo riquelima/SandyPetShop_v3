@@ -8,7 +8,6 @@ import {
     ChevronLeftIcon,
     CalendarDaysIcon,
     UsersIcon,
-    SparklesIcon,
     CheckIcon
 } from '@heroicons/react/24/outline';
 import { 
@@ -161,7 +160,7 @@ export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
     return (
         <div className="min-h-screen bg-[#faf9fb] text-slate-800 antialiased flex justify-center py-2 sm:py-6 px-0 sm:px-4">
             {/* Mobile / Compact App Frame */}
-            <div className="w-full max-w-[480px] md:max-w-3xl min-h-screen bg-[#faf9fb] flex flex-col relative shadow-xl sm:border sm:border-slate-200/70 sm:rounded-3xl pb-36 overflow-hidden">
+            <div className="w-full max-w-[480px] md:max-w-3xl bg-[#faf9fb] flex flex-col relative shadow-xl sm:border sm:border-slate-200/70 sm:rounded-3xl pb-32 md:pb-0">
                 
                 {/* Toast feedback */}
                 {toastMessage && (
@@ -172,7 +171,7 @@ export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
                 )}
 
                 {/* BEGIN: TopBar (Sticky) */}
-                <header className="sticky top-0 z-30 bg-[#faf9fb]/90 backdrop-blur-md border-b border-slate-200/70 px-4 pt-3.5 pb-2.5">
+                <header className="sticky top-0 z-30 bg-[#faf9fb]/90 backdrop-blur-md border-b border-slate-200/70 px-4 pt-3.5 pb-2.5 sm:rounded-t-3xl">
                     <div className="flex items-center justify-between">
                         <button 
                             type="button"
@@ -184,22 +183,35 @@ export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
                         </button>
                         
                         <div className="flex flex-col items-center">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-pink-600 bg-pink-50 px-2.5 py-0.5 rounded-full mb-0.5 inline-flex items-center gap-1">
-                                <SparklesIcon className="w-3 h-3" />
-                                Administração
-                            </span>
                             <h1 className="text-base font-bold text-slate-900 tracking-tight">Grade de Horários</h1>
                         </div>
 
-                        <button 
-                            type="button"
-                            onClick={handleReset}
-                            title="Restaurar Padrão de Fábrica"
-                            aria-label="Restaurar Padrão" 
-                            className="w-9 h-9 rounded-full flex items-center justify-center bg-white shadow-sm border border-slate-200/80 active:scale-95 hover:border-pink-300 hover:text-pink-600 transition-all text-slate-600"
-                        >
-                            <ArrowPathIcon className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button 
+                                type="button"
+                                onClick={handleSave}
+                                disabled={isSyncing}
+                                title="Salvar Alterações"
+                                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#e11d68] to-[#db2777] hover:from-[#c81057] text-white text-xs font-bold shadow-sm active:scale-95 transition-all disabled:opacity-50"
+                            >
+                                {isSyncing ? (
+                                    <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                    <CheckIcon className="w-3.5 h-3.5 stroke-[2.5]" />
+                                )}
+                                <span>Salvar</span>
+                            </button>
+
+                            <button 
+                                type="button"
+                                onClick={handleReset}
+                                title="Restaurar Padrão de Fábrica"
+                                aria-label="Restaurar Padrão" 
+                                className="w-9 h-9 rounded-full flex items-center justify-center bg-white shadow-sm border border-slate-200/80 active:scale-95 hover:border-pink-300 hover:text-pink-600 transition-all text-slate-600"
+                            >
+                                <ArrowPathIcon className="w-4 h-4" />
+                            </button>
+                        </div>
                     </div>
                 </header>
                 {/* END: TopBar */}
@@ -515,8 +527,8 @@ export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
                 </main>
                 {/* END: MainContent */}
 
-                {/* BEGIN: FixedBottomBar (Mobile Sticky Footer) */}
-                <aside className="fixed bottom-0 left-0 right-0 max-w-[480px] md:max-w-3xl mx-auto bg-white/95 backdrop-blur-lg border-t border-slate-200/90 px-4 pt-2.5 pb-6 z-40 shadow-2xl">
+                {/* BEGIN: Mobile Fixed Bottom Bar (Apenas no Mobile < md) */}
+                <aside className="md:hidden fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto bg-white/95 backdrop-blur-lg border-t border-slate-200/90 px-4 pt-2.5 pb-6 z-40 shadow-2xl">
                     <div className="flex items-center gap-1.5 justify-center mb-2">
                         <CheckIcon className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />
                         <span className="text-[11px] text-slate-500 font-medium">Alterações passam a valer imediatamente</span>
@@ -536,7 +548,32 @@ export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
                         <span>{isSyncing ? 'Sincronizando...' : 'Confirmar & Salvar Alterações'}</span>
                     </button>
                 </aside>
-                {/* END: FixedBottomBar */}
+                {/* END: Mobile Fixed Bottom Bar */}
+
+                {/* BEGIN: Desktop Aligned Footer (100% alinhado dentro do card no Desktop) */}
+                <aside className="hidden md:block sticky bottom-0 z-30 w-full bg-white/95 backdrop-blur-lg border-t border-slate-200/90 px-6 py-4 rounded-b-3xl shadow-lg mt-8">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                            <CheckCircleIcon className="w-5 h-5 text-emerald-600 shrink-0" />
+                            <span className="text-xs text-slate-500 font-medium">Alterações passam a valer imediatamente para agendamentos</span>
+                        </div>
+
+                        <button 
+                            type="button"
+                            onClick={handleSave}
+                            disabled={isSyncing}
+                            className="px-6 py-3 bg-gradient-to-r from-[#e11d68] to-[#db2777] hover:from-[#c81057] hover:to-[#be185d] text-white font-bold text-sm rounded-xl shadow-[0_10px_25px_-5px_rgba(225,29,104,0.25)] flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50 shrink-0"
+                        >
+                            {isSyncing ? (
+                                <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <CheckIcon className="w-4 h-4 stroke-[2.5]" />
+                            )}
+                            <span>{isSyncing ? 'Sincronizando...' : 'Confirmar & Salvar Alterações'}</span>
+                        </button>
+                    </div>
+                </aside>
+                {/* END: Desktop Aligned Footer */}
 
             </div>
         </div>
