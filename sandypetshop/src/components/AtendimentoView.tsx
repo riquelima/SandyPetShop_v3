@@ -109,7 +109,7 @@ export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
 
     const showToast = (msg: string) => {
         setToastMessage(msg);
-        setTimeout(() => setToastMessage(null), 4000);
+        setTimeout(() => setToastMessage(null), 2000);
     };
 
     // Altera a capacidade de um horário individual
@@ -140,20 +140,20 @@ export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
             hours
         );
 
-        showToast(`Definido ${capacity} vaga(s) para horários padrão (${hours[0]}h às ${hours[hours.length - 1]}h)!`);
+        showToast('Configurações Salvas com Sucesso');
     };
 
     // Salvar alterações
     const handleSave = async () => {
-        const res = await saveAll(configs);
-        showToast(res.message);
+        await saveAll(configs);
+        showToast('Configurações Salvas com Sucesso');
     };
 
     // Restaurar padrões
     const handleReset = async () => {
         if (window.confirm('Deseja realmente restaurar os horários padrão de fábrica? (Pet Móvel: 8h-15h 1 vaga; Fixo: 10h-17h/9h-16h 1 vaga)')) {
-            const res = await resetToDefaults();
-            showToast(res.message);
+            await resetToDefaults();
+            showToast('Configurações Salvas com Sucesso');
         }
     };
 

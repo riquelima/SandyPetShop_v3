@@ -295,7 +295,7 @@ export function useScheduleSlots() {
         setIsSyncing(false);
         return {
           success: true,
-          message: 'Configurações salvas localmente com sucesso! (Para sincronizar entre computadores, execute o script SQL do Supabase).',
+          message: 'Configurações Salvas com Sucesso',
         };
       }
 
@@ -303,7 +303,7 @@ export function useScheduleSlots() {
       setIsSyncing(false);
       return {
         success: true,
-        message: 'Configurações salvas e sincronizadas na nuvem Supabase com sucesso!',
+        message: 'Configurações Salvas com Sucesso',
       };
     } catch (err: any) {
       console.warn('[useScheduleSlots] Erro de rede ao sincronizar Supabase:', err);
@@ -311,7 +311,7 @@ export function useScheduleSlots() {
       setIsSyncing(false);
       return {
         success: true,
-        message: 'Configurações salvas localmente com sucesso!',
+        message: 'Configurações Salvas com Sucesso',
       };
     }
   };
