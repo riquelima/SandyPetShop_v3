@@ -28,8 +28,8 @@ interface AtendimentoViewProps {
     monthlyClients?: any[];
 }
 
-const AVAILABLE_HOURS_PET_MOVEL = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
-const AVAILABLE_HOURS_FIXED = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+const AVAILABLE_HOURS_PET_MOVEL = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+const AVAILABLE_HOURS_FIXED = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
 
 const SQL_MIGRATION_TEXT = `-- Tabela para gerenciar dinamicamente a capacidade e grade de horários de atendimento
 -- (Pet Móvel e Banho & Tosa Fixo)
@@ -75,8 +75,6 @@ export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
     const [selectedCondo, setSelectedCondo] = useState<'Vitta Parque' | 'Max Haus' | 'Paseo'>('Vitta Parque');
     const [selectedFixedDay, setSelectedFixedDay] = useState<number>(2); // 2=Terça ... 6=Sábado
     const [toastMessage, setToastMessage] = useState<string | null>(null);
-    const [showSqlModal, setShowSqlModal] = useState(false);
-    const [copiedSql, setCopiedSql] = useState(false);
 
     // Dia da semana atual selecionado
     const currentDayOfWeek = useMemo(() => {
@@ -193,16 +191,6 @@ export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
         }
     };
 
-    const handleCopySql = async () => {
-        try {
-            await navigator.clipboard.writeText(SQL_MIGRATION_TEXT);
-            setCopiedSql(true);
-            setTimeout(() => setCopiedSql(false), 3000);
-        } catch (e) {
-            console.error('Falha ao copiar:', e);
-        }
-    };
-
     return (
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fadeIn">
             {/* Toast feedback */}
@@ -229,12 +217,6 @@ export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
                                 <SparklesIcon className="w-3.5 h-3.5" />
                                 Administração
                             </span>
-                            {isSupabaseOnline === false && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800" title="Configurações ativas no navegador">
-                                    <InformationCircleIcon className="w-3.5 h-3.5" />
-                                    Armazenamento Local
-                                </span>
-                            )}
                         </div>
                         <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mt-1">
                             Atendimento & Grade de Horários
@@ -247,16 +229,6 @@ export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
 
                 {/* Botões de Ação do Topo */}
                 <div className="flex flex-wrap items-center gap-2.5">
-                    <button
-                        type="button"
-                        onClick={() => setShowSqlModal(true)}
-                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 transition-all shadow-sm"
-                        title="Ver script SQL do banco Supabase"
-                    >
-                        <CommandLineIcon className="w-4 h-4 text-gray-500" />
-                        Script SQL
-                    </button>
-
                     <button
                         type="button"
                         onClick={handleReset}
@@ -281,31 +253,6 @@ export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
                     </button>
                 </div>
             </div>
-
-            {/* Aviso Amigável do Supabase se a tabela ainda não foi criada */}
-            {isSupabaseOnline === false && (
-                <div className="mb-6 p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900 text-sm">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-amber-200/60 flex items-center justify-center shrink-0 text-amber-800">
-                            <CommandLineIcon className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <p className="font-semibold text-amber-950">
-                                Sincronização em Nuvem Supabase
-                            </p>
-                            <p className="text-xs text-amber-800 mt-0.5">
-                                Suas edições já estão ativas e funcionando perfeitamente no sistema. Para sincronizar na nuvem entre múltiplos computadores, basta rodar o script SQL de 1 clique no Supabase.
-                            </p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={() => setShowSqlModal(true)}
-                        className="shrink-0 px-3 py-1.5 rounded-lg bg-amber-200/70 hover:bg-amber-200 text-amber-900 font-medium text-xs transition-colors"
-                    >
-                        Ver Script SQL
-                    </button>
-                </div>
-            )}
 
             {/* Abas Principais: Pet Móvel vs Loja Física */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2 mb-6">
@@ -605,57 +552,6 @@ export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
                     </button>
                 </div>
             </div>
-
-            {/* Modal com o Script SQL para Supabase */}
-            {showSqlModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
-                    <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-gray-100 relative">
-                        <div className="flex items-start justify-between mb-4">
-                            <div>
-                                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                    <CommandLineIcon className="w-6 h-6 text-pink-600" />
-                                    Script SQL para o Supabase
-                                </h3>
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Execute este script no <strong>SQL Editor</strong> do painel Supabase para criar a tabela de persistência em nuvem.
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => setShowSqlModal(false)}
-                                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <div className="relative mb-4">
-                            <pre className="bg-gray-900 text-gray-100 p-4 rounded-2xl text-xs font-mono overflow-x-auto max-h-72 border border-gray-800">
-                                {SQL_MIGRATION_TEXT}
-                            </pre>
-                            <button
-                                onClick={handleCopySql}
-                                className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-pink-600 hover:bg-pink-700 text-white text-xs font-semibold shadow-md transition-all"
-                            >
-                                <DocumentDuplicateIcon className="w-4 h-4" />
-                                {copiedSql ? 'Copiado!' : 'Copiar SQL'}
-                            </button>
-                        </div>
-
-                        <div className="bg-pink-50 border border-pink-200/70 rounded-xl p-3 text-xs text-pink-900 mb-5">
-                            <strong>Como executar:</strong> Abra o Supabase &rarr; Clique em <em>SQL Editor</em> no menu lateral &rarr; Cole este código &rarr; Clique em <em>Run</em>.
-                        </div>
-
-                        <div className="flex justify-end">
-                            <button
-                                onClick={() => setShowSqlModal(false)}
-                                className="px-5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold text-sm transition-colors"
-                            >
-                                Fechar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

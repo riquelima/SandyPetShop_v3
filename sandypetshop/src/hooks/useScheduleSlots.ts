@@ -6,7 +6,7 @@ export interface ScheduleSlotConfig {
   category: 'pet_movel' | 'fixed';
   condominium?: string | null; // 'Vitta Parque' | 'Max Haus' | 'Paseo' | null
   day_of_week: number;         // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sáb
-  hour: number;                // 8..18
+  hour: number;                // 7..19
   capacity: number;            // 0 = closed, 1 = single slot, 2 = double slot, etc.
   is_active: boolean;          // true = open, false = blocked
   created_at?: string;

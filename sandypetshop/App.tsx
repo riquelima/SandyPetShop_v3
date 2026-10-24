@@ -13123,15 +13123,15 @@ export const TimeSlotPicker: React.FC<{
     };
 
     const hoursToRender = React.useMemo(() => {
+        // Consulta horários ativos configurados no menu Atendimento
+        const dynamicHours = getActiveHoursForDay(isPetMovel ? 'pet_movel' : 'fixed', selectedCondo, condoWeekday ?? 0);
+        if (dynamicHours && dynamicHours.length > 0) {
+            return dynamicHours;
+        }
         if (!isPetMovel) return workingHours;
         // Preserva workingHours de teste caso contenha horários específicos que não estejam nos padrões
         if (workingHours && workingHours.length <= 2 && workingHours.some(h => !WORKING_HOURS.includes(h) && h !== 8)) {
             return workingHours;
-        }
-        // Consulta horários ativos configurados no menu Atendimento
-        const dynamicHours = getActiveHoursForDay('pet_movel', selectedCondo, condoWeekday ?? 0);
-        if (dynamicHours && dynamicHours.length > 0) {
-            return dynamicHours;
         }
         // Todos os dias (Quarta, Quinta e Sexta) e todos os condomínios: 08h às 15h direto (inclusive 13h)
         return [8, 9, 10, 11, 12, 13, 14, 15];
