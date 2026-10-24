@@ -5,17 +5,14 @@ import {
     BuildingStorefrontIcon, 
     ArrowPathIcon, 
     CheckCircleIcon, 
-    ExclamationTriangleIcon, 
     ChevronLeftIcon,
-    CommandLineIcon,
-    DocumentDuplicateIcon,
-    SparklesIcon,
     CalendarDaysIcon,
-    InformationCircleIcon
+    UsersIcon,
+    SparklesIcon,
+    CheckIcon
 } from '@heroicons/react/24/outline';
 import { 
     useScheduleSlots, 
-    ScheduleSlotConfig, 
     DEFAULT_PET_MOVEL_HOURS, 
     DEFAULT_FIXED_HOURS_WEEKDAY, 
     DEFAULT_FIXED_HOURS_SATURDAY,
@@ -31,40 +28,10 @@ interface AtendimentoViewProps {
 const AVAILABLE_HOURS_PET_MOVEL = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
 const AVAILABLE_HOURS_FIXED = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
 
-const SQL_MIGRATION_TEXT = `-- Tabela para gerenciar dinamicamente a capacidade e grade de horários de atendimento
--- (Pet Móvel e Banho & Tosa Fixo)
-CREATE TABLE IF NOT EXISTS public.schedule_slot_configs (
-    id uuid NOT NULL DEFAULT gen_random_uuid(),
-    category text NOT NULL, -- 'pet_movel' | 'fixed'
-    condominium text,        -- 'Vitta Parque', 'Max Haus', 'Paseo' (ou null para fixo)
-    day_of_week integer NOT NULL, -- 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sáb
-    hour integer NOT NULL,        -- 8, 9, 10, 11, 12, 13, 14, 15, etc.
-    capacity integer NOT NULL DEFAULT 1, -- 0=fechado, 1=1 vaga, 2=2 vagas, etc.
-    is_active boolean NOT NULL DEFAULT true,
-    created_at timestamp with time zone NOT NULL DEFAULT now(),
-    updated_at timestamp with time zone NOT NULL DEFAULT now(),
-    CONSTRAINT schedule_slot_configs_pkey PRIMARY KEY (id),
-    CONSTRAINT schedule_slot_configs_unique_slot UNIQUE (category, condominium, day_of_week, hour)
-);
-
-CREATE INDEX IF NOT EXISTS idx_schedule_slot_configs_query 
-ON public.schedule_slot_configs(category, condominium, day_of_week, is_active);
-
-ALTER TABLE public.schedule_slot_configs ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Public read schedule_slot_configs" 
-ON public.schedule_slot_configs FOR SELECT USING (true);
-
-CREATE POLICY "Admins can manage schedule_slot_configs" 
-ON public.schedule_slot_configs FOR ALL USING (true) WITH CHECK (true);
-`;
-
 export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
     const { 
         configs, 
-        isLoading, 
         isSyncing, 
-        isSupabaseOnline, 
         saveAll, 
         updateSlot, 
         setDaySlotsCapacity, 
@@ -109,7 +76,7 @@ export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
             };
         }
 
-        // Padrão
+        // Padrão: 8h às 15h para Pet Móvel, 10h às 17h para Fixo
         let isDefault = false;
         if (activeTab === 'pet_movel') {
             isDefault = DEFAULT_PET_MOVEL_HOURS.includes(hour);
@@ -174,7 +141,7 @@ export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
             hours
         );
 
-        showToast(`Definido ${capacity} vaga(s) para todos os horários padrão (${hours[0]}h às ${hours[hours.length - 1]}h)!`);
+        showToast(`Definido ${capacity} vaga(s) para horários padrão (${hours[0]}h às ${hours[hours.length - 1]}h)!`);
     };
 
     // Salvar alterações
@@ -192,142 +159,129 @@ export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
     };
 
     return (
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fadeIn">
-            {/* Toast feedback */}
-            {toastMessage && (
-                <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-gray-700 text-sm font-medium animate-slideUp">
-                    <CheckCircleIcon className="w-5 h-5 text-emerald-400 shrink-0" />
-                    <span>{toastMessage}</span>
-                </div>
-            )}
+        <div className="min-h-screen bg-[#faf9fb] text-slate-800 antialiased flex justify-center py-2 sm:py-6 px-0 sm:px-4">
+            {/* Mobile / Compact App Frame */}
+            <div className="w-full max-w-[480px] md:max-w-3xl min-h-screen bg-[#faf9fb] flex flex-col relative shadow-xl sm:border sm:border-slate-200/70 sm:rounded-3xl pb-36 overflow-hidden">
+                
+                {/* Toast feedback */}
+                {toastMessage && (
+                    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 bg-slate-900 text-white px-4 py-2.5 rounded-2xl shadow-xl border border-slate-700 text-xs font-semibold animate-fadeIn max-w-[90vw]">
+                        <CheckCircleIcon className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span>{toastMessage}</span>
+                    </div>
+                )}
 
-            {/* Cabeçalho */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={onBack}
-                        className="p-2.5 rounded-xl border border-gray-200 hover:border-pink-300 hover:bg-pink-50 text-gray-600 hover:text-pink-600 transition-all shadow-sm"
-                        title="Voltar ao Painel"
-                    >
-                        <ChevronLeftIcon className="w-5 h-5" />
-                    </button>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-pink-100 text-pink-700">
-                                <SparklesIcon className="w-3.5 h-3.5" />
+                {/* BEGIN: TopBar (Sticky) */}
+                <header className="sticky top-0 z-30 bg-[#faf9fb]/90 backdrop-blur-md border-b border-slate-200/70 px-4 pt-3.5 pb-2.5">
+                    <div className="flex items-center justify-between">
+                        <button 
+                            type="button"
+                            onClick={onBack}
+                            aria-label="Voltar ao Painel" 
+                            className="w-9 h-9 rounded-full flex items-center justify-center bg-white shadow-sm border border-slate-200/80 active:scale-95 hover:border-pink-300 hover:text-pink-600 transition-all text-slate-700"
+                        >
+                            <ChevronLeftIcon className="w-5 h-5" />
+                        </button>
+                        
+                        <div className="flex flex-col items-center">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-pink-600 bg-pink-50 px-2.5 py-0.5 rounded-full mb-0.5 inline-flex items-center gap-1">
+                                <SparklesIcon className="w-3 h-3" />
                                 Administração
                             </span>
+                            <h1 className="text-base font-bold text-slate-900 tracking-tight">Grade de Horários</h1>
                         </div>
-                        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mt-1">
-                            Atendimento & Grade de Horários
-                        </h1>
-                        <p className="text-sm text-gray-500 mt-0.5">
-                            Gerencie slots de atendimento: configure 1 slot, 2 slots ou feche horários específicos.
-                        </p>
+
+                        <button 
+                            type="button"
+                            onClick={handleReset}
+                            title="Restaurar Padrão de Fábrica"
+                            aria-label="Restaurar Padrão" 
+                            className="w-9 h-9 rounded-full flex items-center justify-center bg-white shadow-sm border border-slate-200/80 active:scale-95 hover:border-pink-300 hover:text-pink-600 transition-all text-slate-600"
+                        >
+                            <ArrowPathIcon className="w-4 h-4" />
+                        </button>
                     </div>
-                </div>
+                </header>
+                {/* END: TopBar */}
 
-                {/* Botões de Ação do Topo */}
-                <div className="flex flex-wrap items-center gap-2.5">
-                    <button
-                        type="button"
-                        onClick={handleReset}
-                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 transition-all shadow-sm"
-                    >
-                        <ArrowPathIcon className="w-4 h-4 text-gray-500" />
-                        Restaurar Padrão
-                    </button>
+                {/* BEGIN: MainContent */}
+                <main className="flex-1 px-4 pt-3.5 space-y-4">
+                    
+                    {/* BEGIN: ServiceTypeSegment */}
+                    <section>
+                        <div className="bg-slate-200/70 p-1 rounded-2xl flex items-center shadow-inner">
+                            <button 
+                                type="button"
+                                onClick={() => setActiveTab('pet_movel')}
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl font-semibold text-xs transition-all ${
+                                    activeTab === 'pet_movel'
+                                        ? 'bg-white shadow-sm text-[#db2777]'
+                                        : 'text-slate-500 hover:text-slate-800'
+                                }`}
+                            >
+                                <TruckIcon className="w-4 h-4" />
+                                Pet Móvel (Condos)
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={() => setActiveTab('fixed')}
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl font-semibold text-xs transition-all ${
+                                    activeTab === 'fixed'
+                                        ? 'bg-white shadow-sm text-[#db2777]'
+                                        : 'text-slate-500 hover:text-slate-800'
+                                }`}
+                            >
+                                <BuildingStorefrontIcon className="w-4 h-4" />
+                                Banho &amp; Tosa Fixo
+                            </button>
+                        </div>
+                    </section>
+                    {/* END: ServiceTypeSegment */}
 
-                    <button
-                        type="button"
-                        onClick={handleSave}
-                        disabled={isSyncing}
-                        className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-gradient-to-r from-pink-600 to-rose-600 text-white hover:from-pink-700 hover:to-rose-700 shadow-md shadow-pink-500/20 transition-all disabled:opacity-50"
-                    >
-                        {isSyncing ? (
-                            <ArrowPathIcon className="w-4 h-4 animate-spin" />
-                        ) : (
-                            <CheckCircleIcon className="w-4 h-4" />
-                        )}
-                        Salvar Alterações
-                    </button>
-                </div>
-            </div>
-
-            {/* Abas Principais: Pet Móvel vs Loja Física */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2 mb-6">
-                <div className="grid grid-cols-2 gap-2">
-                    <button
-                        onClick={() => setActiveTab('pet_movel')}
-                        className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-sm font-semibold transition-all ${
-                            activeTab === 'pet_movel'
-                                ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md shadow-pink-500/25'
-                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                        }`}
-                    >
-                        <TruckIcon className="w-5 h-5" />
-                        <span>Pet Móvel (Condomínios)</span>
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('fixed')}
-                        className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-sm font-semibold transition-all ${
-                            activeTab === 'fixed'
-                                ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md shadow-pink-500/25'
-                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                        }`}
-                    >
-                        <BuildingStorefrontIcon className="w-5 h-5" />
-                        <span>Banho & Tosa Fixo (Loja)</span>
-                    </button>
-                </div>
-            </div>
-
-            {/* Sub-Seletores de Condomínio ou Dia da Semana */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 mb-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    {/* Seletor de Condomínio (Pet Móvel) */}
-                    {activeTab === 'pet_movel' ? (
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                                Escolha o Condomínio & Dia de Atendimento
-                            </label>
-                            <div className="flex flex-wrap gap-2">
-                                {(
-                                    [
-                                        { name: 'Vitta Parque', day: 'Quarta-feira', dayNum: 3 },
-                                        { name: 'Max Haus', day: 'Quinta-feira', dayNum: 4 },
-                                        { name: 'Paseo', day: 'Sexta-feira', dayNum: 5 },
-                                    ] as const
-                                ).map(item => {
+                    {/* BEGIN: CondominiumSelector */}
+                    <section className="space-y-1.5">
+                        <div className="flex items-center justify-between px-0.5">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                {activeTab === 'pet_movel' ? 'Condomínio & Dia' : 'Dia da Semana (Loja Física)'}
+                            </span>
+                        </div>
+                        
+                        <div className="flex items-center gap-2.5 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            {activeTab === 'pet_movel' ? (
+                                ([
+                                    { name: 'Vitta Parque', day: 'Quarta-feira' },
+                                    { name: 'Max Haus', day: 'Quinta-feira' },
+                                    { name: 'Paseo', day: 'Sexta-feira' }
+                                ] as const).map(item => {
                                     const isSelected = selectedCondo === item.name;
                                     return (
                                         <button
                                             key={item.name}
+                                            type="button"
                                             onClick={() => setSelectedCondo(item.name)}
-                                            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
+                                            className={`flex-shrink-0 relative rounded-2xl p-2.5 pl-3 pr-4 shadow-sm min-w-[160px] text-left transition-all ${
                                                 isSelected
-                                                    ? 'bg-pink-50 border-pink-500 text-pink-700 shadow-sm'
-                                                    : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                                                    ? 'bg-white border-2 border-pink-500 shadow-sm'
+                                                    : 'bg-white border border-slate-200/90 opacity-75 hover:opacity-100'
                                             }`}
                                         >
-                                            <CalendarDaysIcon className={`w-4 h-4 ${isSelected ? 'text-pink-600' : 'text-gray-400'}`} />
-                                            <span>{item.name}</span>
-                                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-normal">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-pink-500 animate-pulse' : 'bg-slate-300'}`} />
+                                                <p className="font-bold text-xs text-slate-900">{item.name}</p>
+                                            </div>
+                                            <p className={`text-[11px] mt-0.5 ${isSelected ? 'text-pink-600 font-semibold' : 'text-slate-400 font-medium'}`}>
                                                 {item.day}
-                                            </span>
+                                            </p>
+                                            {isSelected && (
+                                                <div className="absolute right-2 top-2 text-pink-500">
+                                                    <CheckCircleIcon className="w-4 h-4" />
+                                                </div>
+                                            )}
                                         </button>
                                     );
-                                })}
-                            </div>
-                        </div>
-                    ) : (
-                        /* Seletor de Dia da Semana (Banho & Tosa Fixo) */
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                                Escolha o Dia da Semana (Loja Física)
-                            </label>
-                            <div className="flex flex-wrap gap-2">
-                                {[
+                                })
+                            ) : (
+                                [
                                     { dayNum: 2, label: 'Terça-feira' },
                                     { dayNum: 3, label: 'Quarta-feira' },
                                     { dayNum: 4, label: 'Quinta-feira' },
@@ -338,219 +292,252 @@ export default function AtendimentoView({ onBack }: AtendimentoViewProps) {
                                     return (
                                         <button
                                             key={item.dayNum}
+                                            type="button"
                                             onClick={() => setSelectedFixedDay(item.dayNum)}
-                                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
+                                            className={`flex-shrink-0 relative rounded-2xl p-2.5 pl-3 pr-4 shadow-sm min-w-[150px] text-left transition-all ${
                                                 isSelected
-                                                    ? 'bg-pink-50 border-pink-500 text-pink-700 shadow-sm'
-                                                    : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                                                    ? 'bg-white border-2 border-pink-500 shadow-sm'
+                                                    : 'bg-white border border-slate-200/90 opacity-75 hover:opacity-100'
                                             }`}
                                         >
-                                            <CalendarDaysIcon className={`w-4 h-4 ${isSelected ? 'text-pink-600' : 'text-gray-400'}`} />
-                                            <span>{item.label}</span>
+                                            <div className="flex items-center gap-1.5">
+                                                <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-pink-500 animate-pulse' : 'bg-slate-300'}`} />
+                                                <p className="font-bold text-xs text-slate-900">{item.label}</p>
+                                            </div>
+                                            <p className={`text-[11px] mt-0.5 ${isSelected ? 'text-pink-600 font-semibold' : 'text-slate-400 font-medium'}`}>
+                                                Loja Física
+                                            </p>
+                                            {isSelected && (
+                                                <div className="absolute right-2 top-2 text-pink-500">
+                                                    <CheckCircleIcon className="w-4 h-4" />
+                                                </div>
+                                            )}
                                         </button>
                                     );
-                                })}
+                                })
+                            )}
+                        </div>
+                    </section>
+                    {/* END: CondominiumSelector */}
+
+                    {/* BEGIN: MetricSummaryCards */}
+                    <section className="grid grid-cols-2 gap-2.5">
+                        <div className="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-sm flex items-center justify-between">
+                            <div>
+                                <span className="text-[11px] font-medium text-slate-400 block leading-tight">Horários Abertos</span>
+                                <span className="text-xl font-extrabold text-slate-800 tracking-tight mt-0.5 block">
+                                    {stats.activeSlotsCount} <span className="text-xs font-semibold text-slate-400">slots</span>
+                                </span>
+                            </div>
+                            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
+                                <ClockIcon className="w-5 h-5" />
                             </div>
                         </div>
-                    )}
 
-                    {/* Cartão de Resumo Rápido da Grade Selecionada */}
-                    <div className="flex items-center gap-4 bg-gray-50 border border-gray-200/80 rounded-xl px-4 py-3 shrink-0">
-                        <div>
-                            <span className="text-xs text-gray-500 block">Horários Abertos</span>
-                            <span className="text-lg font-bold text-gray-900">{stats.activeSlotsCount} horários</span>
+                        <div className="bg-white rounded-2xl p-3 border border-pink-100 shadow-sm flex items-center justify-between bg-gradient-to-br from-white to-pink-50/40">
+                            <div>
+                                <span className="text-[11px] font-medium text-pink-600 block leading-tight">Total de Vagas</span>
+                                <span className="text-xl font-extrabold text-pink-600 tracking-tight mt-0.5 block">
+                                    {stats.totalCapacity} <span className="text-xs font-bold text-pink-400">vagas</span>
+                                </span>
+                            </div>
+                            <div className="w-9 h-9 rounded-xl bg-pink-100/70 flex items-center justify-center text-pink-600">
+                                <UsersIcon className="w-5 h-5" />
+                            </div>
                         </div>
-                        <div className="h-8 w-px bg-gray-200" />
-                        <div>
-                            <span className="text-xs text-gray-500 block">Total de Vagas</span>
-                            <span className="text-lg font-bold text-pink-600">{stats.totalCapacity} vagas</span>
+                    </section>
+                    {/* END: MetricSummaryCards */}
+
+                    {/* BEGIN: QuickActionsBar */}
+                    <section className="bg-white/90 rounded-2xl p-2.5 border border-slate-200/80 shadow-sm space-y-1.5">
+                        <div className="flex items-center justify-between px-1">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Ações Rápidas</span>
+                            <span className="text-[10px] text-slate-400">Aplicar em lote</span>
                         </div>
-                    </div>
-                </div>
-
-                {/* Barra de Ações em Lote (Presets Rápidos) */}
-                <div className="mt-5 pt-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                            Ações Rápidas:
-                        </span>
-                        <button
-                            type="button"
-                            onClick={() => handleApplyPreset(1)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
-                        >
-                            Definir 1 Slot em Todos (Padrão Único)
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleApplyPreset(2)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors"
-                        >
-                            Definir 2 Slots em Todos (Slots Duplos)
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleApplyPreset(0)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200 transition-colors"
-                        >
-                            Fechar Todos
-                        </button>
-                    </div>
-
-                    <div className="text-xs text-gray-500">
-                        * Padrão atual: 08h às 15h, 1 vaga por horário.
-                    </div>
-                </div>
-            </div>
-
-            {/* Grade Visual dos Horários */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-5">
-                    <div>
-                        <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                            <ClockIcon className="w-5 h-5 text-pink-600" />
-                            Grade Horária para {activeTab === 'pet_movel' ? `${selectedCondo}` : 'Loja Física'}
-                        </h2>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                            Clique nos botões de cada horário para alternar instantaneamente entre Fechado, 1 Slot ou 2 Slots.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {displayHours.map(hour => {
-                        const slot = getSlot(hour);
-                        const isClosed = !slot.is_active || slot.capacity === 0;
-                        const isSingle = slot.is_active && slot.capacity === 1;
-                        const isDouble = slot.is_active && slot.capacity === 2;
-                        const isMore = slot.is_active && slot.capacity > 2;
-
-                        return (
-                            <div
-                                key={hour}
-                                className={`relative rounded-2xl p-4 border transition-all duration-200 ${
-                                    isClosed
-                                        ? 'bg-gray-50/70 border-dashed border-gray-300 opacity-80'
-                                        : isSingle
-                                        ? 'bg-emerald-50/40 border-emerald-300 shadow-sm'
-                                        : isDouble
-                                        ? 'bg-indigo-50/40 border-indigo-300 shadow-sm'
-                                        : 'bg-purple-50/40 border-purple-300 shadow-sm'
-                                }`}
+                        <div className="grid grid-cols-3 gap-1.5">
+                            <button 
+                                type="button"
+                                onClick={() => handleApplyPreset(1)}
+                                className="py-2 px-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-[11px] font-semibold tracking-tight text-center active:scale-95 transition-all"
                             >
-                                {/* Horário e Badge de Status */}
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xl font-black text-gray-900 tracking-tight">
-                                            {String(hour).padStart(2, '0')}:00
-                                        </span>
-                                    </div>
+                                1 Vaga Tudo
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={() => handleApplyPreset(2)}
+                                className="py-2 px-2 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-xl text-[11px] font-semibold tracking-tight text-center active:scale-95 transition-all"
+                            >
+                                2 Vagas Tudo
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={() => handleApplyPreset(0)}
+                                className="py-2 px-2 bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 rounded-xl text-[11px] font-semibold tracking-tight text-center active:scale-95 transition-all"
+                            >
+                                Fechar Todos
+                            </button>
+                        </div>
+                    </section>
+                    {/* END: QuickActionsBar */}
 
-                                    {/* Tag de Estado */}
-                                    {isClosed && (
-                                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-200 text-gray-600">
-                                            Fechado
-                                        </span>
-                                    )}
-                                    {isSingle && (
-                                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                            1 Vaga (Único)
-                                        </span>
-                                    )}
-                                    {isDouble && (
-                                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200">
-                                            2 Vagas (Duplo)
-                                        </span>
-                                    )}
-                                    {isMore && (
-                                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200">
-                                            {slot.capacity} Vagas
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Botões Rápidos de Vagas (0, 1, 2) */}
-                                <div className="grid grid-cols-3 gap-1.5 mb-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => handleSetSlotCapacity(hour, 0)}
-                                        className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                                            isClosed
-                                                ? 'bg-gray-700 text-white shadow-sm'
-                                                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100'
-                                        }`}
-                                    >
-                                        0 (Off)
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleSetSlotCapacity(hour, 1)}
-                                        className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                                            isSingle
-                                                ? 'bg-emerald-600 text-white shadow-sm'
-                                                : 'bg-white border border-gray-200 text-gray-600 hover:bg-emerald-50 hover:text-emerald-700'
-                                        }`}
-                                    >
-                                        1 Vaga
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleSetSlotCapacity(hour, 2)}
-                                        className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                                            isDouble
-                                                ? 'bg-indigo-600 text-white shadow-sm'
-                                                : 'bg-white border border-gray-200 text-gray-600 hover:bg-indigo-50 hover:text-indigo-700'
-                                        }`}
-                                    >
-                                        2 Vagas
-                                    </button>
-                                </div>
-
-                                {/* Stepper de Ajuste Fino (+ / -) */}
-                                <div className="flex items-center justify-between pt-2 border-t border-gray-100 text-xs text-gray-500">
-                                    <span>Capacidade custom:</span>
-                                    <div className="flex items-center gap-1.5">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleSetSlotCapacity(hour, Math.max(0, slot.capacity - 1))}
-                                            className="w-6 h-6 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-sm"
-                                            title="Diminuir 1 vaga"
-                                        >
-                                            -
-                                        </button>
-                                        <span className="w-5 text-center font-bold text-gray-800">
-                                            {slot.capacity}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleSetSlotCapacity(hour, slot.capacity + 1)}
-                                            className="w-6 h-6 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-sm"
-                                            title="Aumentar 1 vaga"
-                                        >
-                                            +
-                                        </button>
-                                    </div>
-                                </div>
+                    {/* BEGIN: TimeSlotList */}
+                    <section className="space-y-2.5 pt-1">
+                        <div className="flex items-center justify-between px-1">
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-sm font-bold text-slate-900">Grade de Horários</span>
+                                <span className="text-xs text-slate-400 font-medium">(07h às 19h)</span>
                             </div>
-                        );
-                    })}
-                </div>
+                            <span className="text-[11px] text-slate-400">Toque para alterar</span>
+                        </div>
 
-                {/* Rodapé informativo */}
-                <div className="mt-8 pt-5 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
-                    <div className="flex items-center gap-2">
-                        <CheckCircleIcon className="w-4 h-4 text-emerald-500" />
-                        <span>Qualquer alteração feita nesta tela passa a valer imediatamente para agendamentos e mensalistas.</span>
+                        <div className="space-y-2 md:grid md:grid-cols-2 md:gap-2.5 md:space-y-0">
+                            {displayHours.map((hour) => {
+                                const slot = getSlot(hour);
+                                const isClosed = !slot.is_active || slot.capacity === 0;
+                                const isSingle = slot.is_active && slot.capacity === 1;
+                                const isDouble = slot.is_active && slot.capacity === 2;
+                                const isMore = slot.is_active && slot.capacity > 2;
+
+                                return (
+                                    <article 
+                                        key={hour}
+                                        className={`bg-white rounded-2xl p-3 border transition-all ${
+                                            isClosed 
+                                                ? 'border-slate-200/70 shadow-sm opacity-80' 
+                                                : isSingle 
+                                                ? 'border-2 border-emerald-500/80 shadow-[0_2px_10px_rgba(16,185,129,0.08)]' 
+                                                : isDouble 
+                                                ? 'border-2 border-blue-500/80 shadow-[0_2px_10px_rgba(59,130,246,0.08)]'
+                                                : 'border-2 border-purple-500/80 shadow-[0_2px_10px_rgba(168,85,247,0.08)]'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`font-black ${isClosed ? 'text-sm text-slate-700' : 'text-base text-slate-900'}`}>
+                                                    {String(hour).padStart(2, '0')}:00
+                                                </span>
+
+                                                {/* Status Badge */}
+                                                {isClosed && (
+                                                    <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                                                        Fechado
+                                                    </span>
+                                                )}
+                                                {isSingle && (
+                                                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/90 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                                                        1 Vaga
+                                                    </span>
+                                                )}
+                                                {isDouble && (
+                                                    <span className="text-[11px] font-bold text-blue-700 bg-blue-100/90 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                                                        2 Vagas
+                                                    </span>
+                                                )}
+                                                {isMore && (
+                                                    <span className="text-[11px] font-bold text-purple-700 bg-purple-100/90 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+                                                        {slot.capacity} Vagas
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Stepper */}
+                                            <div className="flex items-center gap-1 bg-slate-100/80 rounded-lg p-0.5">
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => handleSetSlotCapacity(hour, Math.max(0, slot.capacity - 1))}
+                                                    className="w-6 h-6 flex items-center justify-center rounded-md bg-white text-slate-600 text-xs font-bold shadow-xs active:bg-slate-200 transition-colors"
+                                                    title="Diminuir"
+                                                >
+                                                    -
+                                                </button>
+                                                <span className={`text-xs font-bold w-4 text-center ${isClosed ? 'text-slate-500' : 'text-slate-800'}`}>
+                                                    {slot.capacity}
+                                                </span>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => handleSetSlotCapacity(hour, slot.capacity + 1)}
+                                                    className="w-6 h-6 flex items-center justify-center rounded-md bg-white text-slate-600 text-xs font-bold shadow-xs active:bg-slate-200 transition-colors"
+                                                    title="Aumentar"
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Direct Options: 0 (Off), 1 Vaga, 2 Vagas */}
+                                        <div className="grid grid-cols-3 gap-1.5">
+                                            <button 
+                                                type="button"
+                                                onClick={() => handleSetSlotCapacity(hour, 0)}
+                                                className={`py-1.5 rounded-xl text-[11px] transition-all ${
+                                                    isClosed 
+                                                        ? 'font-bold bg-slate-700 text-white shadow-xs' 
+                                                        : 'font-medium bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
+                                                }`}
+                                            >
+                                                0 (Off)
+                                            </button>
+
+                                            <button 
+                                                type="button"
+                                                onClick={() => handleSetSlotCapacity(hour, 1)}
+                                                className={`py-1.5 rounded-xl text-[11px] transition-all ${
+                                                    isSingle 
+                                                        ? 'font-bold bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-600' 
+                                                        : 'font-medium bg-slate-50 border border-slate-200 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700'
+                                                }`}
+                                            >
+                                                1 Vaga
+                                            </button>
+
+                                            <button 
+                                                type="button"
+                                                onClick={() => handleSetSlotCapacity(hour, 2)}
+                                                className={`py-1.5 rounded-xl text-[11px] transition-all ${
+                                                    isDouble 
+                                                        ? 'font-bold bg-blue-600 text-white shadow-sm ring-1 ring-blue-600' 
+                                                        : 'font-medium bg-slate-50 border border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-700'
+                                                }`}
+                                            >
+                                                2 Vagas
+                                            </button>
+                                        </div>
+                                    </article>
+                                );
+                            })}
+                        </div>
+                    </section>
+                    {/* END: TimeSlotList */}
+
+                </main>
+                {/* END: MainContent */}
+
+                {/* BEGIN: FixedBottomBar (Mobile Sticky Footer) */}
+                <aside className="fixed bottom-0 left-0 right-0 max-w-[480px] md:max-w-3xl mx-auto bg-white/95 backdrop-blur-lg border-t border-slate-200/90 px-4 pt-2.5 pb-6 z-40 shadow-2xl">
+                    <div className="flex items-center gap-1.5 justify-center mb-2">
+                        <CheckIcon className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />
+                        <span className="text-[11px] text-slate-500 font-medium">Alterações passam a valer imediatamente</span>
                     </div>
-                    <button
+
+                    <button 
                         type="button"
                         onClick={handleSave}
                         disabled={isSyncing}
-                        className="px-4 py-2 rounded-xl text-xs font-bold bg-pink-600 text-white hover:bg-pink-700 transition-colors shadow-sm disabled:opacity-50"
+                        className="w-full py-3.5 px-4 bg-gradient-to-r from-[#e11d68] to-[#db2777] hover:from-[#c81057] hover:to-[#be185d] text-white font-bold text-sm rounded-2xl shadow-[0_10px_25px_-5px_rgba(225,29,104,0.25)] flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
                     >
-                        {isSyncing ? 'Sincronizando...' : 'Confirmar & Salvar'}
+                        {isSyncing ? (
+                            <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <CheckIcon className="w-4 h-4 stroke-[2.5]" />
+                        )}
+                        <span>{isSyncing ? 'Sincronizando...' : 'Confirmar & Salvar Alterações'}</span>
                     </button>
-                </div>
+                </aside>
+                {/* END: FixedBottomBar */}
+
             </div>
         </div>
     );
