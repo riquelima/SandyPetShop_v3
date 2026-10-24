@@ -118,42 +118,29 @@ export const LUNCH_HOUR = 13;
 export const MAX_CAPACITY_PER_SLOT = 1; // Single groomer/slot
 
 // Horários específicos do Pet Móvel:
-// - Quarta (Vitta Parque) e Sexta (Paseo): 08h às 17h (inclusive 13h)
-// - Quinta (Max Haus): 08h às 15h direto (inclusive 13h)
+// - Quarta, Quinta e Sexta (todos os condomínios: Vitta Parque, Max Haus, Paseo):
+//   08h às 15h direto (inclusive 13h), slots únicos de 1 vaga para cada horário (sem duplicação).
+export const PET_MOBILE_HOURS: number[] = [8, 9, 10, 11, 12, 13, 14, 15];
 export const PET_MOBILE_THURSDAY_HOURS: number[] = [8, 9, 10, 11, 12, 13, 14, 15];
-export const PET_MOBILE_FRIDAY_HOURS: number[] = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
-// Quarta-feira rigorosamente idêntica à Sexta-feira:
-export const PET_MOBILE_WEDNESDAY_HOURS: number[] = [...PET_MOBILE_FRIDAY_HOURS];
-export const PET_MOBILE_DEFAULT_HOURS: number[] = [...PET_MOBILE_FRIDAY_HOURS];
+export const PET_MOBILE_FRIDAY_HOURS: number[] = [8, 9, 10, 11, 12, 13, 14, 15];
+export const PET_MOBILE_WEDNESDAY_HOURS: number[] = [8, 9, 10, 11, 12, 13, 14, 15];
+export const PET_MOBILE_DEFAULT_HOURS: number[] = [8, 9, 10, 11, 12, 13, 14, 15];
 
 export function getPetMovelWorkingHours(dayOfWeek?: number | null, condo?: string | null): number[] {
-  if (dayOfWeek === 4 || (condo && condo.toLowerCase().includes('max haus'))) {
-    return PET_MOBILE_THURSDAY_HOURS; // Quinta: 08h às 15h direto
-  }
-  // Quarta-feira, Sexta-feira e Pet Móvel padrão: exatamente a mesma grade (08h às 17h)
-  return PET_MOBILE_FRIDAY_HOURS;
+  // Todos os dias (Quarta, Quinta e Sexta) e todos os condomínios: rigorosamente 08h às 15h direto
+  return [8, 9, 10, 11, 12, 13, 14, 15];
 }
 
-// Horários duplicados do Pet Móvel (quando há 2 atendentes simultâneas: 09h às 12h e 14h às 15h)
-// - 08h: 1 slot (Rafa)
-// - 09h às 12h: 2 slots (Rafa + Bia)
-// - 13h: 1 slot (Rafa - intervalo de almoço da Bia)
-// - 14h às 15h: 2 slots (Rafa + Bia)
-// - 16h e 17h: 1 slot (Bia - Rafa finalizou às 15h)
-// - Quinta: apenas Rafa -> todos os horários são simples (1 slot)
-export const PET_MOBILE_DUPLICATED_HOURS: number[] = [9, 10, 11, 12, 14, 15];
+// Horários duplicados do Pet Móvel:
+// Conforme nova regra, todos os slots de quarta, quinta e sexta são estritamente únicos (1 vaga), sem serem dobrados.
+export const PET_MOBILE_DUPLICATED_HOURS: number[] = [];
 
 export function isPetMovelHourDuplicated(hour: number, dayOfWeek?: number | null, condo?: string | null): boolean {
-  const isWednesday = dayOfWeek === 3 || (condo && condo.toLowerCase().includes('vitta parque'));
-  const isFriday = dayOfWeek === 5 || (condo && condo.toLowerCase().includes('paseo'));
-  if (isWednesday || isFriday) {
-    return PET_MOBILE_DUPLICATED_HOURS.includes(hour);
-  }
   return false;
 }
 
 export function getPetMovelSlotCapacity(hour: number, dayOfWeek?: number | null, condo?: string | null): number {
-  return isPetMovelHourDuplicated(hour, dayOfWeek, condo) ? 2 : 1;
+  return 1;
 }
 
 export function matchesCondo(apptCondo?: string, targetCondo?: string): boolean {

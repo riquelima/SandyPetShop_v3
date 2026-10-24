@@ -661,8 +661,7 @@ const MonthlyClientCard: React.FC<{
             const currTime = Number(inlineForm.recurrence_time);
             if (!formWorkingHours.includes(currTime)) {
                 const firstAvailable = formWorkingHours.find(h => {
-                    const isDup = isFormPetMovel && isPetMovelHourDuplicated(h, Number(inlineForm.recurrence_day), formEffectiveCondo);
-                    const maxCap = isFormPetMovel ? (isDup ? 2 : 1) : 1;
+                    const maxCap = 1;
                     const count = existingMonthlyClients.filter(mc =>
                         mc.id !== client.id &&
                         mc.is_active &&
@@ -1536,8 +1535,7 @@ const MonthlyClientCard: React.FC<{
                                             </option>
                                         )}
                                         {formWorkingHours.map(h => {
-                                            const isDup = isFormPetMovel && isPetMovelHourDuplicated(h, Number(inlineForm.recurrence_day), formEffectiveCondo);
-                                            const maxCap = isFormPetMovel ? (isDup ? 2 : 1) : MAX_CAPACITY_PER_SLOT;
+                                            const maxCap = 1;
                                             const bookedCount = existingMonthlyClients.filter(mc => {
                                                 if (mc.id === client.id) return false;
                                                 if (!mc.is_active) return false;
@@ -1560,13 +1558,10 @@ const MonthlyClientCard: React.FC<{
                                                 >
                                                     {`${h}:00`}
                                                     {isCurrentClientSlot
-                                                        ? (isDup ? ` (Vaga atual de ${client.pet_name} - ${bookedCount + 1}/${maxCap})` : ` (Vaga atual de ${client.pet_name})`)
+                                                        ? ` (Vaga atual de ${client.pet_name})`
                                                         : isFull
                                                             ? ` (Lotado - ${bookedCount}/${maxCap})`
-                                                            : (isDup
-                                                                ? (bookedCount > 0 ? ` (1 vaga livre - ${bookedCount}/${maxCap})` : ` (2 vagas livres)`)
-                                                                : (bookedCount > 0 ? ` (${bookedCount}/${maxCap} ocupada)` : ` (1 vaga livre)`)
-                                                              )
+                                                            : (bookedCount > 0 ? ` (${bookedCount}/${maxCap} ocupada)` : ` (1 vaga livre)`)
                                                     }
                                                 </option>
                                             );

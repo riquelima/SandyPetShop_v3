@@ -4,7 +4,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../../supabaseClient';
 import { MonthlyClient, PetWeight, ServiceType } from '../../types';
 import ExtraServicesSelection from './ExtraServicesSelection';
-import { PET_WEIGHT_OPTIONS } from '../../constants';
+import { PET_WEIGHT_OPTIONS, getPetMovelWorkingHours, BATH_GROOMING_HOURS, WORKING_HOURS } from '../../constants';
 
 // --- Interfaces ---
 interface EditMonthlyClientModalProps {
@@ -500,9 +500,24 @@ const EditMonthlyClientModal: React.FC<EditMonthlyClientModalProps> = ({ client,
                                     <div>
                                         <Label htmlFor="recurrence_time">Horário</Label>
                                         <Select id="recurrence_time" name="recurrence_time" value={formData.recurrence_time} onChange={handleInputChange}>
-                                            {Array.from({ length: 13 }, (_, i) => 7 + i).map(h => (
-                                                <option key={h} value={h}>{h}:00</option>
-                                            ))}
+                                            {(() => {
+                                                const isPetMovel = !!formData.condominium || String(formData.service || '').toLowerCase().includes('móvel') || String(formData.service || '').toLowerCase().includes('movel');
+                                                const hours = isPetMovel
+                                                    ? getPetMovelWorkingHours(Number(formData.recurrence_day), formData.condominium)
+                                                    : (formData.condominium === 'Banho & Tosa Fixo' ? BATH_GROOMING_HOURS : WORKING_HOURS);
+                                                return (
+                                                    <>
+                                                        {formData.recurrence_time !== undefined &&
+                                                         formData.recurrence_time !== null &&
+                                                         !hours.includes(Number(formData.recurrence_time)) && (
+                                                            <option value={formData.recurrence_time}>{`${formData.recurrence_time}:00 (Atual)`}</option>
+                                                        )}
+                                                        {hours.map(h => (
+                                                            <option key={h} value={h}>{h}:00</option>
+                                                        ))}
+                                                    </>
+                                                );
+                                            })()}
                                         </Select>
                                     </div>
                                     <div className="sm:col-span-2 lg:col-span-2">

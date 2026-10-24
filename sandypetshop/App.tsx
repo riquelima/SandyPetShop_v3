@@ -437,25 +437,10 @@ export function evaluateSlotAvailability(args: {
 
     const occupied = occupiedFromTables + occupiedFromMonthly;
 
-    // Capacidade dos slots do Pet Móvel:
-    // - Quarta (3) e Sexta (5):
-    //   - 09h às 12h e 14h às 15h: horário duplo (capacidade 2 - Rafa + Bia)
-    //   - 08h, 13h, 16h e 17h: horário simples (capacidade 1)
-    // - Quinta (4): 08h às 15h direto (inclusive 13h): sem horário duplo (capacidade 1 - apenas Rafa)
-    const [y, m, d] = ymd.split('-').map(Number);
-    const utcRef = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
-    const dayOfWeek = getSaoPauloTimeParts(utcRef).day;
-    let mobileCapacity = 1;
-    if (args.type === 'mobile') {
-        const isWednesday = dayOfWeek === 3 || (args.condo && matchesCondo(args.condo, 'Vitta Parque'));
-        const isFriday = dayOfWeek === 5 || (args.condo && matchesCondo(args.condo, 'Paseo'));
-        if ((isWednesday || isFriday) && [9, 10, 11, 12, 14, 15].includes(args.hour)) {
-            mobileCapacity = 2;
-        } else {
-            mobileCapacity = 1;
-        }
-    }
-    const capacity = args.type === 'mobile' ? mobileCapacity : 1;
+    // Capacidade dos slots do Pet Móvel e Banho & Tosa:
+    // Conforme regra atualizada, todos os slots de quarta, quinta e sexta (e qualquer condomínio)
+    // são estritamente únicos (1 vaga por horário, sem duplicação).
+    const capacity = 1;
 
     if (occupied >= capacity) {
         return {
@@ -2535,8 +2520,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
     useEffect(() => {
         if (!workingHours.includes(recurrence.time)) {
             const firstAvailable = workingHours.find(h => {
-                const isDup = isPetMovel && isPetMovelHourDuplicated(h, recurrence.day, formData.condominium);
-                const maxCap = isPetMovel ? (isDup ? 2 : 1) : 1;
+                const maxCap = 1;
                 const count = existingMonthlyClients.filter(mc =>
                     Number(mc.recurrence_day) === Number(recurrence.day) &&
                     Number(mc.recurrence_time) === Number(h) &&
@@ -3237,8 +3221,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                                     <div className="relative">
                                         <select name="time" onChange={handleRecurrenceChange} value={recurrence.time} className="w-full pl-4 pr-10 py-3.5 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-pink-500 transition-all appearance-none text-ellipsis overflow-hidden whitespace-nowrap">
                                             {workingHours.map(h => {
-                                                const isDup = isPetMovel && isPetMovelHourDuplicated(h, recurrence.day, formData.condominium);
-                                                const maxCap = isPetMovel ? (isDup ? 2 : 1) : MAX_CAPACITY_PER_SLOT;
+                                                const maxCap = 1;
                                                 const bookedCount = existingMonthlyClients.filter(mc => {
                                                     if (Number(mc.recurrence_day) !== Number(recurrence.day)) return false;
                                                     if (Number(mc.recurrence_time) !== Number(h)) return false;
@@ -3259,10 +3242,7 @@ const AddMonthlyClientView: React.FC<{ onBack: () => void; onSuccess: () => void
                                                         {`${h}:00`}
                                                         {isFull 
                                                             ? ` (Lotado - ${bookedCount}/${maxCap})` 
-                                                            : (isDup 
-                                                                ? (bookedCount > 0 ? ` (1 vaga livre - ${bookedCount}/${maxCap})` : ` (2 vagas livres)`) 
-                                                                : (bookedCount > 0 ? ` (${bookedCount}/${maxCap} ocupada)` : ` (1 vaga livre)`)
-                                                              )
+                                                            : (bookedCount > 0 ? ` (${bookedCount}/${maxCap} ocupada)` : ` (1 vaga livre)`)
                                                         }
                                                     </option>
                                                 );
@@ -4471,7 +4451,7 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
             const allApps = [...(regularData || []), ...(petMovelData || []), ...(banhoTosaData || [])];
 
             const counts: Record<number, number> = {};
-            const hoursToCheck = [...WORKING_HOURS, ...VISIT_WORKING_HOURS];
+            const hoursToCheck = Array.from(new Set([...WORKING_HOURS, ...VISIT_WORKING_HOURS, 8, ...PET_MOBILE_HOURS]));
 
             hoursToCheck.forEach(h => {
                 const targetTime = toSaoPauloUTC(year, month, day, h).toISOString();
@@ -4761,7 +4741,7 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
                                             value={timePart}
                                             onChange={e => {
                                                 const val = Number(e.target.value);
-                                                if (availabilityCounts[val] >= MAX_CAPACITY_PER_SLOT) {
+                                                if (val !== timePart && (availabilityCounts[val] || 0) >= MAX_CAPACITY_PER_SLOT) {
                                                     alert('Horário indisponível! Por favor selecione outro.');
                                                     return;
                                                 }
@@ -4775,21 +4755,28 @@ const EditAppointmentModal: React.FC<{ appointment: AdminAppointment; onClose: (
                                                     ? getPetMovelWorkingHours(datePart ? getSaoPauloTimeParts(datePart).day : null, formData.condominium || appointment.condominium)
                                                     : (['Creche Pet', 'Hotel Pet', visitDaycareLabel, visitHotelLabel].includes(formData.service) ? VISIT_WORKING_HOURS : WORKING_HOURS);
 
-                                                return hoursList.map(h => {
-                                                    const isDup = isMobileAppt && isPetMovelHourDuplicated(h, datePart ? getSaoPauloTimeParts(datePart).day : null, formData.condominium || appointment.condominium);
-                                                    const maxCap = isMobileAppt ? (isDup ? 2 : 1) : MAX_CAPACITY_PER_SLOT;
-                                                    const isFull = (availabilityCounts[h] || 0) >= maxCap;
-                                                    return (
-                                                        <option
-                                                            key={h}
-                                                            value={h}
-                                                            disabled={isFull}
-                                                            className={isFull ? 'text-red-400 bg-gray-100' : ''}
-                                                        >
-                                                            {`${h}:00`} {isFull ? '(Indisponível)' : ''}
-                                                        </option>
-                                                    );
-                                                });
+                                                return (
+                                                    <>
+                                                        {timePart && !hoursList.includes(timePart) && (
+                                                            <option value={timePart}>{`${timePart}:00 (Atual - Fora da grade)`}</option>
+                                                        )}
+                                                        {hoursList.map(h => {
+                                                            const maxCap = 1;
+                                                            const isCurrentApptTime = h === timePart;
+                                                            const isFull = !isCurrentApptTime && (availabilityCounts[h] || 0) >= maxCap;
+                                                            return (
+                                                                <option
+                                                                    key={h}
+                                                                    value={h}
+                                                                    disabled={isFull}
+                                                                    className={isFull ? 'text-red-400 bg-gray-100' : ''}
+                                                                >
+                                                                    {`${h}:00`} {isFull ? '(Indisponível)' : (isCurrentApptTime ? '(Atual)' : '')}
+                                                                </option>
+                                                            );
+                                                        })}
+                                                    </>
+                                                );
                                             })()}
                                         </select>
                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" /></svg></div>
@@ -6977,6 +6964,9 @@ const EditPetMovelAppointmentModal: React.FC<{
                         <div>
                             <label className="font-semibold text-gray-600">Hora</label>
                             <select value={timePart} onChange={e => setTimePart(Number(e.target.value))} className="w-full mt-1 px-5 py-4 border rounded-lg bg-white">
+                                {timePart && !getPetMovelWorkingHours(datePart ? getSaoPauloTimeParts(datePart).day : null, formData.condominium).includes(timePart) && (
+                                    <option value={timePart}>{`${timePart}:00 (Atual - Fora da grade)`}</option>
+                                )}
                                 {getPetMovelWorkingHours(datePart ? getSaoPauloTimeParts(datePart).day : null, formData.condominium).map(h => <option key={h} value={h}>{`${h}:00`}</option>)}
                             </select>
                         </div>
@@ -9252,7 +9242,7 @@ const MonthlyClientsView: React.FC<{
                                     className="w-full pl-8 pr-8 py-2 bg-gray-50/50 border border-gray-200 rounded-xl appearance-none focus:outline-none focus:ring-2 focus:ring-pink-500/30 focus:border-pink-400 focus:bg-white transition-all text-gray-700 text-sm font-medium hover:border-pink-300"
                                 >
                                     <option value="">Todos</option>
-                                    {Array.from({ length: 9 }, (_, i) => i + 9).map(hour => (
+                                    {[8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map(hour => (
                                         <option key={hour} value={hour}>{hour}:00</option>
                                     ))}
                                 </select>
@@ -13110,29 +13100,18 @@ export const TimeSlotPicker: React.FC<{
     const condoWeekday = spParts ? (spParts.day ?? (spParts as any).weekday ?? selectedDate.getDay()) : null;
 
     const isHourDuplicatedForPetMovel = (hour: number) => {
-        if (!isPetMovel) return false;
-        const isWednesday = condoWeekday === 3 || (selectedCondo && matchesCondo(selectedCondo, 'Vitta Parque'));
-        const isFriday = condoWeekday === 5 || (selectedCondo && matchesCondo(selectedCondo, 'Paseo'));
-        if ((isWednesday || isFriday) && [9, 10, 11, 12, 14, 15].includes(hour)) {
-            return true;
-        }
         return false;
     };
 
     const hoursToRender = React.useMemo(() => {
         if (!isPetMovel) return workingHours;
-        const isThursday = condoWeekday === 4 || (selectedCondo && matchesCondo(selectedCondo, 'Max Haus'));
         // Preserva workingHours de teste caso contenha horários específicos que não estejam nos padrões
         if (workingHours && workingHours.length <= 2 && workingHours.some(h => !WORKING_HOURS.includes(h) && h !== 8)) {
             return workingHours;
         }
-        if (isThursday) {
-            // Quinta: 08 às 15 (inclusive 13h)
-            return [8, 9, 10, 11, 12, 13, 14, 15];
-        }
-        // Quarta, Sexta ou Pet Móvel geral: 08 às 17 (inclusive 13h)
-        return [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
-    }, [isPetMovel, condoWeekday, selectedCondo, workingHours]);
+        // Todos os dias (Quarta, Quinta e Sexta) e todos os condomínios: 08h às 15h direto (inclusive 13h)
+        return [8, 9, 10, 11, 12, 13, 14, 15];
+    }, [isPetMovel, workingHours]);
 
     // Separate calendars logic
 
@@ -13200,18 +13179,9 @@ export const TimeSlotPicker: React.FC<{
             return true;
         }
 
-        // 2. Capacity Check — cada slot duplicado representa uma vaga separada
+        // 2. Capacity Check — cada slot é único (capacidade = 1)
         let load = getAppointmentsAtHour(hour);
 
-        const isDuplicated = isHourDuplicatedForPetMovel(hour);
-
-        // Quando duplicado, capacidade = 2. slotIdx 0 ocupado se load>=1,
-        // slotIdx 1 ocupado se load>=2.
-        if (isDuplicated) {
-            return load <= slotIdx;
-        }
-
-        // Capacidade padrão = 1 (quinta-feira, 17h, ou qualquer horário simples)
         if (load >= 1) return false;
 
         return true;
@@ -13219,49 +13189,35 @@ export const TimeSlotPicker: React.FC<{
 
     return (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-            {hoursToRender.flatMap((hour) => {
-                const isDuplicated = isHourDuplicatedForPetMovel(hour);
-                const slots = isDuplicated
-                    ? [
-                        { hour, label: `${hour}:00`, slotIdx: 0 },
-                        { hour, label: `${hour}:00`, slotIdx: 1 },
-                      ]
-                    : [{ hour, label: `${hour}:00`, slotIdx: 0 }];
+            {hoursToRender.map((hour) => {
+                const available = isHourAvailable(hour);
+                const isSelected = selectedTime === hour;
 
-                return slots.map(slot => {
-                    const available = isHourAvailable(slot.hour, slot.slotIdx);
-                    // Para slots duplicados, exigir match exato de slotIdx
-                    // para que cada botão mantenha seu próprio estado de seleção.
-                    const isSelected = isDuplicated
-                        ? (selectedTime === slot.hour && selectedSlotIdx === slot.slotIdx)
-                        : (selectedTime === slot.hour && slot.slotIdx === 0);
-
-                    return (
-                        <button
-                            key={`${slot.hour}-${slot.slotIdx}`}
-                            type="button"
-                            title={available ? "Disponível" : "Indisponível"}
-                            disabled={!available}
-                            onClick={() => {
-                                if (available) {
-                                    setSelectedSlotIdx(slot.slotIdx);
-                                    onTimeSelect(slot.hour);
-                                }
-                            }}
-                            className={`px-3 py-2 rounded-md text-center font-medium transition-colors border flex items-center justify-center gap-1
-                                ${isSelected
-                                    ? 'bg-pink-600 text-white border-pink-600 shadow-md'
-                                    : available
-                                        ? 'bg-white hover:bg-pink-50 border-gray-200 text-gray-900'
-                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-100 opacity-60'
-                                }
-                                leading-tight text-sm
-                            `}
-                        >
-                            {slot.label}
-                        </button>
-                    );
-                });
+                return (
+                    <button
+                        key={hour}
+                        type="button"
+                        title={available ? "Disponível" : "Indisponível"}
+                        disabled={!available}
+                        onClick={() => {
+                            if (available) {
+                                setSelectedSlotIdx(0);
+                                onTimeSelect(hour);
+                            }
+                        }}
+                        className={`px-3 py-2 rounded-md text-center font-medium transition-colors border flex items-center justify-center gap-1
+                            ${isSelected
+                                ? 'bg-pink-600 text-white border-pink-600 shadow-md'
+                                : available
+                                    ? 'bg-white hover:bg-pink-50 border-gray-200 text-gray-900'
+                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-100 opacity-60'
+                            }
+                            leading-tight text-sm
+                        `}
+                    >
+                        {`${hour}:00`}
+                    </button>
+                );
             })}
         </div>
     );

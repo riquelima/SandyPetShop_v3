@@ -43,7 +43,7 @@ interface Appointment {
 }
 
 const BATH_GROOMING_HOURS = [10, 11, 12, 14, 15, 16, 17];
-const PET_MOBILE_HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+const PET_MOBILE_HOURS = [8, 9, 10, 11, 12, 13, 14, 15];
 const CONDOMINIUMS = [
     { name: 'Vitta Parque', day: 'Quarta-feira', dayNumber: 3 },
     { name: 'Max Haus', day: 'Quinta-feira', dayNumber: 4 },

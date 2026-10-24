@@ -19,7 +19,7 @@ import {
 const LOGO_URL = 'https://i.imgur.com/M3Gt3OA.png';
 
 const BATH_GROOMING_HOURS = [10, 11, 12, 14, 15, 16, 17];
-const PET_MOBILE_HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+const PET_MOBILE_HOURS = [8, 9, 10, 11, 12, 13, 14, 15];
 
 const CONDOMINIUMS = [
     { name: 'Vitta Parque', day: 'Quarta-feira', dayNumber: 3 },
@@ -287,7 +287,7 @@ export const AvailableTimesPage: React.FC = () => {
                                                 {isDayAvailable ? (
                                                     <>
                                                         <p className="text-sm text-gray-500 mb-4">
-                                                            Horário de funcionamento: {condo.dayNumber === 4 ? '8h às 15h' : '8h às 17h'}
+                                                            Horário de funcionamento: 8h às 15h
                                                         </p>
                                                         <div className="grid grid-cols-4 gap-3">
                                                             {getPetMovelWorkingHours(condo.dayNumber, condo.name).map((hour) => {
