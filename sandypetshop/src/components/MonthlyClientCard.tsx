@@ -27,6 +27,54 @@ import {
 } from '../../constants';
 
 // --- Helpers ---
+const SAO_PAULO_OFFSET_MS = 3 * 60 * 60 * 1000;
+
+function toSaoPauloUTC(year: number, month: number, day: number, hour = 0, minute = 0, second = 0): Date {
+    return new Date(Date.UTC(year, month, day, hour, minute, second) + SAO_PAULO_OFFSET_MS);
+}
+
+function parseISODateAsSaoPaulo(isoDate: string): Date {
+    if (!isoDate) return new Date();
+    const clean = isoDate.split('T')[0].trim();
+    const [y, m, d] = clean.split('-').map(Number);
+    if (isNaN(y) || isNaN(m) || isNaN(d)) return new Date();
+    return toSaoPauloUTC(y, m - 1, d, 12, 0, 0);
+}
+
+function getSaoPauloTimeParts(date: Date | string | null | undefined) {
+    if (!date) {
+        const now = new Date();
+        const spDate = new Date(now.getTime() - SAO_PAULO_OFFSET_MS);
+        return {
+            year: spDate.getUTCFullYear(),
+            month: spDate.getUTCMonth(),
+            date: spDate.getUTCDate(),
+            hour: spDate.getUTCHours(),
+            day: spDate.getUTCDay(),
+        };
+    }
+    let d: Date;
+    if (typeof date === 'string') {
+        const trimmed = date.trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+            d = parseISODateAsSaoPaulo(trimmed);
+        } else {
+            d = new Date(trimmed);
+        }
+    } else {
+        d = date;
+    }
+    const time = isNaN(d.getTime()) ? Date.now() : d.getTime();
+    const spDate = new Date(time - SAO_PAULO_OFFSET_MS);
+    return {
+        year: spDate.getUTCFullYear(),
+        month: spDate.getUTCMonth(),
+        date: spDate.getUTCDate(),
+        hour: spDate.getUTCHours(),
+        day: spDate.getUTCDay(),
+    };
+}
+
 const FALLBACK_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="28">🐾</text></svg>';
 
 const SafeImage: React.FC<{
@@ -392,8 +440,13 @@ const MonthlyClientCard: React.FC<{
                 const m = selDate.getMonth();
                 const startOfMonth = new Date(y, m, 1, 0, 0, 0, 0).toISOString();
                 const endOfMonth = new Date(y, m + 1, 0, 23, 59, 59, 999).toISOString();
+                const todayIso = new Date().toISOString();
 
-                const [apptsRes, petMovelRes, bathGroomRes, completedApptsRes, completedPetMovelRes, completedBathGroomRes] = await Promise.all([
+                const [
+                    apptsRes, petMovelRes, bathGroomRes, 
+                    completedApptsRes, completedPetMovelRes, completedBathGroomRes,
+                    futureApptsRes, futurePetMovelRes, futureBathGroomRes
+                ] = await Promise.all([
                     supabase
                         .from('appointments')
                         .select('appointment_time, status')
@@ -432,7 +485,28 @@ const MonthlyClientCard: React.FC<{
                         .eq('monthly_client_id', client.id)
                         .eq('status', 'CONCLUÍDO')
                         .gte('appointment_time', startOfMonth)
-                        .lte('appointment_time', endOfMonth)
+                        .lte('appointment_time', endOfMonth),
+                    supabase
+                        .from('appointments')
+                        .select('appointment_time, status')
+                        .eq('monthly_client_id', client.id)
+                        .gte('appointment_time', todayIso)
+                        .order('appointment_time', { ascending: true })
+                        .limit(8),
+                    supabase
+                        .from('pet_movel_appointments')
+                        .select('appointment_time, status')
+                        .eq('monthly_client_id', client.id)
+                        .gte('appointment_time', todayIso)
+                        .order('appointment_time', { ascending: true })
+                        .limit(8),
+                    supabase
+                        .from('agendamento_banhotosa')
+                        .select('appointment_time, status')
+                        .eq('monthly_client_id', client.id)
+                        .gte('appointment_time', todayIso)
+                        .order('appointment_time', { ascending: true })
+                        .limit(8)
                 ]);
 
                 if (!isMounted) return;
@@ -464,7 +538,10 @@ const MonthlyClientCard: React.FC<{
                 const combined = [
                     ...(apptsRes.data || []),
                     ...(petMovelRes.data || []),
-                    ...(bathGroomRes.data || [])
+                    ...(bathGroomRes.data || []),
+                    ...(futureApptsRes.data || []),
+                    ...(futurePetMovelRes.data || []),
+                    ...(futureBathGroomRes.data || [])
                 ];
 
                 combined.sort((a, b) => new Date(a.appointment_time).getTime() - new Date(b.appointment_time).getTime());
@@ -756,6 +833,83 @@ const MonthlyClientCard: React.FC<{
             const { error } = await supabase.from('monthly_clients').update(updatePayload).eq('id', client.id);
             if (error) throw error;
 
+            // Atualiza em massa os agendamentos futuros
+            const today = new Date().toISOString();
+            const unitPriceUpdate = (() => {
+                const total = Number(inlineForm.price || 0);
+                if (inlineForm.recurrence_type === 'weekly') return total / 4;
+                if (inlineForm.recurrence_type === 'bi-weekly') return total / 2;
+                return total;
+            })();
+
+            const commonPayload = {
+                pet_name: inlineForm.pet_name,
+                owner_name: inlineForm.owner_name,
+                whatsapp: inlineForm.whatsapp,
+                owner_cpf: inlineForm.owner_cpf ? inlineForm.owner_cpf.replace(/\D/g, '') : null,
+                pet_breed: inlineForm.pet_breed,
+                owner_address: inlineForm.owner_address,
+                service: inlineForm.service,
+                weight: inlineForm.weight,
+                price: unitPriceUpdate,
+                condominium: inlineForm.condominium,
+                observation: inlineForm.observation
+            };
+
+            const targetHour = inlineForm.recurrence_time !== undefined && inlineForm.recurrence_time !== null
+                ? Number(typeof inlineForm.recurrence_time === 'string' ? inlineForm.recurrence_time.split(':')[0] : inlineForm.recurrence_time)
+                : null;
+
+            const tables: ('appointments' | 'pet_movel_appointments' | 'agendamento_banhotosa')[] = 
+                ['appointments', 'pet_movel_appointments', 'agendamento_banhotosa'];
+
+            for (const table of tables) {
+                const { data: futureAppts } = await supabase
+                    .from(table)
+                    .select('id, appointment_time, status')
+                    .eq('monthly_client_id', client.id)
+                    .gte('appointment_time', today);
+
+                if (futureAppts && futureAppts.length > 0) {
+                    for (const appt of futureAppts) {
+                        if (appt.status === 'CONCLUÍDO') {
+                            await supabase.from(table).update(commonPayload).eq('id', appt.id);
+                            continue;
+                        }
+
+                        const currentApptDate = new Date(appt.appointment_time);
+                        const spParts = getSaoPauloTimeParts(currentApptDate);
+                        let year = spParts.year;
+                        let month = spParts.month;
+                        let date = spParts.date;
+
+                        if (inlineForm.recurrence_type !== 'monthly' && inlineForm.recurrence_day) {
+                            const targetDayOfWeek = Number(inlineForm.recurrence_day);
+                            const currentDayOfWeek = spParts.day === 0 ? 7 : spParts.day;
+                            const diffDays = targetDayOfWeek - currentDayOfWeek;
+                            if (diffDays !== 0) {
+                                const tempDate = new Date(Date.UTC(year, month, date));
+                                tempDate.setUTCDate(tempDate.getUTCDate() + diffDays);
+                                year = tempDate.getUTCFullYear();
+                                month = tempDate.getUTCMonth();
+                                date = tempDate.getUTCDate();
+                            }
+                        }
+
+                        const hourToUse = targetHour !== null && !isNaN(targetHour) ? targetHour : spParts.hour;
+                        const newAppointmentTime = toSaoPauloUTC(year, month, date, hourToUse).toISOString();
+
+                        await supabase
+                            .from(table)
+                            .update({
+                                ...commonPayload,
+                                appointment_time: newAppointmentTime
+                            })
+                            .eq('id', appt.id);
+                    }
+                }
+            }
+
             onStatusChanged?.();
             setIsFlipped(false);
         } catch (err) {
@@ -838,7 +992,8 @@ const MonthlyClientCard: React.FC<{
                     const appDate = new Date(y, m - 1, d);
                     return appDate >= now;
                 });
-                return futureAppts.length > 0 ? futureAppts[0].date : upcomingAppointments[0].date;
+                if (futureAppts.length > 0) return futureAppts[0].date;
+                return client.is_active ? getNextAppointmentDateText(client, selectedDate) : 'Pausado';
               })()
             : client.is_active 
                 ? getNextAppointmentDateText(client, selectedDate)

@@ -5,6 +5,7 @@ import { supabase } from '../../supabaseClient';
 import { MonthlyClient, PetWeight, ServiceType } from '../../types';
 import ExtraServicesSelection from './ExtraServicesSelection';
 import { PET_WEIGHT_OPTIONS, getPetMovelWorkingHours, BATH_GROOMING_HOURS, WORKING_HOURS } from '../../constants';
+import { toSaoPauloUTC, getSaoPauloTimeParts } from '../../App';
 
 // --- Interfaces ---
 interface EditMonthlyClientModalProps {
@@ -322,12 +323,55 @@ const EditMonthlyClientModal: React.FC<EditMonthlyClientModalProps> = ({ client,
             };
 
             const tables = ['appointments', 'pet_movel_appointments', 'agendamento_banhotosa'];
+            const targetHour = payload.recurrence_time !== undefined && payload.recurrence_time !== null
+                ? Number(typeof payload.recurrence_time === 'string' ? payload.recurrence_time.split(':')[0] : payload.recurrence_time)
+                : null;
+
             for (const table of tables) {
-                await supabase
+                const { data: futureAppts } = await supabase
                     .from(table)
-                    .update(commonPayload)
+                    .select('id, appointment_time, status')
                     .eq('monthly_client_id', client.id)
                     .gte('appointment_time', today);
+
+                if (futureAppts && futureAppts.length > 0) {
+                    for (const appt of futureAppts) {
+                        if (appt.status === 'CONCLUÍDO') {
+                            await supabase.from(table).update(commonPayload).eq('id', appt.id);
+                            continue;
+                        }
+
+                        const currentApptDate = new Date(appt.appointment_time);
+                        const spParts = getSaoPauloTimeParts(currentApptDate);
+                        let year = spParts.year;
+                        let month = spParts.month;
+                        let date = spParts.date;
+
+                        if (payload.recurrence_type !== 'monthly' && payload.recurrence_day) {
+                            const targetDayOfWeek = Number(payload.recurrence_day);
+                            const currentDayOfWeek = spParts.day === 0 ? 7 : spParts.day;
+                            const diffDays = targetDayOfWeek - currentDayOfWeek;
+                            if (diffDays !== 0) {
+                                const tempDate = new Date(Date.UTC(year, month, date));
+                                tempDate.setUTCDate(tempDate.getUTCDate() + diffDays);
+                                year = tempDate.getUTCFullYear();
+                                month = tempDate.getUTCMonth();
+                                date = tempDate.getUTCDate();
+                            }
+                        }
+
+                        const hourToUse = targetHour !== null && !isNaN(targetHour) ? targetHour : spParts.hour;
+                        const newAppointmentTime = toSaoPauloUTC(year, month, date, hourToUse).toISOString();
+
+                        await supabase
+                            .from(table)
+                            .update({
+                                ...commonPayload,
+                                appointment_time: newAppointmentTime
+                            })
+                            .eq('id', appt.id);
+                    }
+                }
             }
 
             onMonthlyClientUpdated();
