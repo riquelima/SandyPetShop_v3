@@ -1,17 +1,13 @@
 import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import tsconfigPaths from 'vite-tsconfig-paths';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, '.', '');
-  const minimaxKey = env.MINIMAX_API_KEY || process.env.MINIMAX_API_KEY || env.VITE_MINIMAX_API_KEY || process.env.VITE_MINIMAX_API_KEY || '';
-
+export default defineConfig(() => {
   return {
-    envPrefix: ['VITE_', 'MINIMAX_'],
+    envPrefix: ['VITE_', 'OPENROUTER_'],
     server: {
       port: 5175,
       strictPort: true,
@@ -34,12 +30,6 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     resolve: {
       alias: {}
-    },
-    define: {
-      'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || process.env.GEMINI_API_KEY || ''),
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || process.env.GEMINI_API_KEY || ''),
-      'import.meta.env.MINIMAX_API_KEY': JSON.stringify(minimaxKey),
-      'process.env.MINIMAX_API_KEY': JSON.stringify(minimaxKey)
     }
   };
 });

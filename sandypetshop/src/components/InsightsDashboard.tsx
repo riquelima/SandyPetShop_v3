@@ -4,6 +4,7 @@ import { SparklesIcon, ChartBarIcon, CalendarDaysIcon, UserGroupIcon, StarIcon, 
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import { AdminAppointment, PetMovelAppointment } from '../../types';
 import AiChatModal from './AiChatModal';
+import { callOpenRouterChatCompletions } from '../services/openrouterService';
 
 interface InsightData {
     topAvulsoLojas: { name: string; total: number; count: number }[];
@@ -408,25 +409,22 @@ const InsightsDashboard: React.FC = () => {
 
                 const batchPrompt = `Você é a IA estratégica do Sandy's PetShop. IMPORTANTE: o petshop funciona APENAS de Segunda a Sexta-feira. NÃO mencione sábado, domingo ou finais de semana em nenhuma sugestão. Retorne APENAS um JSON estrito com as propriedades: "social_media_posts" (array com 3 strings de posts de instagram divertidos para dias úteis), "idle_day_alert" (1 string sugerindo o que fazer para atrair clientes num dia útil), "upsell_recommendation" (1 string sugerindo upsell para a loja). Dados: Pets semana: ${thisWeekApptsCount}. Raça Pop: ${topBreeds[0]?.name || 'N/A'}. Dia mais fraco (seg-sex): ${slowestDayName}.`;
 
-                const aiRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_GROQ_API_KEY}` },
-                    body: JSON.stringify({
-                        model: "llama-3.3-70b-versatile",
-                        messages: [{ role: "system", content: "You strictly output JSON block. No markdown." }, { role: "user", content: batchPrompt }],
-                        response_format: { type: "json_object" },
-                        temperature: 0.7
-                    })
+                const aiData = await callOpenRouterChatCompletions({
+                    messages: [
+                        { role: "system", content: "You strictly output JSON block. No markdown." },
+                        { role: "user", content: batchPrompt }
+                    ],
+                    response_format: { type: "json_object" },
+                    temperature: 0.7
                 });
 
-                if (aiRes.ok) {
-                    const aiData = await aiRes.json();
+                if (aiData?.choices?.[0]?.message?.content) {
                     const textContent = aiData.choices[0].message.content.trim();
                     const jsonContent = textContent.replace(/^```json/, '').replace(/```$/, '').trim();
                     aiAdvancedContent = JSON.parse(jsonContent);
                 }
             } catch (e) {
-                console.error('Groq JSON Batch call failed:', e);
+                console.error('OpenRouter JSON Batch call failed:', e);
             }
 
             const parsedData = { topAvulsoLojas, topAvulsoPetMovel, topPets, bottomPets, missingPets, missingPetsRaw, weeklyAppts, monthlyAppts, monthlyEarnings, agendaOccupation, monthlyConversions, topBreeds, lojaAvgTicket, petMovelAvgTicket, averageReturnDays, aiAdvancedContent };
@@ -502,26 +500,15 @@ const InsightsDashboard: React.FC = () => {
                 return;
             }
 
-            const apiKey = import.meta.env.VITE_GROQ_API_KEY || 'N/A';
-            const groqUrl = `https://api.groq.com/openai/v1/chat/completions`;
-
             // Comment about earnings
             if (!cachedComment) {
                 const earningsPrompt = `Você é um consultor inteligente do Sandy's PetShop. Forneça uma análise financeira curtíssima (máximo absoluto de 140 caracteres) sobre a evolução dos ganhos listados abaixo. Seja animador e dê uma dica rápida de negócio. Não use asteriscos.\nReceita: ${JSON.stringify(d.monthlyEarnings)}`;
 
-                fetch(groqUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: 'llama-3.3-70b-versatile',
-                        messages: [{ role: 'user', content: earningsPrompt }],
-                        temperature: 0.7,
-                        max_tokens: 50
-                    }),
-                }).then(r => r.json()).then(res => {
+                callOpenRouterChatCompletions({
+                    messages: [{ role: 'user', content: earningsPrompt }],
+                    temperature: 0.7,
+                    max_tokens: 60
+                }).then(res => {
                     const text = res?.choices?.[0]?.message?.content;
                     if (text) {
                         let cleanText = text.replace(/["_*]/g, '').trim();
@@ -531,7 +518,10 @@ const InsightsDashboard: React.FC = () => {
                     } else {
                         setAiComment("Ótimo movimento! Foque em converter clientes avulsos em mensalistas para crescer mais.");
                     }
-                }).catch(err => { console.error("Network error API Groq:", err); setAiComment("O movimento está ótimo nas últimas semanas! Mantenha o excelente trabalho."); });
+                }).catch(err => {
+                    console.error("Erro na API OpenRouter Earnings:", err);
+                    setAiComment("O movimento está ótimo nas últimas semanas! Mantenha o excelente trabalho.");
+                });
             }
 
             // Tips about missing pets
@@ -539,19 +529,11 @@ const InsightsDashboard: React.FC = () => {
                 if (d.missingPets.length > 0) {
                     const tipsPrompt = `Você é o especialista em marketing do Sandy's PetShop. Escreva um conselho curto (máximo 140 caracteres) voltado para a administradora do pet shop, sugerindo uma ação prática para ela reconquistar esses clientes sumidos (ex: oferecer cupom, mandar mensagem, etc). Não escreva uma mensagem para o cliente, escreva uma sugestão para a administradora. Não use asteriscos.\nPets: ${d.missingPets.map(p => p.name).join(', ')}`;
 
-                    fetch(groqUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${apiKey}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            model: 'llama-3.3-70b-versatile',
-                            messages: [{ role: 'user', content: tipsPrompt }],
-                            temperature: 0.8,
-                            max_tokens: 60
-                        }),
-                    }).then(r => r.json()).then(res => {
+                    callOpenRouterChatCompletions({
+                        messages: [{ role: 'user', content: tipsPrompt }],
+                        temperature: 0.8,
+                        max_tokens: 60
+                    }).then(res => {
                         const text = res?.choices?.[0]?.message?.content;
                         if (text) {
                             let cleanText = text.replace(/["_*]/g, '').trim();
@@ -561,7 +543,10 @@ const InsightsDashboard: React.FC = () => {
                         } else {
                             setAiTips("Envie um cupom 'Saudades' com 15% OFF pelo WhatsApp para eles!");
                         }
-                    }).catch(err => { console.error("Network error API Groq Tips:", err); setAiTips("Crie uma campanha de 'Welcome Back' oferecendo um extra gratuito!"); });
+                    }).catch(err => {
+                        console.error("Erro na API OpenRouter Tips:", err);
+                        setAiTips("Crie uma campanha de 'Welcome Back' oferecendo um extra gratuito!");
+                    });
                 } else {
                     const defaultMsg = "Retenção incrível! Não temos pets inativos na lista.";
                     setAiTips(defaultMsg);

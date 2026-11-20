@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import { DaycareRegistration } from '../../types';
+import { generateOpenRouterText } from '../services/openrouterService';
 
 interface Props {
     enrollment: DaycareRegistration;
@@ -298,13 +299,6 @@ const DaycareDiaryPage: React.FC<Props> = ({ enrollment, date, onDateChange, onB
     const handleGenerateAI = async () => {
         setIsGenerating(true);
         try {
-            const apiKey = import.meta.env.MINIMAX_API_KEY || import.meta.env.VITE_MINIMAX_API_KEY;
-            if (!apiKey) {
-                alert('Chave da API do Minimax (MINIMAX_API_KEY) não configurada no ambiente.');
-                setIsGenerating(false);
-                return;
-            }
-
             const data = {
                 energy: energy || 'Não informado',
                 mood: mood || 'Não informado',
@@ -334,40 +328,23 @@ ${obs ? `O administrador também rascunhou o seguinte texto: "${obs}". Integre e
 
 Seja natural, use alguns emojis e demonstre carinho. Finalize assinando como "Tia Sandy".`;
 
-            const response = await fetch('https://api.minimaxi.chat/v1/text/chatcompletion_v2', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify({
-                    model: 'MiniMax-Text-01',
-                    messages: [
-                        { role: 'system', content: 'Você é a Tia Sandy, uma cuidadora super amorosa de pets em uma creche. Você escreve resumos fofos e divertidos sobre o dia do cãozinho para enviar aos tutores. Sempre use emojis e demonstre muito carinho e afeto.' },
-                        { role: 'user', content: prompt }
-                    ]
-                })
+            const systemInstruction = 'Você é a Tia Sandy, uma cuidadora super amorosa de pets em uma creche. Você escreve resumos fofos e divertidos sobre o dia do cãozinho para enviar aos tutores. Sempre use emojis e demonstre muito carinho e afeto.';
+
+            const result = await generateOpenRouterText({
+                prompt,
+                systemInstruction,
+                temperature: 0.7,
+                maxOutputTokens: 800
             });
 
-            const resData = await response.json();
-            if (resData.choices && resData.choices.length > 0 && resData.choices[0]?.message?.content) {
-                setObs(resData.choices[0].message.content);
+            if (result.text) {
+                setObs(result.text);
             } else {
-                console.error('MiniMax API Error:', resData);
-                const statusCode = resData.base_resp?.status_code;
-                const statusMsg = resData.base_resp?.status_msg;
-
-                if (statusCode === 2067) {
-                    alert('Limite de plano/tokens atingido no MiniMax (Erro 2067: Token Plan limit reached).\n\nPara continuar usando, adicione créditos ou ative o "auto consumption" na sua conta em platform.minimaxi.com.');
-                } else if (statusMsg) {
-                    alert(`Erro na API do MiniMax (${statusCode || 'Erro'}): ${statusMsg}`);
-                } else {
-                    alert('Erro ao gerar recadinho com IA: resposta sem dados gerados.');
-                }
+                alert('Erro ao gerar recadinho com IA: resposta sem dados gerados.');
             }
-        } catch (err) {
-            console.error(err);
-            alert('Erro de conexão com a API da IA.');
+        } catch (err: any) {
+            console.error('Erro na geração com OpenRouter:', err);
+            alert(err.message || 'Erro de conexão com a API da IA.');
         } finally {
             setIsGenerating(false);
         }

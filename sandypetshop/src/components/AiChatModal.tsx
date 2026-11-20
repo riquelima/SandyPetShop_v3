@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import { ChatBubbleLeftRightIcon, XMarkIcon, PaperAirplaneIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { callOpenRouterChatCompletions } from '../services/openrouterService';
 
 interface Message {
   role: 'user' | 'model';
@@ -107,9 +108,6 @@ const AiChatModal: React.FC<AiChatModalProps> = ({ systemData }) => {
         setIsResponding(true);
 
         try {
-            const apiKey = import.meta.env.VITE_GROQ_API_KEY || 'N/A';
-            const groqUrl = `https://api.groq.com/openai/v1/chat/completions`;
-
             // Daily counts summary to avoid tool calls for basic questions
             const getCounts = (list: any[] = []) => {
                 const clouds: Record<string, number> = {};
@@ -174,27 +172,17 @@ Para listagens detalhadas (nomes, horários, serviços específicos), você DEVE
                 { role: 'user', content: newMsg.text }
             ];
 
-            const executeGroq = async (currentMsgs: any[]) => {
-                const response = await fetch(groqUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: 'llama-3.1-8b-instant', // 20,000 TPM vs 6,000 for 70b
-                        messages: currentMsgs,
-                        tools: tools,
-                        tool_choice: "auto",
-                        temperature: 0.4,
-                        max_tokens: 600
-                    })
+            const executeAi = async (currentMsgs: any[]) => {
+                return await callOpenRouterChatCompletions({
+                    messages: currentMsgs,
+                    tools: tools,
+                    tool_choice: "auto",
+                    temperature: 0.4,
+                    max_tokens: 600
                 });
-                return await response.json();
             };
 
-
-            let resData = await executeGroq(msgsForApi);
+            let resData = await executeAi(msgsForApi);
             let responseMessage = resData?.choices?.[0]?.message;
 
             if (responseMessage?.tool_calls) {
@@ -253,7 +241,7 @@ Para listagens detalhadas (nomes, horários, serviços específicos), você DEVE
                 }
                 
                 // Dispara nova chamada para processar o resultado da tool e gerar texto:
-                resData = await executeGroq(msgsForApi);
+                resData = await executeAi(msgsForApi);
                 responseMessage = resData?.choices?.[0]?.message;
             }
 
@@ -262,12 +250,13 @@ Para listagens detalhadas (nomes, horários, serviços específicos), você DEVE
             if (textResponse) {
                 setMessages(prev => [...prev, { role: 'model', text: textResponse }]);
             } else {
-                console.error("Gemini Error:", resData);
+                console.error("OpenRouter Response Error:", resData);
                 setMessages(prev => [...prev, { role: 'model', text: "Desculpe, tive um problema ao tentar entender sua pergunta. Tente novamente." }]);
             }
-        } catch (e) {
-            console.error('Network Error:', e);
-            setMessages(prev => [...prev, { role: 'model', text: "Erro de conexão ao comunicar com a IA." }]);
+        } catch (e: any) {
+            console.error('OpenRouter Error:', e);
+            const msg = e?.message || "Erro de conexão ao comunicar com a IA.";
+            setMessages(prev => [...prev, { role: 'model', text: msg }]);
         } finally {
             setIsResponding(false);
         }

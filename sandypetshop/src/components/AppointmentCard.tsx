@@ -677,7 +677,7 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
                         <UserIcon className="w-4 h-4 text-gray-400" />
                         <div className="flex flex-col">
                             <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Tutor</span>
-                            <span className={`text-xs font-medium text-gray-700 truncate max-w-[100px] ${isCancelledByClient ? 'line-through text-gray-400' : ''}`}>{owner_name}</span>
+                            <span className={`text-xs font-medium text-gray-700 truncate max-w-[100px] ${isCancelledByClient ? 'line-through text-gray-400' : ''}`}>{owner_name ? owner_name.replace(/\b\w/g, l => l.toUpperCase()) : ''}</span>
                         </div>
                     </div>
 
@@ -724,7 +724,7 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
                             <div className="flex flex-col">
                                 <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Raça</span>
                                 <span className="text-xs font-medium text-gray-700 truncate max-w-[120px]">
-                                    {pet_breed}
+                                    {pet_breed ? pet_breed.replace(/\b\w/g, l => l.toUpperCase()) : ''}
                                 </span>
                             </div>
                         </div>

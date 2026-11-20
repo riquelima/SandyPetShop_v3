@@ -299,7 +299,7 @@ const AppointmentCardWithEditablePrice: React.FC<AppointmentCardWithEditablePric
                         </div>
                         <div>
                             <h3 className="font-outfit font-bold text-xl text-gray-900 leading-tight group-hover:text-pink-600 transition-colors">
-                                {pet_name}
+                                {pet_name ? pet_name.replace(/\b\w/g, l => l.toUpperCase()) : ''}
                             </h3>
                             <div className="flex flex-wrap gap-1 mt-1.5">
                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`}>
@@ -365,7 +365,7 @@ const AppointmentCardWithEditablePrice: React.FC<AppointmentCardWithEditablePric
                         <UserIcon className="w-4 h-4 text-gray-400" />
                         <div className="flex flex-col">
                             <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Tutor</span>
-                            <span className="text-xs font-medium text-gray-700 truncate max-w-[100px]">{owner_name}</span>
+                            <span className="text-xs font-medium text-gray-700 truncate max-w-[100px]">{owner_name ? owner_name.replace(/\b\w/g, l => l.toUpperCase()) : ''}</span>
                         </div>
                     </div>
 
@@ -412,7 +412,7 @@ const AppointmentCardWithEditablePrice: React.FC<AppointmentCardWithEditablePric
                             <div className="flex flex-col">
                                 <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Raça</span>
                                 <span className="text-xs font-medium text-gray-700 truncate max-w-[120px]">
-                                    {pet_breed}
+                                    {pet_breed ? pet_breed.replace(/\b\w/g, l => l.toUpperCase()) : ''}
                                 </span>
                             </div>
                         </div>
