@@ -31,18 +31,52 @@ export function getOpenRouterApiKey(): string {
 }
 
 /**
+ * Remove qualquer resíduo de raciocínio interno (thinking process / chain-of-thought)
+ * que alguns modelos geram antes ou no lugar da resposta real.
+ */
+export function stripThinkingProcess(raw: string): string {
+    if (!raw) return '';
+    let text = raw.trim();
+
+    // 1. Remove blocos delimitados por tags <think>...</think> ou <thought>...</thought>
+    text = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
+    text = text.replace(/<thought>[\s\S]*?<\/thought>/gi, '');
+
+    // 2. Se começar ou contiver "Here's a thinking process" ou "Thinking Process:"
+    if (/here(?:'s| is) a thinking process/i.test(text) || /^thinking process[:\s]/im.test(text)) {
+        // Se houver separador explícito como '---' ou 'Final Response:'
+        const parts = text.split(/\n\s*---\s*\n|\n\s*(?:final response|final answer|recadinho|resposta final|texto final)[:\s]*\n/i);
+        if (parts.length > 1) {
+            text = parts[parts.length - 1];
+        } else {
+            // Tenta localizar onde começam as saudações ou texto real em português
+            const matchGreeting = text.search(/\n\s*(?:Olá|Oi\b|Querid[oa]s?|O\s+[A-Z]|A\s+[A-Z]|Hoje\s+o|Hoje\s+a|Passando\s+pra|Tia\s+Sandy)/i);
+            if (matchGreeting !== -1) {
+                text = text.substring(matchGreeting);
+            } else {
+                // Se tudo for apenas thinking process e nenhuma resposta real existir, descarta
+                return '';
+            }
+        }
+    }
+
+    // 3. Remove cabeçalhos residuais no início
+    text = text.replace(/^[\s\S]*?here(?:'s| is) a thinking process[:\s]*/i, '');
+    text = text.replace(/^[\s\S]*?thinking process[:\s]*/i, '');
+
+    return text.trim();
+}
+
+/**
  * Pool de modelos gratuitos disponíveis na OpenRouter.
- * A OpenRouter permite no máximo 3 modelos por requisição no array "models".
- * Este serviço rotaciona de forma inteligente entre eles em cada chamada e em caso de rate-limit (429/503).
+ * Apenas modelos instrucionais estáveis (sem modelos :reasoning que vazam pensamentos).
  */
 export const FREE_MODELS_POOL: string[] = [
     'openrouter/free',
+    'inclusionai/ling-3.2-flash:free',
     'google/gemma-4-31b-it:free',
     'nvidia/nemotron-3.5-lightning:free',
-    'inclusionai/ling-3.2-flash:free',
     'particle-ai/particle-1:free',
-    'dots-studio/dots-3-note-preview:free',
-    'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
     'liquid/lfm-3-1.7b:free',
     'baidu/ernie-5.5-flash-preview:free'
 ];
@@ -94,7 +128,7 @@ export async function generateOpenRouterText(options: GenerateTextOptions): Prom
     if (options.systemInstruction) {
         messages.push({
             role: 'system',
-            content: options.systemInstruction
+            content: options.systemInstruction + '\nIMPORTANTE: NUNCA exiba notas mentais, chain-of-thought, raciocínio interno ou "thinking process". Responda diretamente com o texto final em português.'
         });
     }
     messages.push({
@@ -102,7 +136,7 @@ export async function generateOpenRouterText(options: GenerateTextOptions): Prom
         content: options.prompt
     });
 
-    const maxRetries = 3;
+    const maxRetries = 4;
     let lastError: any = null;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -119,6 +153,7 @@ export async function generateOpenRouterText(options: GenerateTextOptions): Prom
                 body: JSON.stringify({
                     models: modelsToTry,
                     messages,
+                    include_reasoning: false,
                     temperature: options.temperature ?? 0.7,
                     max_tokens: options.maxOutputTokens ?? 800
                 })
@@ -135,28 +170,25 @@ export async function generateOpenRouterText(options: GenerateTextOptions): Prom
             }
 
             const choice = resData.choices?.[0];
-            const content = choice?.message?.content;
+            const rawContent = choice?.message?.content;
             const modelUsed = resData.model || modelsToTry[0];
 
-            if (content && typeof content === 'string' && content.trim().length > 0) {
-                return {
-                    text: content.trim(),
-                    modelUsed,
-                    raw: resData
-                };
+            if (rawContent && typeof rawContent === 'string') {
+                const cleanText = stripThinkingProcess(rawContent);
+                // Valida se o texto resultante é um texto final de qualidade e não um fragmento de pensamento
+                if (cleanText.length > 20 && !cleanText.toLowerCase().startsWith("here's a thinking") && !cleanText.toLowerCase().startsWith("thinking process")) {
+                    return {
+                        text: cleanText,
+                        modelUsed,
+                        raw: resData
+                    };
+                }
             }
 
-            // Fallback caso o modelo tenha retornado apenas reasoning ou recusa
-            const reasoning = choice?.message?.reasoning;
-            if (reasoning && typeof reasoning === 'string' && reasoning.trim().length > 0) {
-                return {
-                    text: reasoning.trim(),
-                    modelUsed,
-                    raw: resData
-                };
-            }
-
-            throw new Error('A API OpenRouter retornou resposta sem conteúdo de texto.');
+            // NUNCA retornar reasoning! Se a resposta for vazia ou foi apenas thinking descartado, rotaciona e tenta o próximo modelo.
+            console.warn(`[OpenRouter] Modelo ${modelUsed} retornou apenas thinking process ou texto vazio. Tentando próximo modelo...`);
+            advanceRotation();
+            lastError = new Error(`O modelo gratuito ${modelUsed} gerou apenas processo mental. Tentando outro modelo...`);
         } catch (err: any) {
             lastError = err;
             advanceRotation();
@@ -192,6 +224,7 @@ export async function callOpenRouterChatCompletions(args: {
         const payload: any = {
             models: modelsToTry,
             messages: args.messages,
+            include_reasoning: false,
             temperature: args.temperature ?? 0.4,
             max_tokens: args.max_tokens ?? 800
         };
@@ -225,6 +258,11 @@ export async function callOpenRouterChatCompletions(args: {
                 advanceRotation();
                 lastError = new Error(`OpenRouter (${response.status}): ${errorMsg}`);
                 continue;
+            }
+
+            // Remove thinking de mensagens de texto se houver
+            if (resData?.choices?.[0]?.message?.content) {
+                resData.choices[0].message.content = stripThinkingProcess(resData.choices[0].message.content);
             }
 
             return resData;

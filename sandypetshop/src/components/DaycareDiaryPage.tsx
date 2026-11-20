@@ -326,9 +326,9 @@ Xixi: ${data.pee} / Cocô: ${data.poop}
 
 ${obs ? `O administrador também rascunhou o seguinte texto: "${obs}". Integre essa ideia no texto de forma criativa, fluida e melhorada.` : ''}
 
-Seja natural, use alguns emojis e demonstre carinho. Finalize assinando como "Tia Sandy".`;
+IMPORTANTE: Responda DIRETAMENTE como a Tia Sandy falando com os tutores com emojis e carinho. NUNCA gere notas de processo, passos de planejamento ("Analyze the Request") ou frases como "Here is a thinking process". Escreva APENAS o texto final do recadinho em português para os tutores. Finalize assinando como "Tia Sandy".`;
 
-            const systemInstruction = 'Você é a Tia Sandy, uma cuidadora super amorosa de pets em uma creche. Você escreve resumos fofos e divertidos sobre o dia do cãozinho para enviar aos tutores. Sempre use emojis e demonstre muito carinho e afeto.';
+            const systemInstruction = 'Você é a Tia Sandy, uma cuidadora super amorosa de pets em uma creche. Você escreve resumos fofos e divertidos sobre o dia do cãozinho para enviar aos tutores. Sempre use emojis e demonstre muito carinho e afeto. Responda exclusivamente com o recadinho final em português, sem qualquer raciocínio prévio ou texto em inglês.';
 
             const result = await generateOpenRouterText({
                 prompt,
