@@ -21072,14 +21072,14 @@ const AdminDashboard: React.FC<{
         <div className={`min-h-screen admin-dashboard-container admin-bg-primary-override ${adminTheme === 'dark' ? 'dark bg-slate-900 text-slate-100' : 'bg-gradient-to-br from-gray-50 via-pink-50/20 to-gray-100'}`} data-theme={adminTheme}>
             <header className="bg-white border-b-2 border-pink-100 shadow-lg fixed top-0 left-0 right-0 z-50 backdrop-blur-sm bg-white/95 admin-bg-card-override admin-border-override">
                 <div className="w-full px-2">
-                    <div className="flex justify-between items-center h-20">
+                    <div className="flex justify-between items-center h-16 md:h-20">
                         <div className="flex items-center gap-4">
                             <SafeImage src="https://i.imgur.com/M3Gt3OA.png" alt="Logo" className="h-12 w-12 drop-shadow-md" loading="eager" />
                             <div>
                                 <div className="font-brand text-pink-800 leading-none whitespace-nowrap text-[clamp(1.25rem,7vw,2.25rem)] hidden md:block admin-text-primary-override">{adminTitle}</div>
                             </div>
-                            <div className="flex-1 flex items-center justify-end pr-6 md:hidden">
-                                <div className="font-brand text-pink-800 leading-none whitespace-nowrap text-[clamp(1rem,6vw,1.5rem)] admin-text-primary-override">{adminTitle}</div>
+                            <div className="flex-1 flex items-center justify-end pr-6 md:hidden min-w-0">
+                                <div className="font-brand text-pink-800 leading-none whitespace-nowrap truncate text-[clamp(0.875rem,5vw,1.25rem)] admin-text-primary-override">{adminTitle}</div>
                             </div>
                         </div>
                         <div className="hidden md:flex items-center gap-3">
@@ -21118,11 +21118,11 @@ const AdminDashboard: React.FC<{
                                 <LogoutIcon /> Sair
                             </button>
                         </div>
-                        <div className="md:hidden flex items-center gap-2">
+                        <div className="md:hidden flex items-center gap-3">
                             <NotificationBell onViewFeedbacks={() => setActiveView('feedbacks')} />
                             <button
                                 onClick={toggleTheme}
-                                className="p-2 rounded-xl text-gray-600 dark:text-slate-300 hover:bg-pink-50 dark:hover:bg-slate-800"
+                                className="p-3 min-w-[44px] min-h-[44px] rounded-xl text-gray-600 dark:text-slate-300 hover:bg-pink-50 dark:hover:bg-slate-800 flex items-center justify-center"
                                 title={adminTheme === 'dark' ? 'Ativar Modo Claro' : 'Ativar Modo Escuro'}
                             >
                                 {adminTheme === 'dark' ? (
@@ -21132,7 +21132,7 @@ const AdminDashboard: React.FC<{
                                 )}
                             </button>
                             {!showMobileMenu && (
-                                <button onClick={openMobileMenu} className="p-3 rounded-xl text-gray-500 hover:bg-pink-50 hover:text-pink-600 transition-colors" aria-label="Menu">
+                                <button onClick={openMobileMenu} className="p-3 min-w-[44px] min-h-[44px] rounded-xl text-gray-500 hover:bg-pink-50 hover:text-pink-600 transition-colors flex items-center justify-center" aria-label="Menu">
                                     <MenuIcon />
                                 </button>
                             )}
@@ -21159,34 +21159,34 @@ const AdminDashboard: React.FC<{
                     <div className={`flex-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] transition-all duration-500 delay-150 ease-[cubic-bezier(0.16,1,0.3,1)] ${isDrawerOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
                         <NavMenu size="compact" />
                         
-                        <div className="mt-6 space-y-1 pt-4 border-t border-pink-100/50">
-                            <div className="px-4 pb-1">
+                        <div className="mt-6 space-y-2 pt-4 border-t border-pink-100/50">
+                            <div className="px-4 pb-2">
                                 <h3 className="text-xl font-bold text-pink-600" style={{ fontFamily: 'Lobster Two, cursive' }}>Ajustes</h3>
                             </div>
                             <button
                                 onClick={() => { setActiveView('storeAdmin'); closeMobileMenu(); }}
-                                className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-base font-medium transition-colors ${activeView === 'storeAdmin' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-colors ${activeView === 'storeAdmin' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-50'}`}
                             >
                                 <SafeImage src="https://cdn-icons-png.flaticon.com/512/1557/1557110.png" alt="Loja" className="w-6 h-6 object-contain" />
                                 Loja
                             </button>
                             <button
                                 onClick={() => { setActiveView('financial'); closeMobileMenu(); }}
-                                className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-base font-medium transition-colors ${activeView === 'financial' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-colors ${activeView === 'financial' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-50'}`}
                             >
                                 <SafeImage src="https://cdn-icons-png.flaticon.com/512/5501/5501360.png" alt="Financeiro" className="w-6 h-6 object-contain" />
                                 Financeiro
                             </button>
                             <button
                                 onClick={() => { setActiveView('fiscalNotes'); closeMobileMenu(); }}
-                                className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-base font-medium transition-colors ${activeView === 'fiscalNotes' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-colors ${activeView === 'fiscalNotes' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-50'}`}
                             >
                                 <SafeImage src="https://cdn-icons-png.flaticon.com/512/1052/1052856.png" alt="Notas Fiscais" className="w-6 h-6 object-contain" />
                                 Notas Fiscais
                             </button>
                             <button
                                 onClick={() => { setActiveView('insights'); closeMobileMenu(); }}
-                                className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-base font-medium transition-colors ${activeView === 'insights' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-colors ${activeView === 'insights' ? 'bg-pink-100 text-pink-700' : 'text-gray-600 hover:bg-gray-50'}`}
                             >
                                 <SafeImage src="https://cdn-icons-png.flaticon.com/512/16921/16921758.png" alt="Insights" className="w-6 h-6 object-contain" />
                                 Insights IA
@@ -21246,7 +21246,7 @@ const AdminDashboard: React.FC<{
                 </div>
             )}
 
-            <div className="w-full px-2 sm:px-3 md:px-4 pt-24 pb-4">
+            <div className="w-full px-2 sm:px-3 md:px-4 pt-20 md:pt-24 pb-4">
                 <div className="flex flex-col md:flex-row gap-8">
                     <aside className={`
                         md:w-64 flex-shrink-0
