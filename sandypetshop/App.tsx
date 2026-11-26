@@ -281,6 +281,29 @@ function isPetMovelServiceLabel(service: any): boolean {
 }
 
 /**
+ * Mapeamento das datas-âncora reais dos mensalistas quinzenais (bi-weekly)
+ * para sincronização exata do ciclo de 14 dias (on-week vs off-week).
+ */
+export const BIWEEKLY_MENSALISTA_ANCHORS: Record<string, string> = {
+    '4e908ae2-db6b-4de9-9b81-807d951e53d0': '2026-04-17', // ISIS (Paseo)
+    '8e56c91b-8985-4ca4-a26c-89f848e73137': '2026-03-24', // Luna (Paseo)
+    'e7a0636f-8404-4170-96cf-c4d109c0fc60': '2026-03-25', // Lorena (Vitta Parque)
+    'd057c002-8a93-42b9-aa6b-516edfcb30af': '2026-04-17', // Pipoca (Paseo)
+    '8ab7a8f4-7bd5-4eda-bd4b-89b9aab7dc03': '2026-04-16', // CLOE (Max Haus)
+    '2a6388f1-0c04-40cb-af6c-5d770c94aa6c': '2026-04-09', // BIJOU (Max Haus)
+    '2e0f5693-cfa6-4d19-9c32-4cbd248f540e': '2026-09-17', // BITUCA (Max Haus)
+    '0861ba66-9092-4793-82d5-a94db734c55b': '2026-09-17', // POLLY (Max Haus)
+    '9f5e72b2-5cfa-4bd1-828d-f6938a0ca494': '2025-11-04', // Princesa (Paseo)
+    'adc7a2c7-44f2-48bf-a745-155047ba3eb2': '2026-09-11', // Vicky (Paseo)
+    'de906fc0-b93e-444c-85e3-c957a25ff10a': '2026-04-17', // Catarina (Banho & Tosa Fixo)
+    '605c4d1b-9b03-4ed6-a6e1-0df155bc1880': '2026-03-26', // Bibi (Max Haus)
+    '40a37f23-f090-430b-9c08-fb5083e2cea5': '2026-04-17', // Fred (Paseo)
+    '9a1fe53c-cb9a-476f-afc3-2164c9c3ced4': '2026-04-08', // LUNINHA (Vitta Parque)
+    '9c343217-1990-4bab-81f6-6bc6c2ac5ea3': '2026-10-21', // Chiquinha (Vitta Parque)
+    '14af90f4-9ec3-4405-8589-10f3ed3514f3': '2026-04-16', // CACAU (Max Haus)
+};
+
+/**
  * Conta quantos mensalistas ativos (recorrentes) ocupam um slot específico.
  *
  * Regras:
@@ -289,8 +312,12 @@ function isPetMovelServiceLabel(service: any): boolean {
  *      · Banho / Banho & Tosa / Só Tosa (fixo): conta no calendário FIXO
  *      · Banho (Pet Móvel) / Banho & Tosa (Pet Móvel) / etc.: conta no calendário MÓVEL
  *        mas apenas se o cliente agendou para o condomínio dele (ou sem condo definido)
+ *  - Recorrência quinzenal (bi-weekly): valida a paridade da semana (ciclo de 14 dias a partir da âncora).
+ *    Em semanas de folga, NÃO ocupa vaga.
+ *  - Recorrência mensal: valida o dia do mês (d === recurrence_day).
  *  - excluded_dates contendo a data (YYYY-MM-DD) libera o slot
  *  - Mensalistas cujos agendamentos JÁ FORAM gerados e persistidos no banco para a data NÃO são duplicados
+ *  - Mensalistas cancelados nesta data específica NÃO bloqueiam a vaga
  *  - Demais casos: 1 slot
  *
  * @param monthlyClients lista de mensalistas ativos (ou todos; filtra internamente)
@@ -299,6 +326,7 @@ function isPetMovelServiceLabel(service: any): boolean {
  * @param type 'fixed' | 'mobile'
  * @param condo filtro de condomínio (apenas para 'mobile'). Se omitido, conta qualquer Pet Móvel.
  * @param alreadyBookedMonthlyIds IDs de mensalistas que já possuem agendamento no banco nesta data
+ * @param cancelledMonthlyIds IDs de mensalistas com cancelamento explícito nesta data
  * @returns capacidade total ocupada por mensalistas recorrentes não persistidos
  */
 export function countMonthlyBookedAt(
@@ -307,7 +335,8 @@ export function countMonthlyBookedAt(
     hour: number,
     type: 'fixed' | 'mobile',
     condo?: string,
-    alreadyBookedMonthlyIds?: Set<string>
+    alreadyBookedMonthlyIds?: Set<string>,
+    cancelledMonthlyIds?: Set<string>
 ): number {
     if (!Array.isArray(monthlyClients) || monthlyClients.length === 0) return 0;
 
@@ -333,10 +362,44 @@ export function countMonthlyBookedAt(
             continue;
         }
 
+        // Se este mensalista teve seu agendamento cancelado para esta data, o slot está livre:
+        if (cancelledMonthlyIds && cancelledMonthlyIds.has(String(c.id))) {
+            continue;
+        }
+
         const recDay = Number(c.recurrence_day);
         const recTime = Number(c.recurrence_time);
         if (!Number.isFinite(recDay) || !Number.isFinite(recTime)) continue;
-        if (recDay !== targetDay) continue;
+
+        const recType = String(c.recurrence_type || 'weekly').toLowerCase();
+
+        // 1. Validação por tipo de recorrência
+        if (recType === 'monthly') {
+            // Recorrência mensal: recDay representa o dia do mês (1..31)
+            if (d !== recDay) continue;
+        } else {
+            // Recorrência semanal ou quinzenal: recDay representa o dia da semana (0..6)
+            if (recDay !== targetDay) continue;
+
+            // Se for quinzenal (bi-weekly), valida se a data ymd cai na semana ativa do mensalista
+            if (recType === 'bi-weekly' || recType === 'biweekly') {
+                const anchor = BIWEEKLY_MENSALISTA_ANCHORS[String(c.id)] ||
+                    c.first_appointment_date ||
+                    c.start_date ||
+                    (c.created_at ? String(c.created_at).slice(0, 10) : null);
+
+                if (anchor) {
+                    const dAnchor = new Date(`${anchor}T12:00:00Z`);
+                    const dCurrent = new Date(`${ymd}T12:00:00Z`);
+                    const diffDays = Math.round((dCurrent.getTime() - dAnchor.getTime()) / (1000 * 60 * 60 * 24));
+                    if (Math.abs(diffDays) % 14 !== 0) {
+                        // Semana de folga do mensalista quinzenal: não ocupa vaga nesta data!
+                        continue;
+                    }
+                }
+            }
+        }
+
         if (recTime !== hour) continue;
         // excluded_dates libera o slot
         const exc = Array.isArray(c.excluded_dates) ? c.excluded_dates : [];
@@ -408,6 +471,20 @@ export function evaluateSlotAvailability(args: {
 
     let occupiedFromTables = 0;
     const bookedMonthlyIds = new Set<string>();
+    const cancelledMonthlyIds = new Set<string>();
+
+    for (const a of args.appointments || []) {
+        if (!a) continue;
+        const s = String(a.status || '').toUpperCase();
+        if (s === 'CANCELADO' || s === 'CANCELLED' || a.cancelled_by_client === true) {
+            if (a.monthly_client_id) {
+                const at = new Date(a.appointment_time || a.appointmentTime);
+                if (at && !isNaN(at.getTime()) && getSaoPauloYMD(at) === ymd) {
+                    cancelledMonthlyIds.add(String(a.monthly_client_id));
+                }
+            }
+        }
+    }
 
     for (const a of relevant) {
         const at = new Date(a.appointment_time || a.appointmentTime);
@@ -434,7 +511,8 @@ export function evaluateSlotAvailability(args: {
         args.hour,
         args.type,
         args.condo,
-        bookedMonthlyIds
+        bookedMonthlyIds,
+        cancelledMonthlyIds
     );
 
     const occupied = occupiedFromTables + occupiedFromMonthly;
